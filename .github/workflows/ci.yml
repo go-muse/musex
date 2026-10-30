@@ -73,29 +73,37 @@ jobs:
         if: matrix.check == 'tests' && steps.packages.outputs.present == 'true'
         run: go test -race -count=1 -covermode=atomic -coverprofile=coverage.out ./...
 
-      - name: Generate coverage reports
-        if: ${{ !cancelled() && matrix.check == 'tests' && hashFiles('coverage.out') != '' }}
+      - name: Generate coverage badge and reports
+        if: ${{ !cancelled() && matrix.check == 'tests' && (success() || hashFiles('coverage.out') != '') }}
+        env:
+          HAS_PACKAGES: ${{ steps.packages.outputs.present }}
         run: |
-          go tool cover -func=coverage.out | tee coverage.txt
-          go tool cover -html=coverage.out -o coverage.html
+          if [[ "$HAS_PACKAGES" == 'true' ]]; then
+            python3 scripts/coverage.py --profile coverage.out
+          else
+            python3 scripts/coverage.py --no-packages
+          fi
           {
             echo '### Test coverage'
             echo '```text'
-            cat coverage.txt
+            cat coverage/coverage.txt
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload coverage reports
-        if: ${{ !cancelled() && matrix.check == 'tests' && hashFiles('coverage.out') != '' }}
+        if: ${{ !cancelled() && matrix.check == 'tests' && hashFiles('coverage/coverage.svg') != '' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage
-          path: |
-            coverage.out
-            coverage.txt
-            coverage.html
+          path: coverage/
           retention-days: 14
           if-no-files-found: error
+
+      - name: Upload coverage site
+        if: matrix.check == 'tests' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          path: coverage/
 
       - name: Install govulncheck
         if: matrix.check == 'vulnerabilities'
@@ -104,3 +112,23 @@ jobs:
       - name: Check known vulnerabilities
         if: matrix.check == 'vulnerabilities' && steps.packages.outputs.present == 'true'
         run: govulncheck ./...
+
+  publish-coverage:
+    name: Publish coverage
+    needs: checks
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    steps:
+      - name: Deploy coverage site
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
