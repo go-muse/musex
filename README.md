@@ -6,6 +6,8 @@ The library focuses on musical concepts and their relationships. It is not a sta
 
 See the [project roadmap](ROADMAP.md) for planned packages and progress.
 
+For development setup and checks, see [Contributing](CONTRIBUTING.md).
+
 ## Installation
 
 ```sh
