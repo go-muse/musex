@@ -1,0 +1,24 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+
+# Format: golangci-lint fmt ./...
+# Check:  golangci-lint run ./...
+formatters:
+  enable:
+    - gofmt
+    - gci
+  settings:
+    gci:
+      custom-order: true
+      sections:
+        - standard
+        - prefix(github.com/go-muse/musex)
+        - default

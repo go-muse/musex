@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: ${{ matrix.check }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        check: [lint, tests, vulnerabilities]
+    env:
+      GOTOOLCHAIN: local
+      GOVULNCHECK_VERSION: v1.9.0
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: |
+            go.mod
+            go.sum
+
+      - name: Detect Go packages
+        id: packages
+        run: |
+          packages="$(go list ./...)"
+          if [[ -n "$packages" ]]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No Go packages yet; package checks are skipped."
+            echo "No Go packages yet. Package analysis, tests and coverage are skipped; they start automatically when packages are added." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Install golangci-lint
+        if: matrix.check == 'lint'
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version-file: .golangci-lint-version
+          install-only: true
+
+      - name: Validate lint configuration
+        if: matrix.check == 'lint'
+        run: golangci-lint config verify
+
+      - name: Check code, formatting and import order
+        if: matrix.check == 'lint' && steps.packages.outputs.present == 'true'
+        run: golangci-lint run ./...
+
+      - name: Test with race detection and coverage
+        if: matrix.check == 'tests' && steps.packages.outputs.present == 'true'
+        run: go test -race -count=1 -covermode=atomic -coverprofile=coverage.out ./...
+
+      - name: Generate coverage reports
+        if: ${{ !cancelled() && matrix.check == 'tests' && hashFiles('coverage.out') != '' }}
+        run: |
+          go tool cover -func=coverage.out | tee coverage.txt
+          go tool cover -html=coverage.out -o coverage.html
+          {
+            echo '### Test coverage'
+            echo '```text'
+            cat coverage.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage reports
+        if: ${{ !cancelled() && matrix.check == 'tests' && hashFiles('coverage.out') != '' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage
+          path: |
+            coverage.out
+            coverage.txt
+            coverage.html
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Install govulncheck
+        if: matrix.check == 'vulnerabilities'
+        run: go install "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}"
+
+      - name: Check known vulnerabilities
+        if: matrix.check == 'vulnerabilities' && steps.packages.outputs.present == 'true'
+        run: govulncheck ./...
