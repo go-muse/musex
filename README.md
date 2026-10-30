@@ -26,10 +26,6 @@ Mark functionality not included in the latest release as unreleased.
 
 <!-- List implemented capabilities from the user's perspective, grouped by musical topic as needed. -->
 
-## Users
-
-<!-- Describe the intended audiences and their needs. Do not imply adoption by actual users without evidence. -->
-
 ## Concept
 
 <!-- Define the library's core musical entities, their relationships, and any differences from conventional terminology. Keep definitions aligned with the implemented model. -->
