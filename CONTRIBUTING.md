@@ -1,5 +1,9 @@
 # Contributing to musex
 
+Use English for commit subjects and bodies, pull request titles and descriptions,
+pull request comments, and comments in project files. Material under `docs/` is
+exempt from this requirement.
+
 Use the Go version in `go.mod`, golangci-lint **v2.15.0** (also recorded in
 `.golangci-lint-version`), and govulncheck **v1.9.0** to match CI.
 
