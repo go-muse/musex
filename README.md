@@ -10,20 +10,34 @@
 [![lint](https://img.shields.io/github/check-runs/go-muse/musex/main?nameFilter=lint&style=flat&logo=go&label=lint)](https://github.com/go-muse/musex/actions/workflows/ci.yml?query=branch%3Amain)
 [![MIT License](https://custom-icon-badges.demolab.com/github/license/go-muse/musex?style=flat&logo=law&label=license)](LICENSE)
 
-`musex` is a Go library for representing and working with musical concepts in software. It provides building blocks for applications such as music editors, analyzers, educational tools, and music generators.
+`musex` is a Go library for representing and working with musical concepts in software. It is intended to provide building blocks for music editors, analyzers, educational tools, and music generators.
 
 The library focuses on musical concepts and their relationships. It is not a standalone application, digital audio workstation, or sound player.
 
-See the [project roadmap](ROADMAP.md) for planned packages and progress.
+> **Early development:** Musical functionality is not implemented yet. The library is not ready for production use, and its public API has not been established.
 
-For development setup and checks, see [Contributing](CONTRIBUTING.md).
+<!--
+Update the relevant sections in the same PR that adds or changes public functionality.
+Describe implemented behavior here; keep future work in ROADMAP.md.
+Mark functionality not included in the latest release as unreleased.
+-->
 
-## Installation
+## Features
 
-```sh
-go get github.com/go-muse/musex
-```
+<!-- List implemented capabilities from the user's perspective, grouped by musical topic as needed. -->
 
-## License
+## Users
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE).
+<!-- Describe the intended audiences and their needs. Do not imply adoption by actual users without evidence. -->
+
+## Concept
+
+<!-- Define the library's core musical entities, their relationships, and any differences from conventional terminology. Keep definitions aligned with the implemented model. -->
+
+## Use Cases
+
+<!-- Describe practical musical or educational problems and the outcomes the library enables, in nontechnical language. Focus on why someone would use it, rather than API calls. -->
+
+## Examples
+
+<!-- Use a technical question-and-answer format: how to perform a task, a short explanation, and a link to a working Go example or the relevant API documentation. Add only examples supported by the implemented API. -->
