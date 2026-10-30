@@ -33,8 +33,23 @@ within each group. Both formatting and linting use `.golangci.yml`.
 
 GitHub Actions runs lint, tests, and vulnerability checks independently on pull
 requests and pushes to `main`. Coverage is shown in the workflow summary and
-saved as an artifact containing text, HTML, and the raw profile. There is no
-minimum coverage threshold.
+saved as an artifact containing text, HTML, the raw profile, and an SVG badge.
+After all checks pass on `main`, the badge and HTML report are published to
+[GitHub Pages](https://go-muse.github.io/musex/). Pull requests generate artifacts
+but never deploy. There is no minimum coverage threshold or external coverage
+service. The badge uses a neutral chart icon and shows `n/a` when there are no
+executable statements; otherwise it shows Go's total statement coverage.
+
+To generate the same report locally after running the tests above:
+
+```sh
+python3 scripts/coverage.py --profile coverage.out
+```
+
+Open `coverage/index.html` to inspect the report. For a repository without Go
+packages, use `python3 scripts/coverage.py --no-packages`. Generated files stay
+in the ignored `coverage/` directory. GitHub Pages must use GitHub Actions as
+its publishing source in the repository settings.
 
 Until the first Go package is added, CI validates the lint configuration and
 explicitly skips package analysis, tests, and coverage. Once packages exist,
