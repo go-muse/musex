@@ -1,0 +1,97 @@
+# Local GitHub CLI wrappers
+/gh
+/gh-auth
+
+# Research, books, and project documentation
+/docs/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+.directory
+.Trash-*
+
+# VS Code and VSCodium
+.vscode/
+.vscode-insiders/
+.history/
+*.code-workspace
+
+# GoLand and other JetBrains IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Other editors
+.zed/
+*.sublime-workspace
+*.sublime-project
+*.swp
+*.swo
+*~
+
+# Local AI tool directories
+.codex/
+.claude/
+.factory/
+.droid/
+.cursor/
+.windsurf/
+.continue/
+.gemini/
+.opencode/
+.aider*
+
+# Local MCP and Claude Desktop configuration
+.mcp.json
+.mcp.local.json
+mcp.json
+claude_desktop_config.json
+
+# GoKG and local graphs
+.gokg/
+.code-review-graph/
+
+# Prevent accidental commits of vendor dependencies
+/vendor/
+
+# Test executables
+*.test
+*.test.exe
+
+# Test coverage and profiling
+/coverage/
+coverage.out
+coverage.html
+*.coverprofile
+*.prof
+*.pprof
+cpu.out
+mem.out
+trace.out
+
+# Local Go workspace
+go.work
+go.work.sum
+
+# Temporary files and tool logs
+/tmp/
+/temp/
+.cache/
+*.log
+*.tmp
+*.temp
+*.bak
+*.orig
+*.rej
