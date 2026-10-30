@@ -7,7 +7,7 @@
 <br>
 [![CI](https://img.shields.io/github/actions/workflow/status/go-muse/musex/ci.yml?branch=main&style=flat&logo=github&label=CI)](https://github.com/go-muse/musex/actions/workflows/ci.yml?query=branch%3Amain)
 [![coverage](https://go-muse.github.io/musex/coverage.svg)](https://go-muse.github.io/musex/)
-[![Go Report Card](https://goreportcard.com/badge/github.com/go-muse/musex)](https://goreportcard.com/report/github.com/go-muse/musex)
+[![lint](https://img.shields.io/github/check-runs/go-muse/musex/main?nameFilter=lint&style=flat&logo=go&label=lint)](https://github.com/go-muse/musex/actions/workflows/ci.yml?query=branch%3Amain)
 [![MIT License](https://custom-icon-badges.demolab.com/github/license/go-muse/musex?style=flat&logo=law&label=license)](LICENSE)
 
 `musex` is a Go library for representing and working with musical concepts in software. It provides building blocks for applications such as music editors, analyzers, educational tools, and music generators.
