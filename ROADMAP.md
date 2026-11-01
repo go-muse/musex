@@ -1,10 +1,10 @@
 # Roadmap
 
-`musex` is planned as a set of focused Go packages across three areas. This roadmap shows the intended package order and scope. All packages are **planned**; none is implemented yet. Check a package off when its agreed API and behavior are implemented, reviewed, and accepted.
+`musex` is planned as a set of focused Go packages across three areas. This roadmap shows the intended package order and scope. Checked packages are implemented; the others are **planned**. Check a package off when its agreed API and behavior are implemented, reviewed, and accepted.
 
 ## 1. Required to get started
 
-- [ ] **1. `letter`** — the seven note letters and their cyclic order.
+- [x] **1. `letter`** — the seven note letters and their cyclic order.
 - [ ] **2. `alteration`** — accidental values and chromatic changes.
 - [ ] **3. `spelling`** — a note name formed from a letter and alteration.
 - [ ] **4. `octave/number`** — octave numbering schemes and their visible numbers.

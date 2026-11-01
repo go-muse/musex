@@ -18,7 +18,7 @@
 
 The library focuses on musical concepts and their relationships. It is not a standalone application, digital audio workstation, or sound player.
 
-> **Early development:** Musical functionality is not implemented yet. The library is not ready for production use, and its public API has not been established.
+> **Early development:** The library is not ready for production use, and its public API has not been established. Only the first package, `letter`, is implemented, and it has not been released yet.
 
 <!--
 Update the relevant sections in the same PR that adds or changes public functionality.
@@ -30,9 +30,33 @@ Mark functionality not included in the latest release as unreleased.
 
 <!-- List implemented capabilities from the user's perspective, grouped by musical topic as needed. -->
 
+### Letters (unreleased)
+
+Package [`letter`](letter/) provides the seven letters used to name notes.
+
+- The seven letters C D E F G A B in canonical order, starting with C.
+- Walking the circle of letters upward from any letter, for example A B C D E F G.
+- Letter distance between two letters, upward or downward, from 0 to 6.
+- Shifting a letter up or down by any number of letter steps, wrapping around the circle: B shifted up by 1 is C.
+- Comparing letters, however they were obtained: C shifted up by 9 is E.
+- Converting between letters and their ordinals 0 to 6, with an error for numbers out of range.
+- Detecting invalid values: the zero value is not a letter and is never treated as C.
+- Immutable values that are safe for concurrent use.
+
 ## Concept
 
 <!-- Define the library's core musical entities, their relationships, and any differences from conventional terminology. Keep definitions aligned with the implemented model. -->
+
+### Letters (unreleased)
+
+- **Letter (basic degree)** — one of the seven letters C, D, E, F, G, A, B. A letter is only a letter name: it has no accidental, octave, or pitch. It is not a notation symbol such as "H" or "do", and it is not a degree of a scale or mode.
+- **Circle of letters** — the letters follow one another in a circle: after B comes C again. The circle has no beginning and does not describe pitch height.
+- **Canonical order** — the agreed order C D E F G A B, starting with the first letter C. The **ordinal** of a letter is its place in this order, from 0 for C to 6 for B.
+- **Letter step** — a move to the neighboring letter around the circle.
+- **Letter distance** — the number of letter steps from one letter to another, upward or downward, from 0 to 6. It differs from the conventional interval number, which counts both letters: from C up to E the letter distance is 2, while the interval is a third.
+- **Shift** — the letter reached after a given number of letter steps: up for a positive number, down for a negative one.
+- **Seven-letter set** — the set of all seven letters. The range of distances 0 to 6 and the shift period of 7 are properties of this set. Sets with a different number of letters are not provided.
+- **Invalid value** — a value that poses as a letter but is none of the seven. Operations recognize it and never treat it as C or any other letter.
 
 ## Use Cases
 
@@ -41,3 +65,29 @@ Mark functionality not included in the latest release as unreleased.
 ## Examples
 
 <!-- Use a technical question-and-answer format: how to perform a task, a short explanation, and a link to a working Go example or the relevant API documentation. Add only examples supported by the implemented API. -->
+
+### Letters (unreleased)
+
+All examples below are in [`letter/example_test.go`](letter/example_test.go); their output is checked by `go test`.
+
+- **How do I list all letters?**
+  `letter.All()` returns C D E F G A B in canonical order; `letter.Count` is 7. Each call returns a new slice that the caller owns.
+  Example: [`ExampleAll`](letter/example_test.go).
+- **How do I walk the circle of letters from a given letter?**
+  `letter.A.Cycle()` returns A B C D E F G: seven letters going upward, starting with A.
+  Example: [`ExampleLetter_Cycle`](letter/example_test.go).
+- **How do I find how many letter steps lie between two letters?**
+  `letter.B.DistanceUp(letter.D)` is 2: counting upward wraps from B through C to D. `letter.C.DistanceDown(letter.E)` is 5. Both results are from 0 to 6.
+  Examples: [`ExampleLetter_DistanceUp`](letter/example_test.go), [`ExampleLetter_DistanceDown`](letter/example_test.go).
+- **How do I move a letter up or down by several steps?**
+  `letter.C.Shift(9)` is E and `letter.C.Shift(-1)` is B. Any `int` is accepted, without overflow.
+  Example: [`ExampleLetter_Shift`](letter/example_test.go).
+- **How do I check whether two letters are the same?**
+  `letter.C.Shift(9).Equal(letter.E)` is true. An invalid value is not equal to any letter.
+  Example: [`ExampleLetter_Equal`](letter/example_test.go).
+- **How do I create a letter from a number stored in my data?**
+  `letter.FromOrdinal(4)` returns G. A number outside 0 to 6 returns an error that matches `letter.ErrInvalid` with `errors.Is`. `letter.MustFromOrdinal` panics instead and suits values known to be correct.
+  Examples: [`ExampleFromOrdinal`](letter/example_test.go), [`ExampleMustFromOrdinal`](letter/example_test.go).
+- **How do I detect a value that is not a letter?**
+  `l.IsValid()` is false for the zero value `var l letter.Letter` and for any value other than the seven constants.
+  Example: [`ExampleLetter_IsValid`](letter/example_test.go).
