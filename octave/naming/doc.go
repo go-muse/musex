@@ -30,6 +30,9 @@
 // number of a note, such as the octave in which a part for a transposing
 // instrument is notated.
 //
+// Octave numberings, including ASPN, are provided by package
+// [github.com/go-muse/musex/octave/number].
+//
 // # Built-in catalogs
 //
 // The package provides three built-in catalogs:
