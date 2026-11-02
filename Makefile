@@ -1,8 +1,8 @@
 # Development checks for musex.
 #
 # Run targets from the repository root; 'make help' lists them. Requires Go,
-# GNU make 3.81 or later, python3 (for 'cover') and common POSIX shell
-# utilities. macOS and Linux are supported; Windows is not.
+# GNU make 3.81 or later, python3 (for 'cover' and 'check') and common POSIX
+# shell utilities. macOS and Linux are supported; Windows is not.
 #
 # CI (.github/workflows/ci.yml) does not call make: it repeats the same check
 # commands. Change a check command or flag here and in ci.yml in the same
@@ -80,12 +80,12 @@ require_version = if [ "$$found" = missing ]; then \
 .NOTPARALLEL:
 
 .PHONY: check help fmt lint test cover vuln tidy tools clean \
-	require-golangci-lint require-govulncheck mod-check
+	require-golangci-lint require-govulncheck mod-check roadmap-badge
 
 # The first rule is the default goal: 'make' runs 'make check'. Both tools
 # are checked first, so a missing tool is reported before any check runs.
 # Use 'make -k check' to run every check and see all failures.
-check: require-golangci-lint require-govulncheck lint mod-check test vuln ## Run lint, module tidiness, test and vuln checks; changes no source files (default)
+check: require-golangci-lint require-govulncheck lint mod-check test roadmap-badge vuln ## Run lint, module tidiness, test, roadmap badge and vuln checks; changes no source files (default)
 	@printf '%s\n' 'All checks passed.'
 
 help: ## List the targets
@@ -106,7 +106,7 @@ test: ## Run the tests with the race detector; writes coverage.out
 	go test -race -count=1 -covermode=atomic -coverprofile=coverage.out ./...
 
 # Keep in sync with CI: tests / 'Generate coverage badge and reports'.
-cover: test ## Run the tests, then build the coverage report in coverage/
+cover: test roadmap-badge ## Run the tests, then build the coverage report and roadmap badge in coverage/
 	python3 scripts/coverage.py --profile coverage.out
 
 # Keep in sync with CI: vulnerabilities / 'Check known vulnerabilities'.
@@ -165,6 +165,12 @@ require-govulncheck:
 	@$(call read_version,$(GOVULNCHECK_VERSION_FILE)); \
 	$(call govulncheck_version,$(GOVULNCHECK)); \
 	$(call require_version,govulncheck,$(GOVULNCHECK),Run 'make tools'.)
+
+# Roadmap badge, part of 'cover' and 'check': counts the checkboxes in
+# ROADMAP.md and writes coverage/roadmap.svg; fails on an unexpected layout.
+# Keep in sync with CI: tests / 'Generate roadmap badge'.
+roadmap-badge:
+	python3 scripts/roadmap.py
 
 # Module tidiness check, part of 'check'; changes no files.
 # Keep in sync with CI: lint / 'Check module tidiness'.
