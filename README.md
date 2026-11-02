@@ -18,7 +18,7 @@
 
 The library focuses on musical concepts and their relationships. It is not a standalone application, digital audio workstation, or sound player.
 
-> **Early development:** The library is not ready for production use, and its public API has not been established. Only the first package, `letter`, is implemented, and it has not been released yet.
+> **Early development:** The library is not ready for production use, and its public API is not yet stable. Only the `letter` package is implemented; it was first released in v0.1.0. Until v1.0.0, compatibility between releases is not guaranteed beyond what the package documentation states, and the API may change.
 
 <!--
 Update the relevant sections in the same PR that adds or changes public functionality.
@@ -30,7 +30,7 @@ Mark functionality not included in the latest release as unreleased.
 
 <!-- List implemented capabilities from the user's perspective, grouped by musical topic as needed. -->
 
-### Letters (unreleased)
+### Letters
 
 Package [`letter`](letter/) provides the seven letters used to name notes.
 
@@ -47,7 +47,7 @@ Package [`letter`](letter/) provides the seven letters used to name notes.
 
 <!-- Define the library's core musical entities, their relationships, and any differences from conventional terminology. Keep definitions aligned with the implemented model. -->
 
-### Letters (unreleased)
+### Letters
 
 - **Letter (basic degree)** — one of the seven letters C, D, E, F, G, A, B. A letter is only a letter name: it has no accidental, octave, or pitch. It is not a notation symbol such as "H" or "do", and it is not a degree of a scale or mode.
 - **Circle of letters** — the letters follow one another in a circle: after B comes C again. The circle has no beginning and does not describe pitch height.
@@ -66,7 +66,7 @@ Package [`letter`](letter/) provides the seven letters used to name notes.
 
 <!-- Use a technical question-and-answer format: how to perform a task, a short explanation, and a link to a working Go example or the relevant API documentation. Add only examples supported by the implemented API. -->
 
-### Letters (unreleased)
+### Letters
 
 All examples below are in [`letter/example_test.go`](letter/example_test.go); their output is checked by `go test`.
 
