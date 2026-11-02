@@ -99,6 +99,21 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # Keep in sync with the Makefile target 'roadmap-badge' (part of 'cover'
+      # and 'check'). Validates the checkboxes in ROADMAP.md and writes
+      # coverage/roadmap.svg, which is published with the coverage site. Runs
+      # on pull requests too, so a malformed ROADMAP.md fails the tests check
+      # before it reaches main.
+      - name: Generate roadmap badge
+        if: ${{ !cancelled() && matrix.check == 'tests' }}
+        run: |
+          progress="$(python3 scripts/roadmap.py)"
+          echo "$progress"
+          {
+            echo '### Roadmap progress'
+            echo "$progress"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload coverage reports
         if: ${{ !cancelled() && matrix.check == 'tests' && hashFiles('coverage/coverage.svg') != '' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -108,6 +123,8 @@ jobs:
           retention-days: 14
           if-no-files-found: error
 
+      # The site holds the coverage report and both badges (coverage.svg and
+      # roadmap.svg). Skipped if any earlier step of this job failed.
       - name: Upload coverage site
         if: matrix.check == 'tests' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4

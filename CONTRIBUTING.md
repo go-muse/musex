@@ -39,22 +39,32 @@ requests and pushes to `main`. The lint check also verifies that `go.mod` and
 `go.sum` are tidy with `go mod tidy -diff`. Coverage is shown in the workflow
 summary and saved as an artifact containing text, HTML, the raw profile, and
 an SVG badge.
-After all checks pass on `main`, the badge and HTML report are published to
+The tests check also counts how many package checkboxes in `ROADMAP.md` are
+checked, shows the result in the workflow summary, and adds a roadmap progress
+badge, `roadmap.svg` (for example `1/30 packages`), to the same artifact.
+Checkboxes in bullet and numbered lists are counted; those in fenced code blocks
+and HTML comments are ignored. If there are no checkboxes, a checkbox is
+malformed or inside a block quote, or a code block or comment is not closed, the
+tests check fails instead of publishing a misleading badge.
+After all checks pass on `main`, both badges and the HTML report are published to
 [GitHub Pages](https://go-muse.github.io/musex/). Pull requests generate artifacts
 but never deploy. There is no minimum coverage threshold or external coverage
-service. The badge uses a neutral chart icon and shows `n/a` when there are no
-executable statements; otherwise it shows Go's total statement coverage.
+service. The coverage badge uses a neutral chart icon and shows `n/a` when there
+are no executable statements; otherwise it shows Go's total statement coverage.
 
-To generate the same report locally after running the tests above:
+To generate the same report and badges locally after running the tests above
+(`make cover` runs the tests and both commands):
 
 ```sh
 python3 scripts/coverage.py --profile coverage.out
+python3 scripts/roadmap.py
 ```
 
-Open `coverage/index.html` to inspect the report. For a repository without Go
-packages, use `python3 scripts/coverage.py --no-packages`. Generated files stay
-in the ignored `coverage/` directory. GitHub Pages must use GitHub Actions as
-its publishing source in the repository settings.
+Open `coverage/index.html` to inspect the report and `coverage/roadmap.svg` to
+see the roadmap badge. For a repository without Go packages, use
+`python3 scripts/coverage.py --no-packages`. Generated files stay in the ignored
+`coverage/` directory. GitHub Pages must use GitHub Actions as its publishing
+source in the repository settings.
 
 Until the first Go package is added, CI validates the lint configuration and
 module tidiness and explicitly skips package analysis, tests, and coverage.
@@ -63,8 +73,8 @@ Once packages exist, these checks run automatically. Docker is not required.
 ## Make targets
 
 The `Makefile` runs the same checks as CI. It needs Go, GNU make 3.81 or later,
-and `python3` for `make cover`, and works on macOS and Linux but not Windows.
-Run it from the repository root:
+and `python3` for `make cover` and `make check`, and works on macOS and Linux
+but not Windows. Run it from the repository root:
 
 | Target | What it does |
 |---|---|
@@ -73,10 +83,10 @@ Run it from the repository root:
 | `make fmt` | Fixes formatting and import order in place: `golangci-lint fmt ./...`. |
 | `make lint` | Runs `golangci-lint config verify`, then `golangci-lint run ./...`. Unformatted code fails. |
 | `make test` | Runs `go test -race -count=1 -covermode=atomic -coverprofile=coverage.out ./...`. |
-| `make cover` | Runs the tests, then `python3 scripts/coverage.py --profile coverage.out`. |
+| `make cover` | Runs the tests and `python3 scripts/roadmap.py`, then `python3 scripts/coverage.py --profile coverage.out`. |
 | `make vuln` | Runs `govulncheck ./...`. |
 | `make tidy` | Runs `go mod tidy`, which updates `go.mod` and `go.sum`. |
-| `make check` | Runs `lint`, the module tidiness check (`go mod tidy -diff`), `test`, and `vuln`. Changes no source files. |
+| `make check` | Runs `lint`, the module tidiness check (`go mod tidy -diff`), `test`, the roadmap badge (`python3 scripts/roadmap.py`), and `vuln`. Changes no source files. |
 | `make clean` | Removes `coverage.out` and `coverage/`. |
 
 - `make` without a target runs `make check`, which stops at the first failure.
