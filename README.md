@@ -19,7 +19,7 @@
 
 The library focuses on musical concepts and their relationships. It is not a standalone application, digital audio workstation, or sound player.
 
-> **Early development:** The library is not ready for production use, and its public API is not yet stable. The `letter`, `alteration` and `octave/naming` packages are implemented; `letter` was first released in v0.1.0, `alteration` in v0.2.0, and `octave/naming` in v0.3.0. Until v1.0.0, compatibility between releases is not guaranteed beyond what the package documentation states, and the API may change.
+> **Early development:** The library is not ready for production use, and its public API is not yet stable. The `letter`, `alteration`, `octave/number` and `octave/naming` packages are implemented; `letter` was first released in v0.1.0, `alteration` in v0.2.0, `octave/naming` in v0.3.0, and `octave/number` in v0.4.0. Until v1.0.0, compatibility between releases is not guaranteed beyond what the package documentation states, and the API may change.
 
 <!--
 Update the relevant sections in the same PR that adds or changes public functionality.
@@ -57,6 +57,20 @@ Package [`alteration`](alteration/) provides alteration values: how many chromat
 - The exact value as a fraction in lowest terms, for storage and exchange.
 - A guaranteed range of magnitudes up to 2^24 chromatic units with denominators up to 2^16, with exact results inside it. A result outside the range returns an error instead of a rounded or wrapped value.
 - The zero value is the natural.
+- Immutable values that are safe for concurrent use.
+
+### Octave numbering
+
+Package [`octave/number`](octave/number/) provides octave numberings: the rules that give octaves their visible numbers.
+
+- Five built-in numberings in a fixed order, each with a label: ASPN (also called SPN and IPN), Franco-Belgian, Mexican, Middle C = C3, and Middle C = C5.
+- Your own numbering from a single pair, such as "the octave with ASPN number 4 has my number 5", optionally with numbers that are skipped.
+- The number of an octave in any numbering from its ASPN number, and the ASPN number of an octave from its number.
+- Converting an octave number between any two numberings, built-in or your own: number 3 with middle C as C3 is number 3 in the Franco-Belgian numbering.
+- Skipped numbers are reported as errors and never replaced with a nearby number: no octave has number 0 in the Franco-Belgian numbering.
+- Comparing numberings by the numbers they give to all octaves, regardless of label: Mexican equals Middle C = C5.
+- Any `int` octave number, with no musical or MIDI limits; a result that does not fit in an `int` is an error, never wrapped around.
+- Detecting undefined values: the zero value is not a numbering and is never treated as ASPN.
 - Immutable values that are safe for concurrent use.
 
 ### Octave names
@@ -99,6 +113,24 @@ Package [`octave/naming`](octave/naming/) provides catalogs of verbal octave nam
 - **Order by size** — comparing values as numbers. It is not the order of note pitches, which also depend on the letter, octave, and system.
 - **Direction** — raising (a value above 0), lowering (below 0), or natural (0).
 - **Guaranteed range** — the values for which the package promises exact results: magnitudes up to 2^24 chromatic units and denominators up to 2^16. It is not a limit on accidentals in music and not a rule of any musical system.
+
+### Octave numbering
+
+Octaves are identified by their **ASPN numbers**, as defined in the Octave names part of this section below: the octave that contains middle C is 4. An octave numbering gives each octave a visible number of its own.
+
+- **Octave numbering** — a rule that gives each octave a visible number. Numbers increase from lower to higher octaves and continue without limit in both directions; there is no lowest or highest octave, and MIDI limits do not apply. A numbering is not a notation: it defines only numbers, not how a note such as "C♯4" or "do3" is written.
+- **Skipped number** — a number that no octave has in a numbering. In the Franco-Belgian numbering, number 0 is skipped: the octave numbered 1 is followed downward by −1.
+- **Built-in numbering** — one of the five numberings provided by the library, each with a label:
+  - **ASPN** — the number of an octave equals its ASPN number; middle C is in octave 4. Also called SPN and IPN; used in English-language literature and science. Labels on Roland and Korg instruments match ASPN.
+  - **Franco-Belgian** — middle C is in octave 3, and number 0 is skipped. Used in France, Belgium, and parts of Spain; in Italy it is prescribed by a law of 1989, but ASPN is common there in practice. Sources confirm the numbers −2 to 7; beyond them, the library continues the numbers in sequence.
+  - **Mexican** — the numbering of the Spanish translations of Riemann; middle C is in octave 5. Used in Mexico alongside ASPN. A single encyclopedia article confirms the numbers from 1, for the octave of the lowest audible C (ASPN 0); below 1, the library continues the numbers in sequence.
+  - **Middle C = C3** — middle C is in octave 3. Used by Yamaha instruments and by default in Logic Pro, and reportedly in Cubase.
+  - **Middle C = C5** — middle C is in octave 5. Used in FL Studio.
+- **Own numbering** — a numbering you define with an **anchor pair**, "the octave with ASPN number *a* has number *x*", and optionally a list of skipped numbers. Without skipped numbers, it is a shift of ASPN. An own numbering has no label.
+- **Label** — the name of a built-in numbering, such as "Franco-Belgian". It identifies the numbering for people and does not affect its numbers.
+- **Conversion** — finding the number in one numbering of the octave that has a given number in another numbering.
+- **Equal numberings** — numberings that give the same number to every octave, however they were defined and whatever their labels. Mexican and Middle C = C5 are equal; Franco-Belgian and Middle C = C3 are not, although both put middle C in octave 3.
+- **Undefined value** — a value that poses as a numbering but is none. Operations recognize it and never treat it as ASPN or any other numbering.
 
 ### Octave names
 
@@ -188,6 +220,38 @@ All examples below are in [`alteration/example_test.go`](alteration/example_test
 - **What happens when a result is too large?**
   The guaranteed range covers magnitudes up to `alteration.MaxMagnitude` (2^24) with denominators up to `alteration.MaxDenominator` (2^16). `alteration.MustFromInt(alteration.MaxMagnitude).Raise()` returns an error that matches `alteration.ErrOutOfRange`; the original value does not change.
   Example: [`Example_outOfRange`](alteration/example_test.go).
+
+### Octave numbering
+
+All examples below are in [`octave/number/example_test.go`](octave/number/example_test.go); their output is checked by `go test`. An overview is in [`Example`](octave/number/example_test.go).
+
+- **How do I list the built-in numberings?**
+  `number.Builtins()` returns ASPN, Franco-Belgian, Mexican, Middle C = C3, and Middle C = C5 in this order. Each call returns a new slice that the caller owns. Each numbering is also available directly, for example `number.FrancoBelgian()`.
+  Example: [`ExampleBuiltins`](octave/number/example_test.go).
+- **How do I find the number of an octave in a numbering?**
+  `number.FrancoBelgian().FromASPN(2)` is 1, and `FromASPN(1)` is −1: number 0 is skipped. The octave is given by its ASPN number; middle C is in ASPN octave 4.
+  Example: [`ExampleNumbering_FromASPN`](octave/number/example_test.go).
+- **How do I find which octave has a given number?**
+  `number.FrancoBelgian().ToASPN(3)` is 4, and `number.Mexican().ToASPN(5)` is 4. A skipped number returns an error that matches `number.ErrSkipped` with `errors.Is`: `number.FrancoBelgian().ToASPN(0)` is an error.
+  Examples: [`ExampleNumbering_ToASPN`](octave/number/example_test.go), [`ExampleNumbering_ToASPN_skipped`](octave/number/example_test.go).
+- **How do I convert an octave number from one numbering to another?**
+  `number.Convert(3, number.MiddleC3(), number.FrancoBelgian())` is 3: both numbers refer to the octave of middle C. `number.MustConvert` panics instead of returning an error and suits values known to be valid.
+  Examples: [`ExampleConvert`](octave/number/example_test.go), [`ExampleMustConvert`](octave/number/example_test.go).
+- **How do I define my own numbering?**
+  `number.New(4, 5)` gives number 5 to ASPN octave 4 and number 1 to ASPN octave 0. Skipped numbers follow the pair: `number.New(4, 3, 0)` equals the Franco-Belgian numbering. A pair whose number is among the skipped numbers, or a repeated skipped number, returns an error that matches `number.ErrInvalidDefinition`.
+  Examples: [`ExampleNew`](octave/number/example_test.go), [`ExampleNew_skipped`](octave/number/example_test.go), [`ExampleNew_invalid`](octave/number/example_test.go).
+- **How do I check whether two numberings are the same?**
+  `number.Mexican().Equal(number.MiddleC5())` is true: they give the same numbers to all octaves, although their labels differ. `==` does not compile for numberings.
+  Example: [`ExampleNumbering_Equal`](octave/number/example_test.go).
+- **How do I show a numbering to a user or in a log?**
+  `Label()` returns the label of a built-in numbering, such as "Franco-Belgian", and an empty string for your own numbering. `String()` always returns a fixed form: `number.MustNew(4, 5).String()` is "ASPN 4 -> 5".
+  Examples: [`ExampleNumbering_Label`](octave/number/example_test.go), [`ExampleNumbering_String`](octave/number/example_test.go).
+- **What happens when a number does not fit in an `int`?**
+  The operation returns an error that matches `number.ErrOutOfRange`; the result never wraps around.
+  Example: [`Example_outOfRange`](octave/number/example_test.go).
+- **How do I detect a numbering that was never set?**
+  `n.IsDefined()` is false for the zero value `var n number.Numbering`. Operations on it return an error that matches `number.ErrUndefined`; it is never treated as ASPN.
+  Example: [`Example_zeroValue`](octave/number/example_test.go).
 
 ### Octave names
 
