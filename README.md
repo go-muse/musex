@@ -19,7 +19,7 @@
 
 The library focuses on musical concepts and their relationships. It is not a standalone application, digital audio workstation, or sound player.
 
-> **Early development:** The library is not ready for production use, and its public API is not yet stable. Only the `letter` package is implemented; it was first released in v0.1.0. Until v1.0.0, compatibility between releases is not guaranteed beyond what the package documentation states, and the API may change.
+> **Early development:** The library is not ready for production use, and its public API is not yet stable. The `letter` and `alteration` packages are implemented; `letter` was first released in v0.1.0 and `alteration` in v0.2.0. Until v1.0.0, compatibility between releases is not guaranteed beyond what the package documentation states, and the API may change.
 
 <!--
 Update the relevant sections in the same PR that adds or changes public functionality.
@@ -44,6 +44,21 @@ Package [`letter`](letter/) provides the seven letters used to name notes.
 - Detecting invalid values: the zero value is not a letter and is never treated as C.
 - Immutable values that are safe for concurrent use.
 
+### Alterations
+
+Package [`alteration`](alteration/) provides alteration values: how many chromatic units an accidental raises or lowers a letter.
+
+- The five traditional accidentals: natural 0, sharp +1, flat -1, double sharp +2, and double flat -2.
+- Any whole number of chromatic units, such as +3 or -4, and exact fractional values, such as +1/2 for a quarter tone up. Fractions are kept in lowest terms: 2/4 is the same value as 1/2.
+- Raising or lowering a value by one unit, by any whole number of units, or by another alteration value, whole or fractional: +1/2 raised by +1/2 is a sharp.
+- The difference between two values: a sharp is +2 higher than a flat.
+- Multiplying a value by a whole number: +1/2 multiplied by 2 is +1.
+- Comparing values, however they were obtained, and ordering them by size; checking the direction of a value and whether it is natural or whole.
+- The exact value as a fraction in lowest terms, for storage and exchange.
+- A guaranteed range of magnitudes up to 2^24 chromatic units with denominators up to 2^16, with exact results inside it. A result outside the range returns an error instead of a rounded or wrapped value.
+- The zero value is the natural.
+- Immutable values that are safe for concurrent use.
+
 ## Concept
 
 <!-- Define the library's core musical entities, their relationships, and any differences from conventional terminology. Keep definitions aligned with the implemented model. -->
@@ -58,6 +73,19 @@ Package [`letter`](letter/) provides the seven letters used to name notes.
 - **Shift** — the letter reached after a given number of letter steps: up for a positive number, down for a negative one.
 - **Seven-letter set** — the set of all seven letters. The range of distances 0 to 6 and the shift period of 7 are properties of this set. Sets with a different number of letters are not provided.
 - **Invalid value** — a value that poses as a letter but is none of the seven. Operations recognize it and never treat it as C or any other letter.
+
+### Alterations
+
+- **Chromatic unit** — the unit of alteration values: the amount by which a sharp raises a letter. It is not a semitone in general or a position of a musical system: how many positions a chromatic unit spans depends on the system.
+- **Alteration value** — the exact number of chromatic units by which an accidental raises a letter (a positive value) or lowers it (a negative value). It is only a number: it has no letter, octave, or pitch, and it is not an accidental symbol, a cent offset, or a modal alteration. Whether a value is allowed in a musical system is a property of that system, not of the value.
+- **Natural** — the value 0. It is a value in its own right, not a missing value; the zero value of the type is the natural.
+- **Traditional accidentals** — natural 0, sharp +1, flat -1, double sharp +2, and double flat -2. They are not the only values: +3 (a triple sharp) is whole too, and +1/2 and -3/2 are fractional (microtonal) values.
+- **Exact value** — a value as a fraction in lowest terms with a positive denominator: 0/1 for the natural and n/1 for a whole value n. There are no decimal approximations.
+- **Raising and lowering** — making a new value a + d or a - d, where d is a whole number or another alteration value. The original value does not change.
+- **Difference** — a - b: how many chromatic units a is higher than b. It is not an interval, which also needs letters.
+- **Order by size** — comparing values as numbers. It is not the order of note pitches, which also depend on the letter, octave, and system.
+- **Direction** — raising (a value above 0), lowering (below 0), or natural (0).
+- **Guaranteed range** — the values for which the package promises exact results: magnitudes up to 2^24 chromatic units and denominators up to 2^16. It is not a limit on accidentals in music and not a rule of any musical system.
 
 ## Use Cases
 
@@ -92,3 +120,47 @@ All examples below are in [`letter/example_test.go`](letter/example_test.go); th
 - **How do I detect a value that is not a letter?**
   `l.IsValid()` is false for the zero value `var l letter.Letter` and for any value other than the seven constants.
   Example: [`ExampleLetter_IsValid`](letter/example_test.go).
+
+### Alterations
+
+All examples below are in [`alteration/example_test.go`](alteration/example_test.go); their output is checked by `go test`.
+
+- **What can I do with alteration values?**
+  `alteration.MustFromFraction(1, 2).MustRaiseBy(1)` is +3/2, and a sharp minus a flat is +2. `String` prints a fixed form such as `+3/2`; it is not a notation.
+  Example: [`Example`](alteration/example_test.go).
+- **How do I get the traditional accidentals?**
+  `alteration.Natural()`, `Sharp()`, `Flat()`, `DoubleSharp()`, and `DoubleFlat()` return 0, +1, -1, +2, and -2. The zero value `var a alteration.Alteration` is the natural.
+  Example: [`Example_signs`](alteration/example_test.go).
+- **How do I create a whole value, such as a triple sharp?**
+  `alteration.FromInt(3)` returns +3. A value beyond `alteration.MaxMagnitude` returns an error that matches `alteration.ErrOutOfRange` with `errors.Is`; `alteration.MustFromInt` panics instead.
+  Example: [`ExampleFromInt`](alteration/example_test.go).
+- **How do I create a fractional value, such as a quarter tone?**
+  `alteration.FromFraction(1, 2)` returns +1/2. Fractions are reduced and the sign is kept in the numerator: 2/4 is +1/2, 1/(-2) is -1/2, and 4/2 is +2. A zero denominator returns an error that matches `alteration.ErrZeroDenominator`. `alteration.MustFromFraction` panics instead and suits literals.
+  Examples: [`ExampleFromFraction`](alteration/example_test.go), [`ExampleMustFromFraction`](alteration/example_test.go).
+- **How do I raise or lower a value by one chromatic unit?**
+  `alteration.Flat().Raise()` returns the natural, and `Lower` goes the other way. Each operation returns a new value; the usual style is `a = a.MustRaise()`.
+  Example: [`ExampleAlteration_Raise`](alteration/example_test.go).
+- **How do I raise or lower a value by several units?**
+  `alteration.Natural().RaiseBy(3)` is +3, and `alteration.Sharp().RaiseBy(-2)` is -1. `LowerBy` lowers instead. Any `int` is accepted, without overflow.
+  Example: [`ExampleAlteration_RaiseBy`](alteration/example_test.go).
+- **How do I raise a value by a fraction?**
+  `a.Add(d)` raises `a` by any alteration value `d`: +1/2 plus +1/2 is +1, and +1/2 plus +1/3 is +5/6.
+  Example: [`ExampleAlteration_Add`](alteration/example_test.go).
+- **How do I find how much higher one value is than another?**
+  `alteration.Sharp().Sub(alteration.Flat())` is +2, and +1/2 minus +1/3 is +1/6. `Sub` also lowers a value by another value.
+  Example: [`ExampleAlteration_Sub`](alteration/example_test.go).
+- **How do I check whether two values are the same, or sort them?**
+  `MustFromFraction(2, 4).Equal(MustFromFraction(1, 2))` is true, and `==` gives the same answer. `a.Compare(b)` returns -1, 0, or +1 and works with `slices.SortFunc(xs, alteration.Alteration.Compare)`.
+  Examples: [`ExampleAlteration_Equal`](alteration/example_test.go), [`ExampleAlteration_Compare`](alteration/example_test.go).
+- **How do I multiply a value by a whole number?**
+  `a.Mul(k)` returns `a` times `k`: +1/2 times 2 is +1, and -3/2 times 4 is -6.
+  Example: [`ExampleAlteration_Mul`](alteration/example_test.go).
+- **How do I tell whether a value raises or lowers, or whether it is whole?**
+  `a.Sign()` is +1, -1, or 0; `a.IsNatural()` and `a.IsInteger()` report whether the value is 0 or a whole number.
+  Examples: [`ExampleAlteration_Sign`](alteration/example_test.go), [`ExampleAlteration_IsInteger`](alteration/example_test.go).
+- **How do I store a value and read it back?**
+  `a.Fraction()` returns the exact value as a numerator and a positive denominator in lowest terms, and `alteration.FromFraction(a.Fraction())` gives back the same value. `String` is for output only.
+  Examples: [`ExampleAlteration_Fraction`](alteration/example_test.go), [`ExampleAlteration_String`](alteration/example_test.go).
+- **What happens when a result is too large?**
+  The guaranteed range covers magnitudes up to `alteration.MaxMagnitude` (2^24) with denominators up to `alteration.MaxDenominator` (2^16). `alteration.MustFromInt(alteration.MaxMagnitude).Raise()` returns an error that matches `alteration.ErrOutOfRange`; the original value does not change.
+  Example: [`Example_outOfRange`](alteration/example_test.go).
