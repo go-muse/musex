@@ -3,7 +3,7 @@
 /gh-auth
 
 # Research, books, and project documentation
-/docs/
+/docs
 
 # macOS
 .DS_Store

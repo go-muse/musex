@@ -24,7 +24,6 @@ jobs:
         check: [lint, tests, vulnerabilities]
     env:
       GOTOOLCHAIN: local
-      GOVULNCHECK_VERSION: v1.9.0
     defaults:
       run:
         shell: bash
@@ -61,18 +60,28 @@ jobs:
           version-file: .golangci-lint-version
           install-only: true
 
+      # Keep in sync with the Makefile target 'lint'.
       - name: Validate lint configuration
         if: matrix.check == 'lint'
         run: golangci-lint config verify
 
+      # Keep in sync with the Makefile target 'lint'.
       - name: Check code, formatting and import order
         if: matrix.check == 'lint' && steps.packages.outputs.present == 'true'
         run: golangci-lint run ./...
 
+      # Keep in sync with the Makefile target 'mod-check' (part of 'check').
+      # Runs even if linting failed, so both problems are reported.
+      - name: Check module tidiness
+        if: ${{ !cancelled() && matrix.check == 'lint' }}
+        run: go mod tidy -diff
+
+      # Keep in sync with the Makefile target 'test'.
       - name: Test with race detection and coverage
         if: matrix.check == 'tests' && steps.packages.outputs.present == 'true'
         run: go test -race -count=1 -covermode=atomic -coverprofile=coverage.out ./...
 
+      # Keep in sync with the Makefile target 'cover'.
       - name: Generate coverage badge and reports
         if: ${{ !cancelled() && matrix.check == 'tests' && (success() || hashFiles('coverage.out') != '') }}
         env:
@@ -105,10 +114,12 @@ jobs:
         with:
           path: coverage/
 
+      # Keep in sync with the Makefile target 'tools'.
       - name: Install govulncheck
         if: matrix.check == 'vulnerabilities'
-        run: go install "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}"
+        run: go install "golang.org/x/vuln/cmd/govulncheck@$(cat .govulncheck-version)"
 
+      # Keep in sync with the Makefile target 'vuln'.
       - name: Check known vulnerabilities
         if: matrix.check == 'vulnerabilities' && steps.packages.outputs.present == 'true'
         run: govulncheck ./...
