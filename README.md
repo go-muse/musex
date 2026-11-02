@@ -19,7 +19,7 @@
 
 The library focuses on musical concepts and their relationships. It is not a standalone application, digital audio workstation, or sound player.
 
-> **Early development:** The library is not ready for production use, and its public API is not yet stable. The `letter` and `alteration` packages are implemented; `letter` was first released in v0.1.0 and `alteration` in v0.2.0. Until v1.0.0, compatibility between releases is not guaranteed beyond what the package documentation states, and the API may change.
+> **Early development:** The library is not ready for production use, and its public API is not yet stable. The `letter`, `alteration` and `octave/naming` packages are implemented; `letter` was first released in v0.1.0, `alteration` in v0.2.0, and `octave/naming` in v0.3.0. Until v1.0.0, compatibility between releases is not guaranteed beyond what the package documentation states, and the API may change.
 
 <!--
 Update the relevant sections in the same PR that adds or changes public functionality.
@@ -59,6 +59,19 @@ Package [`alteration`](alteration/) provides alteration values: how many chromat
 - The zero value is the natural.
 - Immutable values that are safe for concurrent use.
 
+### Octave names
+
+Package [`octave/naming`](octave/naming/) provides catalogs of verbal octave names.
+
+- Built-in Russian, English and German catalogs: the Russian catalog names the octaves with ASPN numbers -1 to 9, the English and German catalogs the octaves 0 to 7.
+- The name of an octave by its ASPN number: octave 4 is "one-line" in English and "eingestrichene" in German.
+- An empty name, without an error, for an octave that has no name in a catalog. Any `int` is accepted as an ASPN number.
+- The ASPN number of an octave by its name, with an error for a name that is not in the catalog.
+- Custom catalogs from your own pairs of ASPN numbers and names, with an error when two octaves are given the same name.
+- Comparing catalogs by their names, however they were created.
+- Exact names: names are stored and looked up exactly as given, without trimming, normalization or case changes.
+- Immutable catalogs that are safe for concurrent use.
+
 ## Concept
 
 <!-- Define the library's core musical entities, their relationships, and any differences from conventional terminology. Keep definitions aligned with the implemented model. -->
@@ -86,6 +99,17 @@ Package [`alteration`](alteration/) provides alteration values: how many chromat
 - **Order by size** — comparing values as numbers. It is not the order of note pitches, which also depend on the letter, octave, and system.
 - **Direction** — raising (a value above 0), lowering (below 0), or natural (0).
 - **Guaranteed range** — the values for which the package promises exact results: magnitudes up to 2^24 chromatic units and denominators up to 2^16. It is not a limit on accidentals in music and not a rule of any musical system.
+
+### Octave names
+
+- **Octave** — the range of pitches from C up to the next B.
+- **ASPN number** — the number of an octave in the ASPN (scientific pitch notation) octave numbering: the octave that contains middle C is 4, neighboring octaves have consecutive numbers, and any integer is a valid number, including negative ones. The number identifies the octave itself; it is not the written octave of a note, such as a note for a transposing instrument.
+- **Octave name** — a word that names an octave, such as "great", "small" or "one-line" in English. A name is not a notation symbol such as c¹ or C₁, and it is not an inflected word form.
+- **Catalog of octave names** — a set of pairs of an ASPN number and a name. Each octave has at most one name in a catalog, and different octaves have different names; the same name may appear in different catalogs. A catalog is not an octave numbering, and it has no name of its own.
+- **Empty name** — the name of an octave that has no name in a catalog. It is not an error, and a pair with an empty name does not add a name to a catalog. A catalog may have no names at all.
+- **Built-in catalogs** — the Russian, English and German catalogs. Their sets of named octaves differ: the octaves -1, 8 and 9 have names only in the Russian catalog. The Russian names for the octaves -1 and 9 are an extension of musex: they follow the pattern of the other names but were not found in the literature.
+- **Exact match** — names are compared exactly, byte for byte: "Small" and " small" are not the name "small". Built-in names are in Unicode normalization form NFC, so ё and ß are single characters: "ss" in place of ß does not match.
+- **Equal catalogs** — catalogs that name the same octaves with the same names, however they were created.
 
 ## Use Cases
 
@@ -164,3 +188,26 @@ All examples below are in [`alteration/example_test.go`](alteration/example_test
 - **What happens when a result is too large?**
   The guaranteed range covers magnitudes up to `alteration.MaxMagnitude` (2^24) with denominators up to `alteration.MaxDenominator` (2^16). `alteration.MustFromInt(alteration.MaxMagnitude).Raise()` returns an error that matches `alteration.ErrOutOfRange`; the original value does not change.
   Example: [`Example_outOfRange`](alteration/example_test.go).
+
+### Octave names
+
+All examples below are in [`octave/naming/example_test.go`](octave/naming/example_test.go); their output is checked by `go test`.
+
+- **How do I get the name of an octave?**
+  `naming.Russian().Name(4)` is "первая", and `naming.Russian().MustASPN("малая")` is 3.
+  Example: [`Example`](octave/naming/example_test.go).
+- **Which octaves do the built-in catalogs name?**
+  `naming.Russian()` names the octaves -1 to 9; `naming.English()` and `naming.German()` name the octaves 0 to 7. Each call returns a new catalog that the caller owns.
+  Examples: [`ExampleRussian`](octave/naming/example_test.go), [`ExampleEnglish`](octave/naming/example_test.go), [`ExampleGerman`](octave/naming/example_test.go).
+- **What do I get for an octave without a name?**
+  `naming.English().Name(8)` is "", without an error. Any `int` is accepted, including negative numbers.
+  Example: [`ExampleCatalog_Name`](octave/naming/example_test.go).
+- **How do I find an octave by its name?**
+  `naming.Russian().ASPN("первая")` returns 4. A name that is not in the catalog, such as "Первая", returns an error that matches `naming.ErrUnknownName` with `errors.Is`; the number returned with the error is not an answer. `MustASPN` panics instead and suits names known to be correct.
+  Examples: [`ExampleCatalog_ASPN`](octave/naming/example_test.go), [`ExampleCatalog_MustASPN`](octave/naming/example_test.go).
+- **How do I create my own catalog?**
+  `naming.New(map[int]string{4: "middle", -3: "deep", 12: "high"})` creates a catalog in which `ASPN("deep")` is -3. An empty name means "no name". The same name for two octaves returns an error that matches `naming.ErrDuplicateName`; `MustNew` panics instead.
+  Examples: [`ExampleNew`](octave/naming/example_test.go), [`ExampleMustNew`](octave/naming/example_test.go).
+- **How do I check whether two catalogs are the same?**
+  `naming.Russian().Equal(naming.Russian())` is true, although the two pointers differ. A catalog with the pairs 1 "a" and 2 "" is equal to a catalog with the pair 1 "a". Use `Equal`, not `==`, which compares pointers.
+  Example: [`ExampleCatalog_Equal`](octave/naming/example_test.go).
