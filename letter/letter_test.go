@@ -86,7 +86,8 @@ func TestLetter_Cycle_Fixed(t *testing.T) {
 }
 
 // K-2: for every start letter the cycle has seven distinct letters and
-// element i is the shift of the start by i.
+// element i is the shift of the start by i. Ownership contract: the result
+// is a fresh slice of length and capacity Count, as for All.
 func TestLetter_Cycle_AllStarts(t *testing.T) {
 	t.Parallel()
 
@@ -97,6 +98,7 @@ func TestLetter_Cycle_AllStarts(t *testing.T) {
 
 			got := start.Cycle()
 			require.Len(t, got, oracleCount)
+			assert.Equal(t, letter.Count, cap(got), "a fresh slice of length and capacity Count")
 
 			seen := make(map[letter.Letter]bool, len(got))
 			for i, l := range got {
