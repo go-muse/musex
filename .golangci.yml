@@ -3,11 +3,345 @@ version: "2"
 linters:
   default: none
   enable:
+    - depguard
     - errcheck
     - govet
     - ineffassign
     - staticcheck
     - unused
+  settings:
+    depguard:
+      # Import barrier. Every rule uses strict mode: an import is allowed only
+      # if it matches an allow entry. All rules that match a file apply, so an
+      # import must be allowed by each of them. A trailing "/" matches the
+      # packages under a path; a trailing "$" matches exactly one package.
+      rules:
+        # Non-test files: the standard library and musex packages only.
+        module:
+          list-mode: strict
+          files:
+            - "$all"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/
+        # Test files, including examples and fuzz tests: the standard library,
+        # any musex package, and Testify.
+        tests:
+          list-mode: strict
+          files:
+            - "$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/
+            - github.com/stretchr/testify/
+
+        # Package rules: one rule per planned package, in the order of the
+        # package plan. Each rule allows the standard library and exactly the
+        # planned direct musex imports of its package, for non-test files.
+        # A rule covers only its own directory, not subdirectories. The rule
+        # name is the package path with "/" replaced by "-". When the planned
+        # imports of a package change, change its rule in the same change.
+        letter:
+          list-mode: strict
+          files:
+            - "**/letter/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+        alteration:
+          list-mode: strict
+          files:
+            - "**/alteration/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+          deny:
+            - pkg: math/big
+              desc: alteration values have a fixed size; arbitrary-precision numbers are not used
+        spelling:
+          list-mode: strict
+          files:
+            - "**/spelling/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/letter$
+            - github.com/go-muse/musex/alteration$
+        octave-number:
+          list-mode: strict
+          files:
+            - "**/octave/number/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+        octave-naming:
+          list-mode: strict
+          files:
+            - "**/octave/naming/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+        octave:
+          list-mode: strict
+          files:
+            - "**/octave/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/octave/number$
+            - github.com/go-muse/musex/octave/naming$
+        pitch:
+          list-mode: strict
+          files:
+            - "**/pitch/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/spelling$
+            - github.com/go-muse/musex/octave$
+        pitchclass:
+          list-mode: strict
+          files:
+            - "**/pitchclass/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+        system:
+          list-mode: strict
+          files:
+            - "**/system/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/letter$
+            - github.com/go-muse/musex/alteration$
+            - github.com/go-muse/musex/spelling$
+            - github.com/go-muse/musex/octave$
+            - github.com/go-muse/musex/pitch$
+            - github.com/go-muse/musex/pitchclass$
+        cents:
+          list-mode: strict
+          files:
+            - "**/cents/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+        tuning-temperament:
+          list-mode: strict
+          files:
+            - "**/tuning/temperament/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/cents$
+        tuning:
+          list-mode: strict
+          files:
+            - "**/tuning/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/pitch$
+            - github.com/go-muse/musex/system$
+            - github.com/go-muse/musex/tuning/temperament$
+        notation:
+          list-mode: strict
+          files:
+            - "**/notation/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/letter$
+            - github.com/go-muse/musex/alteration$
+            - github.com/go-muse/musex/spelling$
+            - github.com/go-muse/musex/octave/number$
+            - github.com/go-muse/musex/octave/naming$
+            - github.com/go-muse/musex/octave$
+            - github.com/go-muse/musex/pitch$
+            - github.com/go-muse/musex/system$
+        settings:
+          list-mode: strict
+          files:
+            - "**/settings/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/octave/number$
+            - github.com/go-muse/musex/octave/naming$
+            - github.com/go-muse/musex/system$
+            - github.com/go-muse/musex/tuning$
+            - github.com/go-muse/musex/notation$
+        instrument:
+          list-mode: strict
+          files:
+            - "**/instrument/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/pitch$
+            - github.com/go-muse/musex/system$
+            - github.com/go-muse/musex/settings$
+        note:
+          list-mode: strict
+          files:
+            - "**/note/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/spelling$
+            - github.com/go-muse/musex/octave$
+            - github.com/go-muse/musex/pitch$
+            - github.com/go-muse/musex/system$
+            - github.com/go-muse/musex/cents$
+            - github.com/go-muse/musex/tuning$
+            - github.com/go-muse/musex/notation$
+            - github.com/go-muse/musex/settings$
+        midi:
+          list-mode: strict
+          files:
+            - "**/midi/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/octave/number$
+            - github.com/go-muse/musex/octave$
+            - github.com/go-muse/musex/pitch$
+            - github.com/go-muse/musex/system$
+            - github.com/go-muse/musex/note$
+        interval:
+          list-mode: strict
+          files:
+            - "**/interval/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/letter$
+            - github.com/go-muse/musex/alteration$
+            - github.com/go-muse/musex/spelling$
+            - github.com/go-muse/musex/octave$
+            - github.com/go-muse/musex/pitch$
+            - github.com/go-muse/musex/system$
+            - github.com/go-muse/musex/note$
+        degree:
+          list-mode: strict
+          files:
+            - "**/degree/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/spelling$
+            - github.com/go-muse/musex/interval$
+        template:
+          list-mode: strict
+          files:
+            - "**/template/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/system$
+            - github.com/go-muse/musex/interval$
+        mode:
+          list-mode: strict
+          files:
+            - "**/mode/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/spelling$
+            - github.com/go-muse/musex/pitchclass$
+            - github.com/go-muse/musex/system$
+            - github.com/go-muse/musex/note$
+            - github.com/go-muse/musex/interval$
+            - github.com/go-muse/musex/degree$
+            - github.com/go-muse/musex/template$
+        scale:
+          list-mode: strict
+          files:
+            - "**/scale/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/system$
+            - github.com/go-muse/musex/note$
+            - github.com/go-muse/musex/mode$
+        search:
+          list-mode: strict
+          files:
+            - "**/search/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/alteration$
+            - github.com/go-muse/musex/spelling$
+            - github.com/go-muse/musex/pitchclass$
+            - github.com/go-muse/musex/system$
+            - github.com/go-muse/musex/note$
+            - github.com/go-muse/musex/template$
+            - github.com/go-muse/musex/mode$
+        modal:
+          list-mode: strict
+          files:
+            - "**/modal/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/interval$
+            - github.com/go-muse/musex/degree$
+            - github.com/go-muse/musex/mode$
+        tendency:
+          list-mode: strict
+          files:
+            - "**/tendency/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/interval$
+            - github.com/go-muse/musex/degree$
+            - github.com/go-muse/musex/mode$
+            - github.com/go-muse/musex/modal$
+        common-fraction:
+          list-mode: strict
+          files:
+            - "**/common/fraction/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+        tuplet:
+          list-mode: strict
+          files:
+            - "**/tuplet/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+        duration:
+          list-mode: strict
+          files:
+            - "**/duration/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/common/fraction$
+            - github.com/go-muse/musex/tuplet$
+        chord:
+          list-mode: strict
+          files:
+            - "**/chord/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/note$
+            - github.com/go-muse/musex/duration$
+        track:
+          list-mode: strict
+          files:
+            - "**/track/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/note$
+            - github.com/go-muse/musex/common/fraction$
+            - github.com/go-muse/musex/chord$
 
 # Format: golangci-lint fmt ./...
 # Check:  golangci-lint run ./...

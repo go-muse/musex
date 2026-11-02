@@ -33,6 +33,8 @@ govulncheck ./...
 Imports are grouped as standard library, `github.com/go-muse/musex` packages,
 then third-party packages, separated by blank lines and sorted alphabetically
 within each group. Both formatting and linting use `.golangci.yml`.
+The depguard rule of each package in `.golangci.yml` sets which musex packages
+it may import; when the package plan changes, update the rule in the same change.
 
 GitHub Actions runs lint, tests, and vulnerability checks independently on pull
 requests and pushes to `main`. The lint check also verifies that `go.mod` and
