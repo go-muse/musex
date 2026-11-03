@@ -93,13 +93,17 @@
 // leading zeros, optionally followed by a slash and either such digits or the
 // single digit 0, then the error also matches:
 //
-//   - [alteration.ErrZeroDenominator] when the denominator is "0", as in
-//     "C+1/0";
-//   - [alteration.ErrOutOfRange] when the numerator or the denominator does
-//     not fit in an int, or the exact value is outside the guaranteed range of
-//     package alteration, as in "C+16777217" or "C+1/65537".
+//   - [alteration.ErrZeroDenominator] when the denominator is exactly "0",
+//     however large the numerator of that shape is, as in "C+1/0" or
+//     "C+99999999999999999999/0";
+//   - [alteration.ErrOutOfRange] when the denominator is not "0" and the
+//     numerator or the denominator does not fit in an int, or the exact value
+//     is outside the guaranteed range of package alteration, as in
+//     "C+16777217" or "C+1/65537".
 //
-// Other reading errors match only ErrInvalidForm.
+// An input with the denominator "0" never matches [alteration.ErrOutOfRange].
+// Other reading errors match only ErrInvalidForm. This includes inputs such as
+// "C+0/0" and "C+01/0", whose numerator does not have the shape of a number.
 //
 // In JSON, a name is a JSON string with its machine form: a value, a struct
 // field, an array element, and a map key alike, for example
@@ -127,33 +131,56 @@
 // Spelling.IsNatural, Spelling.IsInteger, Spelling.SameLetter,
 // Spelling.SameAlteration, and Spelling.Equal report false for it,
 // Spelling.Direction returns DirectionUnset, the letter distances are -1,
-// and Spelling.Compare sorts it before every valid name. Operations that
-// create a name from it return the unset name, and operations with an error
-// result return an error that matches [letter.ErrInvalid]. It is written as
-// "unset", and reading "unset" or JSON null gives it back.
+// and Spelling.Compare sorts it before every valid name. Spelling.Natural and
+// Spelling.WithAlteration return the unset name without an error. Raising and
+// lowering it with Spelling.Raise, Spelling.Lower, Spelling.RaiseBy,
+// Spelling.LowerBy, Spelling.RaiseByAlteration, and
+// Spelling.LowerByAlteration, and Spelling.AlterationDifference with the unset
+// name as either operand, return an error that matches [letter.ErrInvalid],
+// and their Must variants panic with it. No other operation returns an error
+// for the unset name: it is written as "unset" with a nil error, and reading
+// "unset" or JSON null gives it back.
 //
 // # Errors
 //
 // Errors are checked with errors.Is; their text is not part of the API.
 //
-//   - New with an invalid letter, and operations on the unset name, return
-//     errors that match [letter.ErrInvalid].
+//   - New with an invalid letter returns an error that matches
+//     [letter.ErrInvalid]. So do Spelling.Raise, Spelling.Lower,
+//     Spelling.RaiseBy, Spelling.LowerBy, Spelling.RaiseByAlteration,
+//     Spelling.LowerByAlteration, and Spelling.AlterationDifference when a
+//     name they use is unset. Other operations on the unset name return no
+//     error, as described in the Unset names section; in particular, writing
+//     it gives "unset" with a nil error.
 //   - Operations whose exact alteration value would be outside the guaranteed
 //     range of package alteration return errors that match
 //     [alteration.ErrOutOfRange].
-//   - Reading a string that is not the machine form of a name returns errors
-//     that match ErrInvalidForm, as described in the Machine form section.
+//   - Parse, Spelling.UnmarshalText, and Spelling.UnmarshalJSON return errors
+//     that match ErrInvalidForm for input that is not the machine form of a
+//     name, as described in the Machine form section.
 //
 // Operations that return a name return the unset name together with an error,
 // and Spelling.AlterationDifference returns the natural. A large argument is
 // not an error by itself: only the exact value of the result is checked.
 //
-// Each operation with an error result has a Must variant, such as MustNew or
-// Spelling.MustRaise, which returns the same result but panics with the same
-// error in the same cases. Must variants are intended for literals and values
-// known to be valid and in range, for example
+// The functions and methods with an error result have Must variants, except
+// the methods of the encoding interfaces (Spelling.MarshalText,
+// Spelling.AppendText, Spelling.UnmarshalText, Spelling.MarshalJSON, and
+// Spelling.UnmarshalJSON), which encoders and decoders call. The Must variants
+// are MustNew, MustParse, Spelling.MustRaise, Spelling.MustLower,
+// Spelling.MustRaiseBy, Spelling.MustLowerBy, Spelling.MustRaiseByAlteration,
+// Spelling.MustLowerByAlteration, and Spelling.MustAlterationDifference. Each
+// returns the same result as its variant with an error result, but instead of
+// returning an error it panics with that error; to read the machine form
+// directly with a panic on error, use MustParse. Must variants are intended
+// for literals and values known to be valid and in range, for example
 // spelling.C().MustRaise().MustRaiseBy(2); use the variants with an error
-// result for values taken from data. No other function or method panics.
+// result for values taken from data.
+//
+// Calling a method through a nil *Spelling is a caller error, as with any Go
+// pointer, and may panic; in particular, Spelling.UnmarshalText and
+// Spelling.UnmarshalJSON need a non-nil receiver. Apart from such calls and
+// the Must variants, no function or method panics.
 //
 // # Values and concurrency
 //
