@@ -146,7 +146,9 @@
 // Errors are checked with errors.Is; their text is not part of the API.
 // A reading error returned by this package quotes a long input only by a short
 // excerpt and its length in bytes, so its text stays short however long the
-// input is.
+// input is. For a valid JSON string, the excerpt and byte length refer to its
+// decoded contents; for a malformed JSON string or a rejected non-string value,
+// they refer to the supplied JSON bytes.
 //
 //   - New with an invalid letter returns an error that matches
 //     [letter.ErrInvalid]. So do Spelling.Raise, Spelling.Lower,
