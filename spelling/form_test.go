@@ -189,6 +189,8 @@ func invalidForms() []struct {
 		{"C-4/2", formOnly},
 		{"C+1/0", formZeroDenominator},
 		{"C-7/0", formZeroDenominator},
+		// A zero denominator wins over a numerator that does not fit in int.
+		{"C+99999999999999999999/0", formZeroDenominator},
 		{"C+16777217", formOutOfRange},
 		{"C-16777217", formOutOfRange},
 		{"C+1/65537", formOutOfRange},

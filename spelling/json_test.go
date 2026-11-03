@@ -356,6 +356,8 @@ func TestJSONInvalid(t *testing.T) {
 			{"escaped notation", []byte(`"C\u0023"`)},
 			{"unquoted form", []byte(`C+1`)},
 			{"unterminated string", []byte(`"C+1`)},
+			// JSON has no \x escape; the method itself must reject it.
+			{"invalid escape", []byte(`"C\x2B1"`)},
 			{"two values", []byte(`"C+1" "D"`)},
 		}
 
@@ -384,13 +386,14 @@ func TestJSONEscapedString(t *testing.T) {
 		{"escaped letter and plus", `"\u0043\u002B1"`, spelling.CSharp()},
 		{"escaped slash", `"B-7\u002F2"`, spelling.MustNew(letter.B, frac(-7, 2))},
 		{"escaped unset", `"\u0075nset"`, spelling.Spelling{}},
+		{"escaped solidus", `"B-7\/2"`, spelling.MustNew(letter.B, frac(-7, 2))},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			require.Contains(t, tc.data, `\u`, "the input must contain a JSON escape")
+			require.Contains(t, tc.data, `\`, "the input must contain a JSON escape")
 
 			for _, codec := range jsonCodecs() {
 				value := spelling.DFlat()
@@ -416,4 +419,62 @@ func TestJSONEscapedString(t *testing.T) {
 		require.NoError(t, receiver.UnmarshalJSON([]byte(`"C\u002B1"`)))
 		assertName(t, letter.C, alteration.Sharp(), receiver)
 	})
+}
+
+// The architecture, type Direction: the numbers of the constants are stable,
+// and JSON encoders write them as numbers. The test checks the observed JSON,
+// so a text form of Direction in JSON would make it fail.
+func TestDirectionJSON(t *testing.T) {
+	t.Parallel()
+
+	type directionField struct {
+		D spelling.Direction `json:"d"`
+	}
+
+	cases := []struct {
+		name string
+		d    spelling.Direction
+		json string
+	}{
+		{"DirectionUnset", spelling.DirectionUnset, "0"},
+		{"DirectionLowered", spelling.DirectionLowered, "1"},
+		{"DirectionNatural", spelling.DirectionNatural, "2"},
+		{"DirectionRaised", spelling.DirectionRaised, "3"},
+	}
+
+	for _, codec := range jsonCodecs() {
+		t.Run(codec.name, func(t *testing.T) {
+			t.Parallel()
+
+			for _, tc := range cases {
+				t.Run(tc.name, func(t *testing.T) {
+					t.Parallel()
+
+					data, err := codec.marshal(tc.d)
+					require.NoError(t, err, tc.json)
+					assert.Equal(t, tc.json, string(data), "value %v", tc.d)
+
+					var value spelling.Direction
+					if tc.d == spelling.DirectionUnset {
+						value = spelling.DirectionRaised
+					}
+
+					require.NoError(t, codec.unmarshal([]byte(tc.json), &value), tc.json)
+					assert.Equal(t, tc.d, value, "read %s", tc.json)
+
+					data, err = codec.marshal(directionField{D: tc.d})
+					require.NoError(t, err, tc.json)
+					assert.Equal(t, `{"d":`+tc.json+`}`, string(data), "field %v", tc.d)
+
+					field := directionField{D: spelling.DirectionRaised}
+					if tc.d == spelling.DirectionRaised {
+						field.D = spelling.DirectionUnset
+					}
+
+					require.NoError(t, codec.unmarshal([]byte(`{"d":`+tc.json+`}`), &field), tc.json)
+					assert.Equal(t, tc.d, field.D, "read field %s", tc.json)
+				})
+			}
+		})
+	}
 }
