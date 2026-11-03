@@ -205,7 +205,7 @@
 //     them;
 //   - Spelling.AppendText may write into the spare capacity of the caller's
 //     buffer, although it never changes the bytes within the length of the
-//     buffer. Concurrent calls with the same buffer, or with buffers that
-//     share a backing array, must be synchronized by the caller;
-//     alternatively, each goroutine uses its own buffer.
+//     buffer. When one call may write bytes that another goroutine reads or
+//     writes, the caller must synchronize them or give each goroutine its own
+//     buffer.
 package spelling
