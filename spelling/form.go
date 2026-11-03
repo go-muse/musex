@@ -15,12 +15,12 @@ import (
 // ErrInvalidForm reports that a text or JSON value is not the machine form of
 // a name.
 //
-// Parse, MustParse, Spelling.UnmarshalText, and Spelling.UnmarshalJSON return
-// errors that match ErrInvalidForm with errors.Is. Some of these errors also
-// match [alteration.ErrZeroDenominator] or [alteration.ErrOutOfRange], as
-// described in the Machine form section of the package documentation; they
-// never match [letter.ErrInvalid]. The text of the error is not part of the
-// API.
+// Parse, Spelling.UnmarshalText, and Spelling.UnmarshalJSON return errors that
+// match ErrInvalidForm with errors.Is, and MustParse panics with such an error
+// instead of returning it. Some of these errors also match
+// [alteration.ErrZeroDenominator] or [alteration.ErrOutOfRange], as described
+// in the Machine form section of the package documentation; they never match
+// [letter.ErrInvalid]. The text of the error is not part of the API.
 var ErrInvalidForm = errors.New("spelling: invalid machine form")
 
 const (
@@ -101,6 +101,8 @@ func MustParse(text string) Spelling {
 // or nil text is an error.
 //
 // On error, s is not changed. UnmarshalText neither modifies nor retains text.
+// The receiver s must not be nil: calling UnmarshalText through a nil
+// *Spelling is a caller error and may panic.
 func (s *Spelling) UnmarshalText(text []byte) error {
 	v, err := parse(string(text))
 	if err != nil {
@@ -122,6 +124,8 @@ func (s *Spelling) UnmarshalText(text []byte) error {
 // Any other JSON value, such as a number, a boolean, an array, or an object,
 // and empty or malformed JSON, returns an error that matches ErrInvalidForm.
 // On error, s is not changed. UnmarshalJSON neither modifies nor retains data.
+// The receiver s must not be nil: calling UnmarshalJSON through a nil
+// *Spelling is a caller error and may panic.
 func (s *Spelling) UnmarshalJSON(data []byte) error {
 	// JSON whitespace around the value is allowed.
 	v := bytes.Trim(data, " \t\r\n")
