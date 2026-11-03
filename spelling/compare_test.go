@@ -137,6 +137,57 @@ func TestCompare(t *testing.T) {
 		}
 	})
 
+	// Two different values near the range limit whose difference,
+	// 1/65535 - 1/65536 (about 2.3e-10), is less than half the float64 spacing
+	// around 2^24: an inexact comparison through float64 would find them equal.
+	t.Run("close fractions near the range limit", func(t *testing.T) {
+		t.Parallel()
+
+		// 2^24 - 1/65535 and 2^24 - 1/65536, both in lowest terms and in range.
+		lowValue := frac(1099494850559, 65535)
+		highValue := frac(1099511627775, 65536)
+
+		pairs := []struct {
+			name   string
+			before alteration.Alteration
+			after  alteration.Alteration
+		}{
+			{"positive", lowValue, highValue},
+			{"negative", alteration.Natural().MustSub(highValue), alteration.Natural().MustSub(lowValue)},
+		}
+
+		for _, tc := range pairs {
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				require.Equal(t, -1, tc.before.Compare(tc.after), "the alteration oracle")
+
+				x := spelling.MustNew(letter.C, tc.before)
+				y := spelling.MustNew(letter.C, tc.after)
+
+				assert.Equal(t, -1, x.Compare(y))
+				assert.Equal(t, 1, y.Compare(x))
+				assert.False(t, x.Equal(y))
+				assert.False(t, y.Equal(x))
+				assert.True(t, x != y, "the names must differ by ==")
+				assert.Equal(t, 0, x.Compare(x))
+			})
+		}
+
+		t.Run("machine form", func(t *testing.T) {
+			t.Parallel()
+
+			x := spelling.MustParse("C+1099494850559/65535")
+			y := spelling.MustParse("C+1099511627775/65536")
+
+			assert.Equal(t, -1, x.Compare(y))
+			assert.Equal(t, 1, y.Compare(x))
+			assert.False(t, x.Equal(y))
+			assert.False(t, y.Equal(x))
+			assert.True(t, x != y, "the names must differ by ==")
+		})
+	})
+
 	t.Run("properties on N", func(t *testing.T) {
 		t.Parallel()
 
