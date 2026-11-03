@@ -20,18 +20,25 @@ func pairsInOrder(numbers []int, names []string) map[int]string {
 	return pairs
 }
 
+// swapNames returns pairs with the names of octaves a and b exchanged.
+func swapNames(pairs map[int]string, a, b int) map[int]string {
+	pairs[a], pairs[b] = pairs[b], pairs[a]
+
+	return pairs
+}
+
 // equalityClass is a catalog maker with the class of catalogs it is equal to.
 type equalityClass struct {
 	namedCatalog
 	class int
 }
 
-// K-13: two catalogs are equal exactly when they name the same
-// octaves with the same names. Every pair of the set below, including a
-// catalog with itself, is compared in both positions: catalogs of one class
-// are equal, of different classes are not. This also checks reflexivity,
-// symmetry and transitivity. Pointer identity does not matter: every maker
-// returns a new catalog.
+// K-13: two catalogs are equal exactly when they name the same octaves with
+// the same names; the same numbers and names paired differently are not equal.
+// Every pair of the set below, including a catalog with itself, is compared in
+// both positions: catalogs of one class are equal, of different classes are
+// not. This also checks reflexivity, symmetry and transitivity. Pointer
+// identity does not matter: every maker returns a new catalog.
 func TestEqual(t *testing.T) {
 	t.Parallel()
 
@@ -67,6 +74,11 @@ func TestEqual(t *testing.T) {
 		{namedCatalog{"MustNew(German oracle)", must(germanOracle())}, 9},
 		// A built-in name in a custom catalog is not the built-in catalog.
 		{namedCatalog{"{4 первая}", must(map[int]string{4: "первая"})}, 10},
+		// The same numbers and the same names, paired differently.
+		{namedCatalog{"{1 b, 2 a}", must(map[int]string{1: "b", 2: "a"})}, 11},
+		{namedCatalog{"{1 a, 2 b, 3 c}", must(map[int]string{1: "a", 2: "b", 3: "c"})}, 12},
+		{namedCatalog{"{1 b, 2 c, 3 a}", must(map[int]string{1: "b", 2: "c", 3: "a"})}, 13},
+		{namedCatalog{"Russian oracle with ASPN 2 and 3 swapped", must(swapNames(russianOracle(), 2, 3))}, 14},
 	}
 
 	for _, a := range set {
