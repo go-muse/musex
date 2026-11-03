@@ -5,7 +5,13 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strconv"
+	"unicode/utf8"
 )
+
+// excerptLimit is the maximum number of bytes of a name quoted in an error
+// message.
+const excerptLimit = 32
 
 // ErrUnknownName reports that a catalog has no octave with the given name.
 //
@@ -120,6 +126,7 @@ func New(names map[int]string) (*Catalog, error) {
 // duplicateError returns an error that wraps ErrDuplicateName for name, which
 // is given to at least two numbers in names. The message names the two
 // smallest of these numbers, so it does not depend on map iteration order.
+// The name is chosen and matched in full; only the message quotes an excerpt.
 func duplicateError(names map[int]string, name string) error {
 	var numbers []int
 
@@ -131,7 +138,32 @@ func duplicateError(names map[int]string, name string) error {
 
 	slices.Sort(numbers)
 
-	return fmt.Errorf("%w: %q for octaves %d and %d", ErrDuplicateName, name, numbers[0], numbers[1])
+	return fmt.Errorf("%w: %s for octaves %d and %d", ErrDuplicateName, excerpt(name), numbers[0], numbers[1])
+}
+
+// excerpt returns name quoted for an error message, with a length bounded
+// whatever the length of name. A name of at most excerptLimit bytes is
+// quoted in full. A longer name is cut at the end of the last rune that ends
+// within the first excerptLimit bytes, where an invalid byte counts as a rune
+// of length 1, and the quoted prefix is followed by an ellipsis and the length
+// of the full name in bytes.
+func excerpt(name string) string {
+	if len(name) <= excerptLimit {
+		return strconv.Quote(name)
+	}
+
+	end := 0
+
+	for end < excerptLimit {
+		_, size := utf8.DecodeRuneInString(name[end:])
+		if end+size > excerptLimit {
+			break
+		}
+
+		end += size
+	}
+
+	return strconv.Quote(name[:end]) + "... (" + strconv.Itoa(len(name)) + " bytes)"
 }
 
 // MustNew is like [New] but panics if New returns an error. The panic value
@@ -179,7 +211,7 @@ func (c *Catalog) ASPN(name string) (int, error) {
 		}
 	}
 
-	return 0, fmt.Errorf("%w: %q", ErrUnknownName, name)
+	return 0, fmt.Errorf("%w: %s", ErrUnknownName, excerpt(name))
 }
 
 // MustASPN is like [Catalog.ASPN] but panics if ASPN returns an error. The
