@@ -234,6 +234,8 @@ func TestNewDuplicateName(t *testing.T) {
 		{name: "spaces only", pairs: func() map[int]string { return map[int]string{1: " ", 2: " "} }},
 		{name: "extreme numbers", pairs: func() map[int]string { return map[int]string{math.MinInt: "x", math.MaxInt: "x"} }},
 		{name: "with empty names", pairs: func() map[int]string { return map[int]string{1: "", 2: "a", 3: "", 4: "a"} }},
+		{name: "zero and a greater number", pairs: func() map[int]string { return map[int]string{0: "x", 1: "x"} }},
+		{name: "a smaller number and zero", pairs: func() map[int]string { return map[int]string{-1: "x", 0: "x"} }},
 	}
 
 	for _, tc := range cases {
@@ -251,6 +253,51 @@ func TestNewDuplicateName(t *testing.T) {
 			assertPanicsWithErrorIs(t, naming.ErrDuplicateName, naming.ErrUnknownName,
 				func() { naming.MustNew(must) })
 			assert.Equal(t, tc.pairs(), must, "the input map is not changed")
+		})
+	}
+}
+
+// K-8: a repeated name is a creation error also when one of its octaves is
+// ASPN 0. The order in which New examines the pairs is not observable, so a
+// fault that depends on the order (for example, treating number 0 as "no
+// octave yet") is exposed in two ways: the partner of 0 lies on either side of
+// it, which covers examination in ascending and in descending order, and every
+// input is checked repeatedly with a new map, which covers randomized map
+// iteration. A correct implementation passes every attempt. This black-box test
+// cannot cover every conceivable fixed order.
+func TestNewDuplicateNameAtZero(t *testing.T) {
+	t.Parallel()
+
+	const attempts = 100
+
+	cases := []struct {
+		name  string
+		pairs func() map[int]string
+	}{
+		{name: "zero and one", pairs: func() map[int]string { return map[int]string{0: "x", 1: "x"} }},
+		{name: "minus one and zero", pairs: func() map[int]string { return map[int]string{-1: "x", 0: "x"} }},
+		{name: "zero and MinInt", pairs: func() map[int]string { return map[int]string{0: "x", math.MinInt: "x"} }},
+		{name: "zero and MaxInt", pairs: func() map[int]string { return map[int]string{0: "x", math.MaxInt: "x"} }},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			for attempt := range attempts {
+				c, err := naming.New(tc.pairs())
+				if !assert.ErrorIs(t, err, naming.ErrDuplicateName, "New, attempt %d", attempt) ||
+					!assert.Nil(t, c, "New, attempt %d", attempt) {
+					break
+				}
+			}
+
+			for attempt := range attempts {
+				if !assertPanicsWithErrorIs(t, naming.ErrDuplicateName, naming.ErrUnknownName,
+					func() { naming.MustNew(tc.pairs()) }, "MustNew, attempt %d", attempt) {
+					break
+				}
+			}
 		})
 	}
 }
@@ -374,9 +421,33 @@ func TestNewReturnsNewCatalog(t *testing.T) {
 
 // K-12: New and MustNew copy their input. Changing, deleting, adding or
 // clearing entries of the map after the call does not change the catalog; a
-// successful call of either does not change the map.
+// successful call of either does not change the map. Every change is made on
+// an input with non-empty names only and on an input with an empty name, with
+// a separate map for each constructor, and both directions of every pair are
+// checked afterwards.
 func TestNewCopiesInput(t *testing.T) {
 	t.Parallel()
+
+	inputs := []struct {
+		name  string
+		pairs func() map[int]string
+	}{
+		{name: "non-empty names only", pairs: customPairs},
+		{name: "with an empty name", pairs: func() map[int]string {
+			pairs := customPairs()
+			pairs[0] = ""
+
+			return pairs
+		}},
+	}
+
+	constructors := []struct {
+		name string
+		make func(map[int]string) (*naming.Catalog, error)
+	}{
+		{name: "New", make: naming.New},
+		{name: "MustNew", make: func(m map[int]string) (*naming.Catalog, error) { return naming.MustNew(m), nil }},
+	}
 
 	changes := []struct {
 		name   string
@@ -390,50 +461,56 @@ func TestNewCopiesInput(t *testing.T) {
 		{name: "clear", change: func(m map[int]string) { clear(m) }},
 	}
 
-	for _, tc := range changes {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+	for _, input := range inputs {
+		for _, ctor := range constructors {
+			for _, tc := range changes {
+				t.Run(input.name+"/"+ctor.name+"/"+tc.name, func(t *testing.T) {
+					t.Parallel()
 
-			in := customPairs()
-			in[0] = ""
-			before := maps.Clone(in)
+					in := input.pairs()
+					before := maps.Clone(in)
 
-			c, err := naming.New(in)
-			require.NoError(t, err)
-			require.NotNil(t, c)
-			assert.Equal(t, before, in, "New does not change its input")
+					var (
+						c   *naming.Catalog
+						err error
+					)
+					require.NotPanics(t, func() { c, err = ctor.make(in) })
+					require.NoError(t, err)
+					require.NotNil(t, c)
+					assert.Equal(t, before, in, "a successful call does not change its input")
 
-			must := naming.MustNew(in)
-			require.NotNil(t, must)
-			assert.Equal(t, before, in, "MustNew does not change its input")
+					tc.change(in)
 
-			tc.change(in)
+					names := []struct {
+						aspn int
+						want string
+					}{
+						{aspn: 4, want: "middle"},
+						{aspn: -3, want: "deep"},
+						{aspn: 12, want: "high"},
+					}
+					for _, pair := range names {
+						assert.Equal(t, pair.want, c.Name(pair.aspn), "ASPN %d", pair.aspn)
 
-			for _, got := range []*naming.Catalog{c, must} {
-				assert.Equal(t, "middle", got.Name(4))
-				assert.Equal(t, "deep", got.Name(-3))
-				assert.Equal(t, "high", got.Name(12))
-				assert.Empty(t, got.Name(0))
-				assert.Empty(t, got.Name(1))
-				assert.Empty(t, got.Name(7))
+						aspn, err := c.ASPN(pair.want)
+						if assert.NoError(t, err, "name %q", pair.want) {
+							assert.Equal(t, pair.aspn, aspn, "name %q", pair.want)
+						}
+					}
 
-				aspn, err := got.ASPN("deep")
-				if assert.NoError(t, err) {
-					assert.Equal(t, -3, aspn)
-				}
-				aspn, err = got.ASPN("high")
-				if assert.NoError(t, err) {
-					assert.Equal(t, 12, aspn)
-				}
+					for _, n := range []int{0, 1, 7} {
+						assert.Empty(t, c.Name(n), "ASPN %d", n)
+					}
 
-				for _, s := range []string{"changed", "added", "zero"} {
-					_, err := got.ASPN(s)
-					assert.ErrorIs(t, err, naming.ErrUnknownName, "name %q", s)
-				}
+					for _, s := range []string{"changed", "added", "zero"} {
+						_, err := c.ASPN(s)
+						assert.ErrorIs(t, err, naming.ErrUnknownName, "name %q", s)
+					}
 
-				assert.True(t, got.Equal(naming.MustNew(customPairs())))
+					assert.True(t, c.Equal(naming.MustNew(customPairs())))
+				})
 			}
-		})
+		}
 	}
 }
 
@@ -510,6 +587,8 @@ func FuzzNewTwoPairs(f *testing.F) {
 	f.Add(math.MinInt, "lo", math.MaxInt, "hi")
 	f.Add(0, " x ", -1, "x")
 	f.Add(3, "\xff", 4, "\xfe")
+	f.Add(0, "x", 1, "x")
+	f.Add(-1, "x", 0, "x")
 
 	f.Fuzz(func(t *testing.T, k1 int, n1 string, k2 int, n2 string) {
 		in := map[int]string{}
