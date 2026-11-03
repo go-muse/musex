@@ -20,11 +20,12 @@
 //
 // Octaves are identified by their numbers in the ASPN (American Standard
 // Pitch Notation, also known as scientific pitch notation) octave
-// numbering. An octave is the range of pitches from C up to the next B. The
-// octave that contains middle C (the one-line octave) has number 4,
-// neighboring octaves have consecutive numbers (the octave above it is 5,
-// the octave below it is 3), and any int is a valid number, including
-// negative ones. The package does not check or limit the numbers.
+// numbering. In the traditional system, an octave is the range of pitches
+// from C up to the next B. The octave that contains middle C (the one-line
+// octave) has number 4, neighboring octaves have consecutive numbers (the
+// octave above it is 5, the octave below it is 3), and any int is a valid
+// number, including negative ones. The package does not check or limit the
+// numbers.
 //
 // The ASPN number identifies the octave itself. It is not a written octave
 // number of a note, such as the octave in which a part for a transposing
