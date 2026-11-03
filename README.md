@@ -19,7 +19,7 @@
 
 The library focuses on musical concepts and their relationships. It is not a standalone application, digital audio workstation, or sound player.
 
-> **Early development:** The library is not ready for production use, and its public API is not yet stable. The `letter`, `alteration`, `spelling`, `octave/number` and `octave/naming` packages are implemented; `letter` was first released in v0.1.0, `alteration` in v0.2.0, `octave/naming` in v0.3.0, `octave/number` in v0.4.0, and `spelling` in v0.5.0. Until v1.0.0, compatibility between releases is not guaranteed beyond what the package documentation states, and the API may change.
+> **Early development:** The library is not ready for production use, and its public API is not yet stable. The `letter`, `alteration`, `spelling`, `octave/number`, `octave/naming` and `octave` packages are implemented; `letter` was first released in v0.1.0, `alteration` in v0.2.0, `octave/naming` in v0.3.0, `octave/number` in v0.4.0, `spelling` in v0.5.0, and `octave` in v0.6.0. Until v1.0.0, compatibility between releases is not guaranteed beyond what the package documentation states, and the API may change.
 
 <!--
 Update the relevant sections in the same PR that adds or changes public functionality.
@@ -103,6 +103,23 @@ Package [`octave/naming`](octave/naming/) provides catalogs of verbal octave nam
 - Exact names: names are stored and looked up exactly as given, without trimming, normalization or case changes.
 - Immutable catalogs that are safe for concurrent use.
 
+### Octaves
+
+Package [`octave`](octave/) provides octaves: elements of the axis of octaves, shown by their numbers and names.
+
+- An octave by its number in any numbering, built-in or your own, or by its name in any catalog, built-in or your own: number 3 in the Franco-Belgian numbering, number 4 in ASPN, and "первая" in the Russian catalog are the same octave.
+- The number of an octave in any numbering and its name in any catalog, with an empty name, without an error, for an octave that has no name.
+- Comparing octaves, however they were obtained; two values of the same octave are also the same map key.
+- Ordering and sorting octaves from lower to higher, and checking whether an octave is above or below another or lies between two octaves.
+- Shifting an octave up or down by any number of octaves, and the next octave above or below.
+- How many octaves one octave is higher than another, and the distance between them: the octaves numbered 3 and -1 in the Franco-Belgian numbering are 3 octaves apart, although their numbers differ by 4.
+- The octaves from one to another, upward or downward, one at a time, with the option to stop at any point.
+- Your own numbering from a single octave, such as "the octave of middle C is my number 1", optionally with skipped numbers, and your own catalog of names from pairs of an octave and a name.
+- Errors instead of guessed results: a skipped number, an undefined numbering, an unknown name, and an invalid definition are reported with the same errors as in `octave/number` and `octave/naming`, and a nearby octave is never used instead.
+- Any octave, with no musical or MIDI limits: every octave whose ASPN number fits in an `int`. A result that does not fit in an `int` is an error, never wrapped around.
+- Detecting invalid values: the zero value is not an octave and is never treated as ASPN 0 or 4.
+- Immutable values that are safe for concurrent use.
+
 ## Concept
 
 <!-- Define the library's core musical entities, their relationships, and any differences from conventional terminology. Keep definitions aligned with the implemented model. -->
@@ -162,7 +179,7 @@ Octaves are identified by their **ASPN numbers**, as defined in the Octave names
 
 ### Octave names
 
-- **Octave** — the range of pitches from C up to the next B.
+- **Octave** — in the traditional system, the range of pitches from C up to the next B; see [Octaves](#octaves-1) for the general definition.
 - **ASPN number** — the number of an octave in the ASPN (scientific pitch notation) octave numbering: the octave that contains middle C is 4, neighboring octaves have consecutive numbers, and any integer is a valid number, including negative ones. The number identifies the octave itself; it is not the written octave of a note, such as a note for a transposing instrument.
 - **Octave name** — a word that names an octave, such as "great", "small" or "one-line" in English. A name is not a notation symbol such as c¹ or C₁, and it is not an inflected word form.
 - **Catalog of octave names** — a set of pairs of an ASPN number and a name. Each octave has at most one name in a catalog, and different octaves have different names; the same name may appear in different catalogs. A catalog is not an octave numbering, and it has no name of its own.
@@ -171,9 +188,25 @@ Octaves are identified by their **ASPN numbers**, as defined in the Octave names
 - **Exact match** — names are compared exactly, byte for byte: "Small" and " small" are not the name "small". Built-in names are in Unicode normalization form NFC, so ё and ß are single characters: "ss" in place of ß does not match.
 - **Equal catalogs** — catalogs that name the same octaves with the same names, however they were created.
 
+### Octaves
+
+- **Octave** — an element of the ordered sequence of octaves, which has no end in either direction; neighboring octaves differ by exactly one octave. The identity of an octave is its place in this sequence, and it is separate from its number and its name. The octave of a note is the octave section of its position in a musical system, and the system decides where that section begins and ends; in the traditional system, an octave is the range of pitches from C up to the next B.
+- **Octave axis** — the sequence of all octaves, ordered from lower to higher.
+- **Visible number and name** — the number of an octave in a numbering and its name in a catalog. They are computed from the numbering or the catalog you choose and are not stored in the octave. How the library represents an octave internally is not visible.
+- **ASPN number of an octave** — one of its visible numbers. It identifies the octave uniquely and is the common reference of octave numberings and octave names; this is why the sections above say that octaves are identified by their ASPN numbers and that the number identifies the octave itself. There is no contradiction: the identity of an octave is its place on the axis, and the ASPN number points to exactly that place.
+- **Order** — lower and higher octaves. It agrees with the order of numbers in every numbering.
+- **Shift** — the octave a given number of octaves higher, or lower for a negative number. The next octave above or below is a shift by one.
+- **Difference** — how many octaves one octave is higher than another; negative if it is lower. It counts octaves, not numbers: in the Franco-Belgian numbering, the octaves numbered 1 and −1 are neighbors, so their difference is 1.
+- **Distance** — the difference without direction.
+- **Range of octaves** — the octaves from one octave to another, both included, upward or downward.
+- **Representable octaves** — the octaves the library can work with: all octaves whose ASPN number fits in an `int`. This is a technical limit, not a musical one; a result beyond it is an error. A number at the very edge of `int` that converts between numberings without an error may still not give a representable octave.
+- **Invalid value** — a value that poses as an octave but is none. It is not the octave with ASPN number 0 or 4, and it does not mean that a note has no octave. Operations recognize it and never treat it as any octave.
+
 ## Use Cases
 
 <!-- Describe practical musical or educational problems and the outcomes the library enables, in nontechnical language. Focus on why someone would use it, rather than API calls. -->
+
+- **Reading octave numbers and names from different traditions.** A French score calls an octave the third, a Russian textbook calls the same octave "первая" (the first), an English book calls it the one-line octave, and software that follows ASPN shows it as 4. An application built on `musex` can take an octave given in any of these conventions and show it in any other, so a student, a teacher, or an editor sees that all of them mean the same octave.
 
 ## Examples
 
@@ -353,3 +386,50 @@ All examples below are in [`octave/naming/example_test.go`](octave/naming/exampl
 - **How do I check whether two catalogs are the same?**
   `naming.Russian().Equal(naming.Russian())` is true, although the two pointers differ. A catalog with the pairs 1 "a" and 2 "" is equal to a catalog with the pair 1 "a". Use `Equal`, not `==`, which compares pointers.
   Example: [`ExampleCatalog_Equal`](octave/naming/example_test.go).
+
+### Octaves
+
+All examples below are in [`octave/example_test.go`](octave/example_test.go); their output is checked by `go test`.
+
+- **How do I show an octave from one convention in another?**
+  `octave.MustFromNumber(3, number.FrancoBelgian())` is the octave of middle C: its name is "первая" in `naming.Russian()` and "one-line" in `naming.English()`, and its ASPN number is 4.
+  Example: [`Example`](octave/example_test.go).
+- **How do I get an octave by its ASPN number?**
+  `octave.FromASPN(4)` returns the octave of middle C and never fails: every `int` is an ASPN number. It prints as `ASPN 4`.
+  Example: [`ExampleFromASPN`](octave/example_test.go).
+- **How do I get an octave by its number in a numbering?**
+  `octave.FromNumber(3, number.FrancoBelgian())`, `octave.FromNumber(5, number.Mexican())`, and `octave.FromNumber(3, number.MiddleC3())` return the same octave, ASPN 4. A skipped number, such as 0 in the Franco-Belgian numbering, returns an error that matches `number.ErrSkipped` with `errors.Is`, and an undefined numbering returns an error that matches `number.ErrUndefined`; no other octave is used instead. `octave.MustFromNumber` panics instead and suits values known to be valid.
+  Examples: [`ExampleFromNumber`](octave/example_test.go), [`ExampleFromNumber_skipped`](octave/example_test.go), [`ExampleFromNumber_undefined`](octave/example_test.go), [`ExampleMustFromNumber`](octave/example_test.go).
+- **How do I get an octave by its name?**
+  `octave.FromName("малая", naming.Russian())` returns ASPN 3, which is number 2 in the Franco-Belgian numbering. A name that is not in the catalog, such as "Первая", returns an error that matches `naming.ErrUnknownName`.
+  Examples: [`ExampleFromName`](octave/example_test.go), [`ExampleFromName_unknown`](octave/example_test.go).
+- **How do I find the number or the name of an octave?**
+  `o.Number(n)` returns the number of `o` in any numbering: ASPN 4 is 4, 3, 5, 3, and 5 in the five built-in numberings. `o.ASPN()` returns the ASPN number. `o.Name(c)` returns the name in any catalog, or "" without an error: ASPN 8 has no English name.
+  Examples: [`ExampleOctave_Number`](octave/example_test.go), [`ExampleOctave_ASPN`](octave/example_test.go), [`ExampleOctave_Name`](octave/example_test.go).
+- **How do I check whether two octaves are the same?**
+  `octave.FromASPN(4).Equal(octave.MustFromNumber(3, number.FrancoBelgian()))` is true. For octaves, `==` gives the same answer, so octaves can be map keys.
+  Example: [`ExampleOctave_Equal`](octave/example_test.go).
+- **How do I sort octaves or compare their heights?**
+  `a.Compare(b)` returns -1, 0, or +1 and works with `slices.SortFunc(xs, octave.Octave.Compare)`. `a.Above(b)` and `a.Below(b)` compare two octaves, and `o.Between(a, b)` reports whether `o` lies between `a` and `b`, both included, in either order.
+  Examples: [`ExampleOctave_Compare`](octave/example_test.go), [`ExampleOctave_Above`](octave/example_test.go), [`ExampleOctave_Between`](octave/example_test.go).
+- **How do I move an octave up or down?**
+  `o.Shift(k)` moves `o` up by `k` octaves, or down for a negative `k`, and `o.ShiftDown(k)` moves it down; `ShiftDown(k)` reverses `Shift(k)` for any `int`. `o.Up()` and `o.Down()` return the neighboring octaves: in the Franco-Belgian numbering, the octave above number -1 is number 1. Each operation returns a new octave.
+  Examples: [`ExampleOctave_Shift`](octave/example_test.go), [`ExampleOctave_ShiftDown`](octave/example_test.go), [`ExampleOctave_Up`](octave/example_test.go).
+- **How many octaves apart are two octaves?**
+  `octave.FromASPN(5).MustSub(octave.FromASPN(4))` is 1: how many octaves the first is higher than the second. In the Franco-Belgian numbering, the octaves numbered 3 and -1 are 3 octaves apart. `a.Distance(b)` is the same without direction.
+  Examples: [`ExampleOctave_Sub`](octave/example_test.go), [`ExampleOctave_Distance`](octave/example_test.go).
+- **How do I go through the octaves from one to another?**
+  `for o := range octave.MustRange(octave.FromASPN(2), octave.FromASPN(5))` gives the octaves ASPN 2 to 5; with the ends swapped, it goes downward. The octaves are produced one at a time, and the loop may stop at any point. `octave.Range` returns an error for an invalid end.
+  Example: [`ExampleRange`](octave/example_test.go).
+- **How do I define my own numbering or catalog by octaves?**
+  `octave.NewNumbering(o, 1)` creates a numbering in which `o` has number 1, and `octave.NewNumbering(octave.FromASPN(4), 3, 0)` equals the Franco-Belgian numbering. `octave.NewCatalog(map[octave.Octave]string{octave.FromASPN(4): "middle"})` creates a catalog of names. An invalid definition returns an error that matches `number.ErrInvalidDefinition`, and the same name for two octaves an error that matches `naming.ErrDuplicateName`.
+  Examples: [`ExampleNewNumbering`](octave/example_test.go), [`ExampleNewNumbering_invalid`](octave/example_test.go), [`ExampleNewCatalog`](octave/example_test.go), [`ExampleNewCatalog_duplicate`](octave/example_test.go).
+- **How do I print an octave in a log?**
+  `fmt.Println(o)` prints a fixed form such as `ASPN 4`, and `%#v` prints `octave.FromASPN(4)`. The forms are for logs and debugging: they are not a notation such as "C4" and have no parser.
+  Examples: [`ExampleOctave_String`](octave/example_test.go), [`ExampleOctave_GoString`](octave/example_test.go).
+- **What happens at the edges of `int`?**
+  `octave.FromASPN(math.MaxInt).Shift(1)` returns an error that matches `octave.ErrOutOfRange`; the result never wraps around. `octave.FromNumber(math.MaxInt, number.MiddleC3())` does too, because that octave's ASPN number does not fit in an `int`, although `number.Convert` converts the same number to the Franco-Belgian numbering without an error.
+  Example: [`Example_outOfRange`](octave/example_test.go).
+- **How do I detect a value that is not an octave?**
+  `o.IsValid()` is false for the zero value `var o octave.Octave`. It is not ASPN 0 or 4: `Number` and `ASPN` return an error that matches `octave.ErrInvalid`, `Name` returns "", and `Equal` is false even for two zero values, while `==` is true.
+  Examples: [`ExampleOctave_IsValid`](octave/example_test.go), [`Example_zeroValue`](octave/example_test.go).

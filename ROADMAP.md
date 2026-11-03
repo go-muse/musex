@@ -9,7 +9,7 @@
 - [x] **3. `spelling`** — a note name formed from a letter and alteration.
 - [x] **4. `octave/number`** — octave numbering schemes and their visible numbers.
 - [x] **5. `octave/naming`** — catalogs of visible octave names.
-- [ ] **6. `octave`** — octave identity and conversion to visible labels.
+- [x] **6. `octave`** — octave identity and conversion to visible labels.
 - [ ] **7. `pitch`** — a written note name in a positional octave.
 - [ ] **8. `pitchclass`** — a position class within an octave.
 - [ ] **9. `system`** — musical positions, steps, equivalence, and written-octave rules.
