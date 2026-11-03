@@ -19,7 +19,7 @@
 
 The library focuses on musical concepts and their relationships. It is not a standalone application, digital audio workstation, or sound player.
 
-> **Early development:** The library is not ready for production use, and its public API is not yet stable. The `letter`, `alteration`, `octave/number` and `octave/naming` packages are implemented; `letter` was first released in v0.1.0, `alteration` in v0.2.0, `octave/naming` in v0.3.0, and `octave/number` in v0.4.0. Until v1.0.0, compatibility between releases is not guaranteed beyond what the package documentation states, and the API may change.
+> **Early development:** The library is not ready for production use, and its public API is not yet stable. The `letter`, `alteration`, `spelling`, `octave/number` and `octave/naming` packages are implemented; `letter` was first released in v0.1.0, `alteration` in v0.2.0, `octave/naming` in v0.3.0, `octave/number` in v0.4.0, and `spelling` in v0.5.0. Until v1.0.0, compatibility between releases is not guaranteed beyond what the package documentation states, and the API may change.
 
 <!--
 Update the relevant sections in the same PR that adds or changes public functionality.
@@ -57,6 +57,23 @@ Package [`alteration`](alteration/) provides alteration values: how many chromat
 - The exact value as a fraction in lowest terms, for storage and exchange.
 - A guaranteed range of magnitudes up to 2^24 chromatic units with denominators up to 2^16, with exact results inside it. A result outside the range returns an error instead of a rounded or wrapped value.
 - The zero value is the natural.
+- Immutable values that are safe for concurrent use.
+
+### Note names
+
+Package [`spelling`](spelling/) provides note names: a letter together with an alteration value, without an octave.
+
+- A note name from any letter and any alteration value, including fractional values and values beyond the traditional accidentals: C with +1/2, E with +3, or B with -7/2.
+- The 35 ready-made names of the seven letters with the natural, sharp, flat, double sharp, and double flat, such as C, C sharp, and B double flat, and a list of all of them in sorting order.
+- Raising or lowering a name by one chromatic unit, by any whole number of units, or by any alteration value, always keeping the letter: C sharp raised by one unit is C double sharp, never D.
+- The natural name of the same letter, and the same letter with another alteration value.
+- Comparing names as written, not by sound: C sharp is not equal to D flat, and B sharp is not equal to C.
+- An agreed order for sorting names: by letter, then by alteration value. It is not an order by pitch.
+- The letter distance between two names and the difference between their alteration values; neither is an interval.
+- Checking whether a name is natural or whole, its direction (raised, lowered, or natural), and whether two names have the same letter or the same alteration value.
+- A fixed machine form for storage and exchange, such as `C+1` or `B-7/2`, as text and in JSON, including map keys. Each name has exactly one form; it is not a notation.
+- Errors instead of guessed results: for an invalid letter, for a result outside the guaranteed range of alteration values, and for text that is not a machine form.
+- Detecting unset names: the zero value is not a name and is never treated as C.
 - Immutable values that are safe for concurrent use.
 
 ### Octave numbering
@@ -113,6 +130,17 @@ Package [`octave/naming`](octave/naming/) provides catalogs of verbal octave nam
 - **Order by size** — comparing values as numbers. It is not the order of note pitches, which also depend on the letter, octave, and system.
 - **Direction** — raising (a value above 0), lowering (below 0), or natural (0).
 - **Guaranteed range** — the values for which the package promises exact results: magnitudes up to 2^24 chromatic units and denominators up to 2^16. It is not a limit on accidentals in music and not a rule of any musical system.
+
+### Note names
+
+- **Note name (spelling)** — a letter together with an alteration value, such as C sharp (the letter C with +1) or B with -7/2. A note name has no octave and no pitch: it is how a note is written, not how it sounds. It is not a string of a notation such as "C♯", "Cis", or "до-диез".
+- **Ready-made names** — the 35 names of the seven letters with the traditional accidentals: natural, sharp, flat, double sharp, and double flat. Any other alteration value forms a name too.
+- **Equal names** — names with the same letter and the same alteration value. Names that may sound the same are not equal: C sharp and D flat are different names, and so are B sharp and C. Which names sound the same, and which names are allowed, depends on the musical system that uses them.
+- **Raising and lowering a name** — changing its alteration value while keeping its letter. There is no enharmonic substitution: C sharp raised by one chromatic unit is C double sharp, not D. The original name does not change.
+- **Order for sorting** — an agreed order: by letter in the canonical order C D E F G A B, then by alteration value. It is not an order by pitch: B sharp sorts after C, and C flat sorts before B.
+- **Letter distance and alteration difference** — the letter distance between the letters of two names, and the difference between their alteration values. From C sharp up to E flat the letter distance is 2; C sharp minus C flat is +2. Neither is an interval: they have no interval quality or direction.
+- **Machine form** — the fixed text form of a name for storage and exchange: the letter alone for a natural name, such as `C`; otherwise the letter, the sign, and the value, such as `C+1`, `D-1`, `C+1/2`, or `B-7/2`. Each name has exactly one form, and the form is part of the package API. It is not a notation: accidental symbols such as `C#` are not accepted.
+- **Unset name** — the zero value: a name that is not given. It is not C and not a natural name, and it is written as `unset`.
 
 ### Octave numbering
 
@@ -220,6 +248,56 @@ All examples below are in [`alteration/example_test.go`](alteration/example_test
 - **What happens when a result is too large?**
   The guaranteed range covers magnitudes up to `alteration.MaxMagnitude` (2^24) with denominators up to `alteration.MaxDenominator` (2^16). `alteration.MustFromInt(alteration.MaxMagnitude).Raise()` returns an error that matches `alteration.ErrOutOfRange`; the original value does not change.
   Example: [`Example_outOfRange`](alteration/example_test.go).
+
+### Note names
+
+All examples below are in [`spelling/example_test.go`](spelling/example_test.go); their output is checked by `go test`.
+
+- **What can I do with note names?**
+  `spelling.MustNew(letter.C, alteration.Sharp())` is C sharp, written `C+1`. `spelling.MustNew(letter.C, alteration.Sharp()).MustRaise()` is `C+2`, which equals `spelling.CDoubleSharp()`, while C sharp is not equal to D flat.
+  Example: [`Example`](spelling/example_test.go).
+- **How do I create a name from a letter and an alteration value?**
+  `s, err := spelling.New(letter.B, alteration.MustFromFraction(-7, 2))` returns B with -7/2, written `B-7/2`. An invalid letter, such as the zero value `letter.Letter(0)`, returns an error that matches `letter.ErrInvalid` with `errors.Is`. `spelling.MustNew` panics instead and suits values known to be valid.
+  Examples: [`ExampleNew`](spelling/example_test.go), [`ExampleNew_invalidLetter`](spelling/example_test.go), [`ExampleMustNew`](spelling/example_test.go).
+- **How do I get common names such as C sharp?**
+  `spelling.C()`, `spelling.CSharp()`, `spelling.DFlat()`, and `spelling.BDoubleFlat()` return ready-made names. `spelling.Predefined()` lists all 35 of them in sorting order, starting with `C-2 C-1 C C+1 C+2`; each call returns a new slice that the caller owns.
+  Examples: [`Example_readyNames`](spelling/example_test.go), [`ExamplePredefined`](spelling/example_test.go).
+- **How do I get the letter and the alteration value of a name?**
+  `l, a := spelling.FSharp().Parts()` gives the letter F and the value +1; `Letter()` and `Alteration()` return them one at a time.
+  Example: [`ExampleSpelling_Parts`](spelling/example_test.go).
+- **How do I check whether two names are the same?**
+  `spelling.CSharp().Equal(spelling.DFlat())` is false: names are compared as written, not by sound. C with 2/4 equals C with 1/2. For set names, `==` gives the same answer, so names can be map keys.
+  Example: [`ExampleSpelling_Equal`](spelling/example_test.go).
+- **How do I raise or lower a name?**
+  `spelling.C().MustRaise()` is `C+1`, `spelling.CSharp().MustRaiseBy(-2)` is `C-1`, and `spelling.CDoubleSharp().MustLowerBy(4)` is `C-2`. The letter never changes, and each operation returns a new name; the usual style is `s = s.MustRaise()`.
+  Examples: [`ExampleSpelling_Raise`](spelling/example_test.go), [`ExampleSpelling_Lower`](spelling/example_test.go), [`ExampleSpelling_RaiseBy`](spelling/example_test.go), [`ExampleSpelling_LowerBy`](spelling/example_test.go).
+- **How do I raise a name by a quarter tone or another fractional value?**
+  `spelling.CSharp().MustRaiseByAlteration(alteration.MustFromFraction(1, 2))` is `C+3/2`, and `spelling.C().MustLowerByAlteration(alteration.MustFromFraction(1, 2))` is `C-1/2`.
+  Example: [`ExampleSpelling_RaiseByAlteration`](spelling/example_test.go).
+- **How do I get the natural name or change the accidental?**
+  `spelling.CSharp().Natural()` is C, and `spelling.CSharp().WithAlteration(alteration.Flat())` is C flat.
+  Examples: [`ExampleSpelling_Natural`](spelling/example_test.go), [`ExampleSpelling_WithAlteration`](spelling/example_test.go).
+- **How do I sort names?**
+  `slices.SortFunc(names, spelling.Spelling.Compare)` sorts by letter, then by alteration value. The order is not by pitch: B sharp sorts after C.
+  Example: [`ExampleSpelling_Compare`](spelling/example_test.go).
+- **How do I compare the letters or the alteration values of two names?**
+  `spelling.CSharp().LetterDistanceUp(spelling.EFlat())` is 2 and `LetterDistanceDown` is 5. `spelling.CSharp().MustAlterationDifference(spelling.CFlat())` is +2. Neither result is an interval.
+  Examples: [`ExampleSpelling_LetterDistanceUp`](spelling/example_test.go), [`ExampleSpelling_LetterDistanceDown`](spelling/example_test.go), [`ExampleSpelling_AlterationDifference`](spelling/example_test.go).
+- **How do I check whether a name is natural, whole, raised, or lowered?**
+  `IsNatural()` and `IsInteger()` report whether the alteration value is 0 or a whole number, and `Direction()` returns `raised`, `lowered`, or `natural`. `SameLetter` and `SameAlteration` compare one part of two names: C sharp and C flat have the same letter.
+  Examples: [`ExampleSpelling_IsNatural`](spelling/example_test.go), [`ExampleSpelling_IsInteger`](spelling/example_test.go), [`ExampleSpelling_Direction`](spelling/example_test.go), [`ExampleDirection_String`](spelling/example_test.go), [`ExampleSpelling_SameLetter`](spelling/example_test.go), [`ExampleSpelling_SameAlteration`](spelling/example_test.go).
+- **How do I store a name and read it back?**
+  `String()` and `MarshalText()` return the machine form, such as `C+1`, and `s, err := spelling.Parse("C+1/2")` reads it back. Only the exact form is accepted: `spelling.Parse("C#")` returns an error that matches `spelling.ErrInvalidForm`. `spelling.MustParse` panics instead and suits literals.
+  Examples: [`ExampleSpelling_String`](spelling/example_test.go), [`ExampleSpelling_MarshalText`](spelling/example_test.go), [`ExampleParse`](spelling/example_test.go), [`ExampleMustParse`](spelling/example_test.go).
+- **How do I use names in JSON?**
+  Names are JSON strings with their machine form in struct fields, arrays, and map keys, for example `{"tonic":"D","notes":["F+1","unset"],"names":{"B-1":"B"}}`. This works with both `encoding/json` and `encoding/json/v2`; JSON `null` reads as the unset name.
+  Example: [`Example_json`](spelling/example_test.go).
+- **What happens when a value is too large?**
+  `top := spelling.MustNew(letter.C, alteration.MustFromInt(alteration.MaxMagnitude))` is `C+16777216`, and `_, err := top.Raise()` returns an error that matches `alteration.ErrOutOfRange`; `top` does not change.
+  Example: [`Example_outOfRange`](spelling/example_test.go).
+- **How do I detect a name that was never set?**
+  `s.IsValid()` is false for the zero value `var s spelling.Spelling`, which is written as `unset`. It is not C: `s.IsNatural()` is false, and operations such as `s.Raise()` return an error that matches `letter.ErrInvalid`. Its alteration part is the natural, so check `IsValid` before using the parts.
+  Example: [`ExampleSpelling_IsValid`](spelling/example_test.go).
 
 ### Octave numbering
 
