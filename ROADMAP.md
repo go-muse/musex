@@ -6,7 +6,7 @@
 
 - [x] **1. `letter`** — the seven note letters and their cyclic order.
 - [x] **2. `alteration`** — accidental values and chromatic changes.
-- [ ] **3. `spelling`** — a note name formed from a letter and alteration.
+- [x] **3. `spelling`** — a note name formed from a letter and alteration.
 - [x] **4. `octave/number`** — octave numbering schemes and their visible numbers.
 - [x] **5. `octave/naming`** — catalogs of visible octave names.
 - [ ] **6. `octave`** — octave identity and conversion to visible labels.
