@@ -107,6 +107,41 @@ linters:
             - "!$test"
           allow:
             - $gostd
+        pcset:
+          list-mode: strict
+          files:
+            - "**/pcset/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/pitchclass$
+        setclass-catalog:
+          list-mode: strict
+          files:
+            - "**/setclass/catalog/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+        setclass:
+          list-mode: strict
+          files:
+            - "**/setclass/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/pitchclass$
+            - github.com/go-muse/musex/pcset$
+            - github.com/go-muse/musex/setclass/catalog$
+        pcseq:
+          list-mode: strict
+          files:
+            - "**/pcseq/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/pitchclass$
+            - github.com/go-muse/musex/pcset$
+            - github.com/go-muse/musex/setclass$
         system:
           list-mode: strict
           files:
@@ -250,6 +285,7 @@ linters:
             - $gostd
             - github.com/go-muse/musex/spelling$
             - github.com/go-muse/musex/pitchclass$
+            - github.com/go-muse/musex/pcset$
             - github.com/go-muse/musex/system$
             - github.com/go-muse/musex/note$
             - github.com/go-muse/musex/interval$
@@ -275,6 +311,7 @@ linters:
             - github.com/go-muse/musex/alteration$
             - github.com/go-muse/musex/spelling$
             - github.com/go-muse/musex/pitchclass$
+            - github.com/go-muse/musex/pcset$
             - github.com/go-muse/musex/system$
             - github.com/go-muse/musex/note$
             - github.com/go-muse/musex/template$

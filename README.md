@@ -19,7 +19,7 @@
 
 The library focuses on musical concepts and their relationships. It is not a standalone application, digital audio workstation, or sound player.
 
-> **Early development:** The library is not ready for production use, and its public API is not yet stable. The `letter`, `alteration`, `spelling`, `octave/number`, `octave/naming` and `octave` packages are implemented; `letter` was first released in v0.1.0, `alteration` in v0.2.0, `octave/naming` in v0.3.0, `octave/number` in v0.4.0, `spelling` in v0.5.0, and `octave` in v0.6.0. Until v1.0.0, compatibility between releases is not guaranteed beyond what the package documentation states, and the API may change.
+> **Early development:** The library is not ready for production use, and its public API is not yet stable. The `letter`, `alteration`, `spelling`, `octave/number`, `octave/naming`, `octave` and `pitchclass` packages are implemented; `letter` was first released in v0.1.0, `alteration` in v0.2.0, `octave/naming` in v0.3.0, `octave/number` in v0.4.0, `spelling` in v0.5.0, `octave` in v0.6.0, and `pitchclass` in v0.7.0. Until v1.0.0, compatibility between releases is not guaranteed beyond what the package documentation states, and the API may change.
 
 <!--
 Update the relevant sections in the same PR that adds or changes public functionality.
@@ -120,6 +120,26 @@ Package [`octave`](octave/) provides octaves: elements of the axis of octaves, s
 - Detecting invalid values: the zero value is not an octave and is never treated as ASPN 0 or 4.
 - Immutable values that are safe for concurrent use.
 
+### Pitch classes
+
+Package [`pitchclass`](pitchclass/) provides pitch classes: the positions within an octave of a system with any number of positions, together with the arithmetic of pitch-class theory.
+
+- A class from its number and the number of positions *N*, such as `1 mod 12`, strictly or by wrapping any integer around the circle: -1 becomes `11 mod 12`, and 13 becomes `1 mod 12`.
+- All the classes of *N* in order, and a walk around the circle upward from any class.
+- Transposition T*n* by any whole number of positions, in either direction.
+- The ordered interval from one class to another, the interval class of a pair, and the index sum; the ordered, complementary, and class intervals of an interval given by its size.
+- Inversion I*n* (also written T*n*I) by an index, around an axis class, or by a pair of classes it exchanges, and the classes an inversion leaves in place.
+- Multiplication M*m*, the invertible multipliers of *N*, the inverse of a multiplier, and their number φ(*N*), computed quickly even for very large *N*.
+- Operators x ↦ m·x + n, which include the 48 twelve-tone operators (TTOs) for 12 positions: creation, application to a class, composition, inverse, and type (transposition or inversion).
+- The groups of transpositions, of transpositions and inversions, and of all operators of *N*, and their sizes, exact for any *N*.
+- Canonical text forms for storage and exchange, `1 mod 12` and `T5M7 mod 12`, with strict parsing.
+- The literary notation of class numbers in four styles: `10 11`, `T E`, `t e`, and `A B`, with strict parsing in the chosen style.
+- Classes and operators as map keys and with an agreed order for sorting; this order is not an order by pitch.
+- Any *N* from 1 to the largest `int`, with exact results for any `int` input; lists are lazy, so their first elements are available at once for any *N*.
+- Errors instead of guessed results: for classes of different *N*, a multiplier that is not invertible, invalid text, and a count that does not fit in an `int`.
+- Detecting unset values: the zero value is not a class and is never treated as `0 mod 12`.
+- Immutable values that are safe for concurrent use.
+
 ## Concept
 
 <!-- Define the library's core musical entities, their relationships, and any differences from conventional terminology. Keep definitions aligned with the implemented model. -->
@@ -201,6 +221,19 @@ Octaves are identified by their **ASPN numbers**, as defined in the Octave names
 - **Range of octaves** — the octaves from one octave to another, both included, upward or downward.
 - **Representable octaves** — the octaves the library can work with: all octaves whose ASPN number fits in an `int`. This is a technical limit, not a musical one; a result beyond it is an error. A number at the very edge of `int` that converts between numberings without an error may still not give a representable octave.
 - **Invalid value** — a value that poses as an octave but is none. It is not the octave with ASPN number 0 or 4, and it does not mean that a note has no octave. Operations recognize it and never treat it as any octave.
+
+### Pitch classes
+
+- **Pitch class** — a position within the octave of a system with *N* positions, numbered from 0 to *N* − 1 and written `k mod N`. A class holds only its number and *N*: it does not remember the system, the octave, the note name, or the pitch. Classes of different systems with the same *N* are equal; classes of different *N* are never equal. In the traditional 12-position system, C is 0, C♯ and D♭ are both 1, and B is 11 (integer notation); results depend on which class is numbered 0. Which class a note name or a step of a system has will be computed by the planned package `system`.
+- **Ordered interval** — the distance from one class upward to another around the circle, from 0 to *N* − 1: from 10 to 2 modulo 12 it is 4, and from 2 to 10 it is 8. The two directions give a pair of complementary intervals.
+- **Interval class** — the smaller of the two ordered intervals of a pair, from 0 to *N*/2: 0 and 7 modulo 12 are in interval class 5. The interval class of a class with itself is 0; the literature names only the interval classes 1 to 6 for 12 positions.
+- **Transposition T*n*** — moving every class by *n* positions around the circle.
+- **Inversion I*n*** — the reflection x ↦ n − x, written I*n* or T*n*I; *n* is its index. The inversion I without an index is I0. An inversion can also be given by an axis class, which stays in place, or by a pair of classes it exchanges, whose index sum is *n*. For 1 or 2 positions, every inversion is also a transposition.
+- **Multiplication M*m*** — x ↦ m·x. If *m* has a common divisor with *N*, different classes merge; otherwise *m* is invertible, as 1, 5, 7, and 11 are for 12 positions. M7 maps the chromatic circle of 12 classes onto the circle of fifths.
+- **Operator** — x ↦ m·x + n with an invertible multiplier *m*, written T*n*M*m*: multiply by *m*, then transpose by *n*. For 12 positions there are 48 operators, the twelve-tone operators of Morris; in general, *N*·φ(*N*). Composition f∘g applies g first, then f. The literature defines these operations for 12 positions; musex generalizes them to any *N* by the same formulas.
+- **Canonical form** — the fixed text form of a class, `1 mod 12`, or of an operator, `T5M7 mod 12`, for storage and exchange. Each value has exactly one form.
+- **Literary notation** — the number of a class without *N*, as in the literature: 10 and 11 are written `10` and `11`, `T` and `E` (MT21), `t` and `e` (Whittall, OMT), or `A` and `B` (Morris). The letter styles apply only to 12 positions or fewer.
+- **Unset value** — the zero value: a class or an operator that is not given. It is not `0 mod 12` and not the identity, and it is written as `Class(invalid)` or `Operator(invalid)`.
 
 ## Use Cases
 
@@ -433,3 +466,44 @@ All examples below are in [`octave/example_test.go`](octave/example_test.go); th
 - **How do I detect a value that is not an octave?**
   `o.IsValid()` is false for the zero value `var o octave.Octave`. It is not ASPN 0 or 4: `Number` and `ASPN` return an error that matches `octave.ErrInvalid`, `Name` returns "", and `Equal` is false even for two zero values, while `==` is true.
   Examples: [`ExampleOctave_IsValid`](octave/example_test.go), [`Example_zeroValue`](octave/example_test.go).
+
+### Pitch classes
+
+All examples below are in [`pitchclass/example_test.go`](pitchclass/example_test.go); their output is checked by `go test`. An overview is in [`Example`](pitchclass/example_test.go).
+
+- **How do I create a pitch class?**
+  `pitchclass.New(1, 12)` returns `1 mod 12`. `New` does not wrap numbers: `pitchclass.New(12, 12)` returns an error that matches `pitchclass.ErrInvalidClass` with `errors.Is`. `pitchclass.Reduce(13, 12)` wraps any integer around the circle and returns `1 mod 12`; `Reduce(-1, 12)` returns `11 mod 12`. `MustNew` and `MustReduce` panic instead and suit values known to be valid.
+  Examples: [`ExampleNew`](pitchclass/example_test.go), [`ExampleReduce`](pitchclass/example_test.go).
+- **How do I list the classes of a system?**
+  `pitchclass.All(12)` returns an iterator over `0 mod 12` to `11 mod 12`; use `slices.Collect` for a slice. For any number of positions, the first classes are available at once. `c.Cycle()` walks the circle upward from `c`.
+  Example: [`ExampleAll`](pitchclass/example_test.go).
+- **How do I transpose a class?**
+  `pitchclass.MustNew(11, 12).Transpose(2)` is `1 mod 12`, and `pitchclass.MustNew(0, 12).Transpose(-1)` is `11 mod 12`.
+  Example: [`ExampleClass_Transpose`](pitchclass/example_test.go).
+- **How do I find the interval between two classes?**
+  `pitchclass.MustNew(10, 12).IntervalTo(pitchclass.MustNew(2, 12))` is 4, and in the other direction it is 8. `IntervalClass` gives the interval class of a pair: 4 for 10 and 2, 5 for 0 and 7. Classes of different numbers of positions, such as `1 mod 12` and `1 mod 19`, return an error that matches `pitchclass.ErrModulusMismatch`. For an interval given by its size, use `pitchclass.ReduceInterval`, `pitchclass.ComplementInterval`, and `pitchclass.IntervalClass`.
+  Examples: [`ExampleClass_IntervalTo`](pitchclass/example_test.go), [`ExampleClass_IntervalTo_modulusMismatch`](pitchclass/example_test.go), [`ExampleClass_IntervalClass`](pitchclass/example_test.go).
+- **How do I invert a class?**
+  `pitchclass.MustNew(2, 12).Invert(8)` is `6 mod 12`: I8 maps 2, 4, and 7 to 6, 4, and 1. `c.Invert(0)` is I without an index. `InvertAround` inverts around an axis class, and `InvertSwapping` by a pair of classes that it exchanges. `pitchclass.InversionFixedClasses(4, 12)` returns the classes I4 leaves in place, `2 mod 12` and `8 mod 12`; for I1 it returns an empty slice.
+  Examples: [`ExampleClass_Invert`](pitchclass/example_test.go), [`ExampleInversionFixedClasses`](pitchclass/example_test.go).
+- **How do I multiply a class?**
+  `pitchclass.MustNew(1, 12).Multiply(7)` is `7 mod 12`; M7 maps 0 to 11 onto 0 7 2 9 4 11 6 1 8 3 10 5, the circle of fifths. Any multiplier is accepted. `pitchclass.Invertible(m, n)`, `pitchclass.InverseMultiplier`, `pitchclass.InvertibleMultipliers`, and `pitchclass.Totient` describe the multipliers that do not merge classes: φ(12) is 4.
+  Examples: [`ExampleClass_Multiply`](pitchclass/example_test.go), [`ExampleTotient`](pitchclass/example_test.go).
+- **How do I work with twelve-tone operators?**
+  `pitchclass.NewOperator(7, 5, 12)` returns `T5M7 mod 12`, the operator x ↦ 7x + 5; it is not a transposition. `MustApply(pitchclass.MustNew(1, 12))` maps 1 to `0 mod 12`. `t3.Compose(i8)` applies I8 first, then T3, and gives `T11M11 mod 12`; `i8.Compose(t3)` gives `T5M11 mod 12`. `Transposition`, `Inversion`, and `Multiplication` create T*n*, I*n*, and M*m*; a multiplier that is not invertible, such as 2 modulo 12, returns an error that matches `pitchclass.ErrNotInvertible`.
+  Examples: [`ExampleNewOperator`](pitchclass/example_test.go), [`ExampleOperator_Apply`](pitchclass/example_test.go), [`ExampleOperator_Compose`](pitchclass/example_test.go).
+- **How do I list or count the operators of a system?**
+  `pitchclass.Operators(12)` returns an iterator over the 48 operators, and `pitchclass.CountOperators(12)` is 48. `Transpositions` and `TranspositionsInversions` list the smaller groups. A count that does not fit in an `int`, such as `CountOperators(math.MaxInt)`, returns an error that matches `pitchclass.ErrOverflow`; `CountOperatorsBig` returns the exact value.
+  Examples: [`ExampleOperators`](pitchclass/example_test.go), [`ExampleCountOperators`](pitchclass/example_test.go).
+- **How do I store a class or an operator as text?**
+  `pitchclass.MustNew(1, 12).String()` is `1 mod 12`, and `pitchclass.Parse("1 mod 12")` returns an equal class. `ParseOperator` reads forms such as `T5M7 mod 12`. Parsing is strict: `01 mod 12` and `12 mod 12` are errors that match `pitchclass.ErrNotation`.
+  Example: [`ExampleClass_String`](pitchclass/example_test.go).
+- **How do I write 10 and 11 as T and E?**
+  `pitchclass.MustNew(10, 12).Notation(pitchclass.TE)` is `T`. The four styles write 10 and 11 as `10 11`, `T E`, `t e`, and `A B`. `pitchclass.ParseNotation("E", pitchclass.TE, 12)` returns `11 mod 12`. The letter styles apply to 12 positions or fewer; for more, they return an error that matches `pitchclass.ErrNotation`.
+  Examples: [`ExampleClass_Notation`](pitchclass/example_test.go), [`ExampleParseNotation`](pitchclass/example_test.go).
+- **Can I use classes as map keys?**
+  Yes: equal classes are equal with `==`, so `pitchclass.MustReduce(13, 12)` and `pitchclass.MustNew(1, 12)` are the same key. Use `Equal` to compare classes in code; `slices.SortFunc(classes, pitchclass.Class.Compare)` sorts them by number of positions, then by number.
+  API documentation: [`Class`](https://pkg.go.dev/github.com/go-muse/musex/pitchclass#Class), [`Class.Compare`](https://pkg.go.dev/github.com/go-muse/musex/pitchclass#Class.Compare).
+- **How do I detect a class that was never set?**
+  `c.IsValid()` is false for the zero value `var c pitchclass.Class`, which is not `0 mod 12`. Its `String()` is `Class(invalid)`, and operations on two classes return an error that matches `pitchclass.ErrInvalidValue`.
+  Example: [`Example_zeroValue`](pitchclass/example_test.go).
