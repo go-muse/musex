@@ -19,7 +19,7 @@ func Example() {
 	fmt.Println(up)
 	fmt.Println(up.Equal(spelling.CDoubleSharp()))
 
-	// The same sound, but a different spelling.
+	// Different spellings are not equal, whatever they sound like.
 	fmt.Println(spelling.CSharp().Equal(spelling.DFlat()))
 	// Output:
 	// C+1
