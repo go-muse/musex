@@ -2,6 +2,7 @@ package spelling_test
 
 import (
 	jsonv2 "encoding/json/v2"
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -151,10 +152,36 @@ func assertLongInputError(t *testing.T, err error, x string, k int) {
 	}
 }
 
-// assertShortInputError checks T1 and T2 for an input x of at most 32 bytes:
-// the text quotes the whole x and, unlike an excerpt, does not give the
-// length of x. The length is checked only for inputs without decimal digits,
-// where its digits cannot come from the quoted input itself.
+// hasLengthAnnotation reports whether the text msg of the error for the value
+// x quoted as quoted annotates x with a number right after the quotation, as
+// the text for a longer input does: "<excerpt>"... (<n> bytes). It inspects
+// only the text from the first occurrence of quoted up to the next ": " that
+// starts the secondary error or the nested JSON diagnostic, or up to the end
+// of the text. That part is the own text of the package: the prefix before the
+// quotation has no quote character, so the first occurrence of quoted is the
+// quotation of the package, and the part after it holds no user data. Any
+// decimal digit there is an annotation, whatever the number is. The digits of
+// the quotation itself and the text after ": " are not inspected: the nested
+// diagnostic quotes user data, and its format is not part of the contract.
+func hasLengthAnnotation(msg, quoted string) bool {
+	i := strings.Index(msg, quoted)
+	if i < 0 {
+		return false
+	}
+
+	tail := msg[i+len(quoted):]
+	if j := strings.Index(tail, ": "); j >= 0 {
+		tail = tail[:j]
+	}
+
+	return strings.ContainsAny(tail, "0123456789")
+}
+
+// assertShortInputError checks T1, T2 and T2a for an input x of at most 32
+// bytes: the text quotes the whole x and, unlike an excerpt, does not
+// annotate it with its length. Digits of the quotation itself (a digit in x,
+// or an escape such as \x01) and of the text after the first ": " are not an
+// annotation: see hasLengthAnnotation.
 func assertShortInputError(t *testing.T, err error, x string) {
 	t.Helper()
 
@@ -162,11 +189,61 @@ func assertShortInputError(t *testing.T, err error, x string) {
 
 	msg := requireErrorText(t, err, len(x))
 	quoted := strconv.Quote(x)
-	assert.Truef(t, strings.Contains(msg, quoted), "T2: the error text must quote the whole input %s", quoted)
+	require.Truef(t, strings.Contains(msg, quoted), "T2: the error text must quote the whole input %s", quoted)
 
-	if !strings.ContainsAny(x, "0123456789") {
-		assert.Falsef(t, strings.Contains(msg, strconv.Itoa(len(x))),
-			"T2: the error text of a short input must not give its length %d", len(x))
+	assert.Falsef(t, hasLengthAnnotation(msg, quoted),
+		"T2a: the text right after the quotation of a short input of %d bytes must have no digits: %s",
+		len(x), msg)
+}
+
+// The detector of the annotation tells the annotation of a mutant from the
+// digits of a quotation or of a nested diagnostic. The texts are
+// illustrations made up for the detector, not the format of the package.
+func TestHasLengthAnnotation(t *testing.T) {
+	t.Parallel()
+
+	const prefix = "spelling: invalid machine form "
+
+	tests := []struct {
+		name string
+		x    string
+		tail string
+		want bool
+	}{
+		{"annotation with bytes", "C#x", " (3 bytes)", true},
+		{"annotation with an ellipsis", "ab", "... (2 bytes)", true},
+		{"annotation in parentheses", "ab", " (2)", true},
+		{"annotation in brackets", "ab", " [2 bytes]", true},
+		{"annotation without parentheses", "ab", " 2 bytes", true},
+		{"annotation as a key", "ab", " len=2", true},
+		{"bare number", "ab", " 2", true},
+		{"other number", "ab", " (99 bytes)", true},
+		{"annotation before the secondary error", "ab", " (2 bytes): alteration: value out of range", true},
+		{"annotation before a nested diagnostic", "ab", " (2 bytes): nested: invalid character", true},
+		{"no annotation", "ab", "", false},
+		{"own text without digits", "ab", " is not a string or null", false},
+		{"digit in the quotation", "a2", "", false},
+		{"digit equal to the length in the quotation", "a2", " is not a string or null", false},
+		{"escape in the quotation", "\x01", "", false},
+		{"escape in the quotation before own text", "\x01", " is not a string or null", false},
+		{"nested diagnostic with an escape", "\"\x03\"", `: nested: invalid character '\x03' in string`, false},
+		{"nested diagnostic with a digit character", "\"\\4\"", `: nested: invalid escape '4'`, false},
+		{"nested diagnostic with a number in parentheses", "\"\\u(7)\"", `: nested: invalid escape (7)`, false},
+		{"nested diagnostic with a number and a word in parentheses", "ab", `: nested: invalid surrogate (14 a)`, false},
+		{"secondary error with a number", "ab", ": alteration: value 2 out of range", false},
+		// The accepted limitation: an annotation after the first ": " is not
+		// found. It is not a defect of the detector.
+		{"annotation after the secondary error", "ab", ": alteration: value out of range (2 bytes)", false},
+		{"annotation after a nested diagnostic", "ab", ": nested: invalid character (2 bytes)", false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			quoted := strconv.Quote(tc.x)
+			assert.Equal(t, tc.want, hasLengthAnnotation(prefix+quoted+tc.tail, quoted))
+		})
 	}
 }
 
@@ -380,6 +457,32 @@ func TestReadErrorExcerptShortInput(t *testing.T) {
 		}
 	}
 
+	// Inputs whose quotation contains digits: the digit of the length is
+	// told apart from the digits of the quoted input.
+	quotedDigits := []struct {
+		name  string
+		input string
+	}{
+		{"one byte 0x01", "\x01"},
+		{"one byte 0x00", "\x00"},
+		{"one byte digit", "1"},
+		{"digit equal to the length", "a3b"},
+		{"digits of 32 bytes", strings.Repeat("3", 16) + strings.Repeat("2", 16)},
+		{"escapes of 32 bytes", strings.Repeat("\x01", 32)},
+	}
+
+	for _, path := range excerptPaths() {
+		for _, tc := range quotedDigits {
+			t.Run(path.name+"/quoted digits/"+tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				err := path.read(t, tc.input)
+				assertShortInputError(t, err, tc.input)
+				assertInvalidForm(t, formOnly, err)
+			})
+		}
+	}
+
 	direct := []struct {
 		name string
 		data string
@@ -389,6 +492,9 @@ func TestReadErrorExcerptShortInput(t *testing.T) {
 	}{
 		{"empty", "", ""},
 		{"number", "1", "1"},
+		{"one byte 0x01", "\x01", "\x01"},
+		{"string of one byte 0x01", "\"\x01\"", "\"\x01\""},
+		{"string of an escape 0x01", `"\u0001"`, "\x01"},
 		{"true", "true", "true"},
 		{"array", "[]", "[]"},
 		{"object", "{}", "{}"},
@@ -399,6 +505,23 @@ func TestReadErrorExcerptShortInput(t *testing.T) {
 		{"unterminated string", `"C+1`, `"C+1`},
 		{"two values", `"C+1" "D"`, `"C+1" "D"`},
 		{"invalid escape", `"C\x2B1"`, `"C\x2B1"`},
+		{"invalid escape of a digit", `"\4"`, `"\4"`},
+		{"digit and control byte", "\"1\x04\"", "\"1\x04\""},
+		{"surrogate escape in parentheses", `"\u(7)"`, `"\u(7)"`},
+		{"surrogate escape with a number in parentheses", `"\uD800(12)"`, `"\uD800(12)"`},
+		{"surrogate escape with a number and a word in parentheses", `"\uD800(14 a)"`, `"\uD800(14 a)"`},
+	}
+
+	// A control byte inside a JSON string: the nested JSON diagnostic may
+	// quote it, and its digits may equal the length of the data (3 bytes).
+	// 0x01 is the case "string of one byte 0x01" above.
+	for _, c := range []byte{0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x1f} {
+		data := string([]byte{'"', c, '"'})
+		direct = append(direct, struct {
+			name   string
+			data   string
+			quoted string
+		}{fmt.Sprintf("string of control byte 0x%02x", c), data, data})
 	}
 
 	for _, tc := range direct {
