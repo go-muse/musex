@@ -1,17 +1,19 @@
 # Roadmap
 
-`musex` is planned as a set of focused Go packages across three areas. This roadmap shows the intended package order and scope. Checked packages are implemented; the others are **planned**. Check a package off when its agreed API and behavior are implemented, reviewed, and accepted.
+`musex` is planned as a set of focused Go packages across three areas. This roadmap shows the intended package order and scope. Checked packages are implemented; the others are **planned**. Open a checked package to read about its musical model or follow its links to the Go API and working examples. Mark a package complete when its agreed API and behavior have been implemented, reviewed, and accepted.
+
+<!-- When a package is implemented, link its checked item to guide/packages/<package path>.md. Keep its musical model and release status in that chapter, and its technical examples in the package's example tests. -->
 
 ## 1. Required to get started
 
-- [x] **1. `letter`** — the seven note letters and their cyclic order.
-- [x] **2. `alteration`** — accidental values and chromatic changes.
-- [x] **3. `spelling`** — a note name formed from a letter and alteration.
-- [x] **4. `octave/number`** — octave numbering schemes and their visible numbers.
-- [x] **5. `octave/naming`** — catalogs of visible octave names.
-- [x] **6. `octave`** — octave identity and conversion to visible labels.
+- [x] **1. [`letter`](guide/packages/letter.md)** — the seven note letters and their cyclic order.
+- [x] **2. [`alteration`](guide/packages/alteration.md)** — accidental values and chromatic changes.
+- [x] **3. [`spelling`](guide/packages/spelling.md)** — a note name formed from a letter and alteration.
+- [x] **4. [`octave/number`](guide/packages/octave/number.md)** — octave numbering schemes and their visible numbers.
+- [x] **5. [`octave/naming`](guide/packages/octave/naming.md)** — catalogs of visible octave names.
+- [x] **6. [`octave`](guide/packages/octave.md)** — octave identity and conversion to visible labels.
 - [ ] **7. `pitch`** — a written note name in a positional octave.
-- [x] **8. `pitchclass`** — a position class within an octave.
+- [x] **8. [`pitchclass`](guide/packages/pitchclass.md)** — a position class within an octave.
 - [ ] **8a. `pcset`** — sets of pitch classes and set operations.
 - [ ] **8b. `setclass/catalog`** — Forte and Carter set-class catalogs for 12 positions.
 - [ ] **8c. `setclass`** — set classes, prime forms, and relations between them.
