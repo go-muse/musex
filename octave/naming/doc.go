@@ -71,6 +71,11 @@
 // [ErrDuplicateName] when two octaves are given the same name. Check errors
 // with [errors.Is]. [MustNew] and [Catalog.MustASPN] panic in the same cases
 // and work the same way otherwise. No other function or method panics.
+// An error quotes a name of up to 32 bytes in full. A longer name is
+// quoted by at most its first 32 bytes, without splitting a valid UTF-8
+// character, followed by its length in bytes, so the length of an error
+// message is bounded whatever the length of the name. The exact text of
+// errors is not part of the API.
 //
 // The zero value of [Catalog] and the nil *Catalog are catalogs without
 // names: they behave like a catalog created from an empty map.
