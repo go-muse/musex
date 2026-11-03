@@ -144,6 +144,9 @@
 // # Errors
 //
 // Errors are checked with errors.Is; their text is not part of the API.
+// A reading error returned by this package quotes a long input only by a short
+// excerpt and its length in bytes, so its text stays short however long the
+// input is.
 //
 //   - New with an invalid letter returns an error that matches
 //     [letter.ErrInvalid]. So do Spelling.Raise, Spelling.Lower,

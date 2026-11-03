@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/go-muse/musex/alteration"
 	"github.com/go-muse/musex/letter"
@@ -35,6 +36,12 @@ const (
 	// a numerator of at most 13 digits (MaxMagnitude*MaxDenominator is 2^40),
 	// a slash, and a denominator of at most 5 digits.
 	maxFormLen = 1 + 1 + 13 + 1 + 5
+
+	// errorExcerptLimit bounds the input bytes quoted in a reading error.
+	errorExcerptLimit = 32
+
+	// jsonErrorLimit bounds the nested JSON diagnostic before an ellipsis.
+	jsonErrorLimit = 128
 )
 
 // String returns the machine form of s, such as "C", "C+1", "C+1/2", or
@@ -151,12 +158,17 @@ func (s *Spelling) UnmarshalJSON(data []byte) error {
 		// including trailing bytes and invalid escapes or UTF-8.
 		text, err := jsontext.AppendUnquote(nil, v)
 		if err != nil {
-			return fmt.Errorf("%w: JSON %q: %v", ErrInvalidForm, data, err)
+			detail := err.Error()
+			if len(detail) > jsonErrorLimit {
+				detail = utf8Prefix(detail, jsonErrorLimit) + "..."
+			}
+
+			return fmt.Errorf("%w: JSON %s: %v", ErrInvalidForm, quotedInput(data), detail)
 		}
 
 		return s.UnmarshalText(text)
 	default:
-		return fmt.Errorf("%w: JSON %q is not a string or null", ErrInvalidForm, data)
+		return fmt.Errorf("%w: JSON %s is not a string or null", ErrInvalidForm, quotedInput(data))
 	}
 }
 
@@ -306,8 +318,37 @@ func isNumber(s string) bool {
 // matches ErrInvalidForm and, if cause is not nil, also cause.
 func invalidForm(text string, cause error) error {
 	if cause == nil {
-		return fmt.Errorf("%w %q", ErrInvalidForm, text)
+		return fmt.Errorf("%w %s", ErrInvalidForm, quotedInput(text))
 	}
 
-	return fmt.Errorf("%w %q: %w", ErrInvalidForm, text, cause)
+	return fmt.Errorf("%w %s: %w", ErrInvalidForm, quotedInput(text), cause)
+}
+
+// quotedInput quotes a short input in full, or an excerpt and the byte length.
+// Only a bounded window is converted, including enough lookahead to recognize
+// a complete rune that crosses the excerpt boundary.
+func quotedInput[T ~string | ~[]byte](input T) string {
+	window := string(input[:min(len(input), errorExcerptLimit+utf8.UTFMax-1)])
+	quoted := strconv.Quote(utf8Prefix(window, errorExcerptLimit))
+	if len(input) <= errorExcerptLimit {
+		return quoted
+	}
+
+	return fmt.Sprintf("%s... (%d bytes)", quoted, len(input))
+}
+
+// utf8Prefix returns the longest prefix of at most limit bytes without
+// splitting a valid UTF-8 encoding. Each invalid byte is a one-byte unit.
+func utf8Prefix(text string, limit int) string {
+	end := 0
+	for end < len(text) && end < limit {
+		_, size := utf8.DecodeRuneInString(text[end:])
+		if end+size > limit {
+			break
+		}
+
+		end += size
+	}
+
+	return text[:end]
 }
