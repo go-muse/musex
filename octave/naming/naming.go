@@ -66,6 +66,9 @@ type Catalog struct {
 // nil or empty map, or a map with only empty names, gives a catalog without
 // names.
 //
+// New sizes both internal indexes by the number of non-empty names, so
+// pairs with an empty name do not increase their capacity.
+//
 // If the same non-empty name is given to two different octave numbers, New
 // returns nil and an error that matches [ErrDuplicateName]; no catalog is
 // created. Names are compared exactly, so "a" and "A", or " a" and "a", are
@@ -77,8 +80,18 @@ type Catalog struct {
 // catalog without names. The caller must not modify names concurrently with
 // the call.
 func New(names map[int]string) (*Catalog, error) {
-	byNumber := make(map[int]string, len(names))
-	byName := make(map[string]int, len(names))
+	// Size both indexes by the number of non-empty names, not by len(names):
+	// a map never shrinks, and pairs with an empty name are left out.
+	count := 0
+
+	for _, name := range names {
+		if name != "" {
+			count++
+		}
+	}
+
+	byNumber := make(map[int]string, count)
+	byName := make(map[string]int, count)
 
 	var duplicates []string
 
