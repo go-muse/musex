@@ -132,14 +132,14 @@
 // Spelling.SameAlteration, and Spelling.Equal report false for it,
 // Spelling.Direction returns DirectionUnset, the letter distances are -1,
 // and Spelling.Compare sorts it before every valid name. Spelling.Natural and
-// Spelling.WithAlteration return the unset name without an error. Raising and
-// lowering it with Spelling.Raise, Spelling.Lower, Spelling.RaiseBy,
-// Spelling.LowerBy, Spelling.RaiseByAlteration, and
+// Spelling.WithAlteration, which have no error result, return the unset name.
+// Raising and lowering it with Spelling.Raise, Spelling.Lower,
+// Spelling.RaiseBy, Spelling.LowerBy, Spelling.RaiseByAlteration, and
 // Spelling.LowerByAlteration, and Spelling.AlterationDifference with the unset
 // name as either operand, return an error that matches [letter.ErrInvalid],
-// and their Must variants panic with it. No other operation returns an error
-// for the unset name: it is written as "unset" with a nil error, and reading
-// "unset" or JSON null gives it back.
+// and their Must variants panic with it. No other operation fails solely
+// because the name is unset: marshaling it succeeds and writes "unset", and
+// reading "unset" or JSON null gives it back.
 //
 // # Errors
 //
@@ -149,9 +149,9 @@
 //     [letter.ErrInvalid]. So do Spelling.Raise, Spelling.Lower,
 //     Spelling.RaiseBy, Spelling.LowerBy, Spelling.RaiseByAlteration,
 //     Spelling.LowerByAlteration, and Spelling.AlterationDifference when a
-//     name they use is unset. Other operations on the unset name return no
-//     error, as described in the Unset names section; in particular, writing
-//     it gives "unset" with a nil error.
+//     name they use is unset. No other operation fails solely because a name
+//     is unset, as described in the Unset names section; in particular,
+//     marshaling the unset name succeeds and writes "unset".
 //   - Operations whose exact alteration value would be outside the guaranteed
 //     range of package alteration return errors that match
 //     [alteration.ErrOutOfRange].
