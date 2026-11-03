@@ -186,14 +186,26 @@
 //
 // Spelling is a small comparable value type: it can be copied freely, a copy
 // shares no data with the original, and it can be used as a map key or in a
-// switch. All methods have value receivers and return new values, so the usual
-// style is s = s.MustRaise(). The only exceptions are Spelling.UnmarshalText
-// and Spelling.UnmarshalJSON, which have pointer receivers and write the name
-// they read into the receiver.
+// switch. All methods have value receivers and never change the receiver:
+// operations that change a name return a new name, so the usual style is
+// s = s.MustRaise(). The only exceptions are Spelling.UnmarshalText and
+// Spelling.UnmarshalJSON, which have pointer receivers and write the name they
+// read into the receiver. Spelling.AppendText returns the extended buffer,
+// which may share a backing array with its argument; the rule for that buffer
+// is given below.
 //
 // The package has no mutable state, and the ready-made names cannot be
-// changed. All functions and methods are safe for concurrent use by multiple
-// goroutines; as with any Go value, a caller that writes a variable with
-// Spelling.UnmarshalText or Spelling.UnmarshalJSON while another goroutine
-// uses it must synchronize them.
+// changed. Spelling values can be shared freely between goroutines, and all
+// functions and methods are safe for concurrent use by multiple goroutines.
+// As with any Go code, the caller synchronizes the data that it shares
+// between goroutines and that a method writes:
+//
+//   - a caller that writes a variable with Spelling.UnmarshalText or
+//     Spelling.UnmarshalJSON while another goroutine uses it must synchronize
+//     them;
+//   - Spelling.AppendText may write into the spare capacity of the caller's
+//     buffer, although it never changes the bytes within the length of the
+//     buffer. Concurrent calls with the same buffer, or with buffers that
+//     share a backing array, must be synchronized by the caller;
+//     alternatively, each goroutine uses its own buffer.
 package spelling

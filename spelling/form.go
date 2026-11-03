@@ -54,9 +54,12 @@ func (s Spelling) MarshalText() ([]byte, error) {
 
 // AppendText implements [encoding.TextAppender]. It appends the machine form
 // of s, the same text as Spelling.String, to b and returns the extended
-// buffer. Like the built-in append, it does not change b[:len(b)] and may use
-// the spare capacity of b; the result is owned by the caller. The error is
-// always nil.
+// buffer. It never changes b[:len(b)], but it may write into the spare
+// capacity of b; the result is owned by the caller. The error is always nil.
+//
+// Because AppendText may write into b, concurrent calls with the same b, or
+// with buffers that share a backing array, must be synchronized by the
+// caller.
 func (s Spelling) AppendText(b []byte) ([]byte, error) {
 	return s.appendForm(b), nil
 }

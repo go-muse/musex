@@ -27,9 +27,10 @@ import (
 // in a switch, for example case spelling.CSharp():. Spelling.Equal is the
 // recommended comparison. For valid names, == and Spelling.Equal agree; the
 // unset name is equal to itself under == but not under Spelling.Equal.
-// Methods never modify the receiver or the arguments, except
-// Spelling.UnmarshalText and Spelling.UnmarshalJSON, which write into the
-// receiver.
+// Methods never modify the receiver or the arguments, with two exceptions:
+// Spelling.UnmarshalText and Spelling.UnmarshalJSON write into the receiver,
+// and Spelling.AppendText may write into the spare capacity of its argument
+// b, although it never changes b[:len(b)].
 type Spelling struct {
 	l letter.Letter
 	a alteration.Alteration
