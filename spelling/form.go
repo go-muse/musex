@@ -54,14 +54,22 @@ func (s Spelling) MarshalText() ([]byte, error) {
 
 // AppendText implements [encoding.TextAppender]. It appends the machine form
 // of s, the same text as Spelling.String, to b and returns the extended
-// buffer. It never changes b[:len(b)], but it may write into the spare
-// capacity of b; the result is owned by the caller. The error is always nil.
+// buffer, like append(b, s.String()...) but without allocating the string.
+// It never changes b[:len(b)]. If the spare capacity of b holds the whole
+// form, AppendText writes the form there and the result shares the array of
+// b; otherwise, the result is a new array and the array of b is not changed.
+// The result is owned by the caller. The error is always nil.
 //
 // Because AppendText may write into the spare capacity of b, when one call may
 // write bytes that another goroutine reads or writes, the caller must
 // synchronize them or give each goroutine its own buffer.
 func (s Spelling) AppendText(b []byte) ([]byte, error) {
-	return s.appendForm(b), nil
+	// The form is built in a local array first, so that b grows with a
+	// single append: when the form does not fit, the array of b is left
+	// unchanged.
+	var form [maxFormLen]byte
+
+	return append(b, s.appendForm(form[:0])...), nil
 }
 
 // MarshalJSON implements [encoding/json.Marshaler]. It returns the machine
