@@ -354,6 +354,112 @@ func TestNewCatalogOwnership(t *testing.T) {
 	}
 }
 
+// K-17, NF-3: an empty name means "the octave has no name in the catalog"; it
+// does not allow NewCatalog or MustNewCatalog to delete the pair from the map
+// of the caller. The whole map (keys, values including the empty ones, and
+// length) is the same after the call, after a successful one and after an
+// error.
+func TestNewCatalogOwnershipEmptyNames(t *testing.T) {
+	t.Parallel()
+
+	successCases := []struct {
+		name    string
+		pairs   func() map[octave.Octave]string
+		want    map[int]string
+		unnamed []int
+	}{
+		{
+			name:    "empty beside named",
+			pairs:   func() map[octave.Octave]string { return map[octave.Octave]string{oct(1): "", oct(2): "named"} },
+			want:    map[int]string{2: "named"},
+			unnamed: []int{1},
+		},
+		{
+			name:    "only empty",
+			pairs:   func() map[octave.Octave]string { return map[octave.Octave]string{oct(1): "", oct(2): ""} },
+			want:    map[int]string{},
+			unnamed: []int{1, 2},
+		},
+		{
+			name: "empty at extreme numbers",
+			pairs: func() map[octave.Octave]string {
+				return map[octave.Octave]string{oct(minInt): "", oct(0): "named", oct(maxInt): ""}
+			},
+			want:    map[int]string{0: "named"},
+			unnamed: []int{minInt, maxInt},
+		},
+	}
+
+	for _, tc := range successCases {
+		for _, must := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/must=%t", tc.name, must), func(t *testing.T) {
+				t.Parallel()
+
+				names := tc.pairs()
+				orig := maps.Clone(names)
+				require.Equal(t, len(tc.want)+len(tc.unnamed), len(orig), "test data: every pair is either named or empty")
+
+				var c *naming.Catalog
+				if must {
+					c = octave.MustNewCatalog(names)
+				} else {
+					var err error
+					c, err = octave.NewCatalog(names)
+					require.NoError(t, err)
+				}
+
+				assert.Equal(t, orig, names, "the call does not change the map")
+				assert.Len(t, names, len(orig), "the call does not delete pairs from the map")
+				for _, a := range tc.unnamed {
+					v, ok := names[oct(a)]
+					assert.True(t, ok, "the pair of O(%d) with the empty name is still in the map", a)
+					assert.Empty(t, v, "the name of O(%d) in the map", a)
+					assert.Empty(t, oct(a).Name(c), "O(%d) has no name in the catalog", a)
+				}
+
+				wantCatalog := naming.MustNew(tc.want)
+				assert.True(t, c.Equal(wantCatalog), "catalog: got %v, want %v", c, wantCatalog)
+			})
+		}
+	}
+
+	t.Run("error duplicate name beside empty", func(t *testing.T) {
+		t.Parallel()
+
+		pairs := func() map[octave.Octave]string {
+			return map[octave.Octave]string{oct(1): "", oct(2): "duplicate", oct(3): "duplicate"}
+		}
+
+		t.Run("NewCatalog", func(t *testing.T) {
+			t.Parallel()
+
+			names := pairs()
+			orig := maps.Clone(names)
+
+			c, err := octave.NewCatalog(names)
+			assertCause(t, err, causeDuplicateName, "NewCatalog")
+			assert.Nil(t, c, "no catalog on error")
+			assert.Equal(t, orig, names, "the call does not change the map on error")
+			v, ok := names[oct(1)]
+			assert.True(t, ok, "the pair with the empty name is still in the map")
+			assert.Empty(t, v, "the name of O(1) in the map")
+		})
+
+		t.Run("MustNewCatalog", func(t *testing.T) {
+			t.Parallel()
+
+			names := pairs()
+			orig := maps.Clone(names)
+
+			assertPanicsCause(t, causeDuplicateName, func() { octave.MustNewCatalog(names) }, "MustNewCatalog")
+			assert.Equal(t, orig, names, "the call does not change the map on panic")
+			v, ok := names[oct(1)]
+			assert.True(t, ok, "the pair with the empty name is still in the map")
+			assert.Empty(t, v, "the name of O(1) in the map")
+		})
+	})
+}
+
 // K-16, K-17: own numberings and catalogs created by octaves work for every
 // octave in the usual range like their octave/number and octave/naming
 // counterparts.
