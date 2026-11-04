@@ -40,6 +40,9 @@ const (
 	labelMiddleC5      = "Middle C = C5"
 )
 
+// errorSkippedLimit bounds the skipped numbers shown in an error description.
+const errorSkippedLimit = 4
+
 // francoBelgianSkipped holds the skipped numbers of the Franco-Belgian
 // numbering. It is read-only and never returned to callers.
 var francoBelgianSkipped = []int{0}
@@ -241,14 +244,15 @@ func Convert(x int, from, to Numbering) (int, error) {
 	}
 
 	if from.isSkipped(x) {
-		return 0, fmt.Errorf("%w: number %d in %s", ErrSkipped, x, from)
+		return 0, fmt.Errorf("%w: number %d in %s", ErrSkipped, x, from.errorDescription())
 	}
 
 	// The rank of the octave in to: from.rank(x) - from.offset is its ASPN
 	// number, and adding to.offset gives its rank in to.
 	result, ok := to.unrank(from.rank(x).sub(from.offset).add(to.offset)).toInt()
 	if !ok {
-		return 0, fmt.Errorf("%w: number %d converted from %s to %s", ErrOutOfRange, x, from, to)
+		return 0, fmt.Errorf("%w: number %d converted from %s to %s",
+			ErrOutOfRange, x, from.errorDescription(), to.errorDescription())
 	}
 
 	return result, nil
@@ -280,7 +284,7 @@ func (n Numbering) FromASPN(aspn int) (int, error) {
 
 	result, ok := n.unrank(int128Of(aspn).add(n.offset)).toInt()
 	if !ok {
-		return 0, fmt.Errorf("%w: ASPN %d in %s", ErrOutOfRange, aspn, n)
+		return 0, fmt.Errorf("%w: ASPN %d in %s", ErrOutOfRange, aspn, n.errorDescription())
 	}
 
 	return result, nil
@@ -316,12 +320,12 @@ func (n Numbering) ToASPN(num int) (int, error) {
 	}
 
 	if n.isSkipped(num) {
-		return 0, fmt.Errorf("%w: number %d in %s", ErrSkipped, num, n)
+		return 0, fmt.Errorf("%w: number %d in %s", ErrSkipped, num, n.errorDescription())
 	}
 
 	result, ok := n.rank(num).sub(n.offset).toInt()
 	if !ok {
-		return 0, fmt.Errorf("%w: number %d in %s", ErrOutOfRange, num, n)
+		return 0, fmt.Errorf("%w: number %d in %s", ErrOutOfRange, num, n.errorDescription())
 	}
 
 	return result, nil
@@ -409,6 +413,17 @@ func (n Numbering) String() string {
 	}
 
 	return string(b)
+}
+
+// errorDescription returns a bounded description without formatting the full
+// skipped list of a long own numbering.
+func (n Numbering) errorDescription() string {
+	if n.label != "" || len(n.skipped) <= errorSkippedLimit {
+		return n.String()
+	}
+
+	return fmt.Sprintf("ASPN %d -> %d, skip [%d %d %d %d ...] (%d skipped)",
+		n.aspn, n.num, n.skipped[0], n.skipped[1], n.skipped[2], n.skipped[3], len(n.skipped))
 }
 
 // isSkipped reports whether x is a skipped number of n.

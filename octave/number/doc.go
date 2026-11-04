@@ -103,6 +103,10 @@
 // methods whose names start with Must panic, with the error as the panic
 // value.
 //
+// Errors show short numbering definitions in full and long ones only by their
+// first skipped numbers and total count, so the text stays short however many
+// numbers are skipped; the text of errors is not part of the API.
+//
 // # Zero value
 //
 // The zero value of [Numbering] is not a numbering: it means that no
