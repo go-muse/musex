@@ -42,6 +42,7 @@ $RECYCLE.BIN/
 *~
 
 # Local AI tool directories
+.agents/
 .codex/
 .claude/
 .factory/

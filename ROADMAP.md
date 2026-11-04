@@ -41,7 +41,7 @@
 
 ## 3. Long-term plans
 
-- [ ] **26. `common/fraction`** — fractions used to represent durations.
+- [ ] **26. `common/fraction`** — exact signed fractions for musical quantities. Preserve the supplied numerator and denominator, compare by numeric value or by the supplied pair, and support arithmetic with explicitly chosen result forms. Review consumers individually, starting with fractional alterations and covering position cycles, systems, cents, tuplets, durations, and track timing.
 - [ ] **27. `tuplet`** — tuplets such as triplets.
 - [ ] **28. `duration`** — musical durations.
 - [ ] **29. `chord`** — chords built from notes and durations.
