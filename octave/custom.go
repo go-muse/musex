@@ -52,8 +52,9 @@ func MustNewNumbering(o Octave, num int, skipped ...int) number.Numbering {
 //
 // Because Octave is comparable and each octave has one representation, equal
 // octaves are one map key, so one octave cannot be given twice in one call.
-// In a map literal, later equal keys replace earlier ones by the rules of Go
-// before NewCatalog is called.
+// In a map literal with equal non-constant keys, Go does not specify which
+// name is kept. For explicit last-write-wins behavior, assign the entries
+// sequentially to a map variable before calling NewCatalog.
 //
 // NewCatalog does not modify or retain names, including on error: changing
 // the map after the call does not affect the catalog. The caller must not
