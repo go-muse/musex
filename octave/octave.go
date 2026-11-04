@@ -112,7 +112,7 @@ func FromASPN(aspn int) Octave {
 func FromNumber(num int, n number.Numbering) (Octave, error) {
 	aspn, err := n.ToASPN(num)
 	if err != nil {
-		return Octave{}, numberError(fmt.Sprintf("octave with number %d in %v", num, n), err)
+		return Octave{}, numberError(fmt.Sprintf("octave with number %d", num), err)
 	}
 
 	return of(aspn), nil
@@ -137,7 +137,7 @@ func MustFromNumber(num int, n number.Numbering) Octave {
 func FromName(name string, c *naming.Catalog) (Octave, error) {
 	aspn, err := c.ASPN(name)
 	if err != nil {
-		return Octave{}, fmt.Errorf("octave: octave named %q: %w", name, err)
+		return Octave{}, fmt.Errorf("octave: octave by name: %w", err)
 	}
 
 	return of(aspn), nil
@@ -169,7 +169,7 @@ func (o Octave) Number(n number.Numbering) (int, error) {
 
 	num, err := n.FromASPN(o.aspn)
 	if err != nil {
-		return 0, numberError(fmt.Sprintf("number of %v in %v", o, n), err)
+		return 0, numberError(fmt.Sprintf("number of %v", o), err)
 	}
 
 	return num, nil
