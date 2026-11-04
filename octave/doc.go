@@ -119,8 +119,11 @@
 // these seven causes. The only double match is one cause: when [FromNumber]
 // or [Octave.Number] gets [number.ErrOutOfRange] from package number, the
 // error matches both [ErrOutOfRange] and [number.ErrOutOfRange], so a single
-// check for ErrOutOfRange covers every case of this package. The text of the
-// errors is not part of the API.
+// check for ErrOutOfRange covers every case of this package.
+// When the package wraps an error of package number or naming, it does not
+// repeat the name or the numbering: the wrapped error describes them in a
+// bounded form, so the text stays short however long the name is or however
+// many numbers are skipped. The text of the errors is not part of the API.
 //
 // The conditions are checked in this order: first the octaves given to an
 // operation, then the numbering, catalog, or definition, and last the range
