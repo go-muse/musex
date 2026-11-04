@@ -88,6 +88,103 @@ func TestNew_CopiesSkipped(t *testing.T) {
 	})
 }
 
+// assertSingleSkipped checks n against the oracle spec over a window of ASPN
+// numbers and octave numbers, and its equality with ref.
+func assertSingleSkipped(t *testing.T, n, ref number.Numbering, s spec, desc string) {
+	t.Helper()
+
+	for a := -30; a <= 30; a++ {
+		got, err := n.FromASPN(a)
+		assertOutcome(t, s.fromASPN(a), got, err, fmt.Sprintf("%s: FromASPN(%d)", desc, a))
+	}
+	for x := -30; x <= 30; x++ {
+		got, err := n.ToASPN(x)
+		assertOutcome(t, s.toASPN(x), got, err, fmt.Sprintf("%s: ToASPN(%d)", desc, x))
+	}
+	assert.True(t, n.Equal(ref), "%s: Equal(independent)", desc)
+	assert.True(t, ref.Equal(n), "%s: independent.Equal", desc)
+}
+
+// K-16, G-6: New and MustNew copy a single skipped number as well. Changing
+// the only element of the slice passed to the call does not change the
+// numbering: the original number stays skipped and the new value stays used.
+func TestNew_CopiesSingleSkipped(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		aspn    int
+		num     int
+		skipped int
+		changed int // the value written to the caller's slice after the call
+	}{
+		{name: "Franco-Belgian, number moved up", aspn: 4, num: 3, skipped: 0, changed: 1},
+		{name: "Franco-Belgian, number moved down", aspn: 4, num: 3, skipped: 0, changed: -5},
+		{name: "below the anchor, moved to the anchor side", aspn: 4, num: 3, skipped: 1, changed: 2},
+		{name: "above the anchor", aspn: 4, num: 4, skipped: 6, changed: 5},
+		{name: "above the anchor, moved far", aspn: 4, num: 4, skipped: 6, changed: 12},
+		{name: "above the anchor, moved below it", aspn: 4, num: 4, skipped: 6, changed: -3},
+		{name: "negative anchor", aspn: 1, num: -1, skipped: 0, changed: -3},
+		{name: "negative anchor, negative skipped", aspn: -2, num: -5, skipped: -8, changed: -7},
+		{name: "zero anchor, skipped below", aspn: 0, num: 0, skipped: -10, changed: 10},
+	}
+
+	for _, tt := range tests {
+		t.Run("New/"+tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			s := newSpec(tt.aspn, tt.num, tt.skipped)
+			ref, err := number.New(tt.aspn, tt.num, tt.skipped)
+			require.NoError(t, err)
+
+			skips := []int{tt.skipped}
+			n, err := number.New(tt.aspn, tt.num, skips...)
+			require.NoError(t, err)
+			assert.Equal(t, []int{tt.skipped}, skips, "New does not change the argument")
+			assertSingleSkipped(t, n, ref, s, "before changing the slice")
+
+			skips[0] = tt.changed
+			assertSingleSkipped(t, n, ref, s, "after changing the slice")
+		})
+
+		t.Run("MustNew/"+tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			s := newSpec(tt.aspn, tt.num, tt.skipped)
+			ref := number.MustNew(tt.aspn, tt.num, tt.skipped)
+
+			skips := []int{tt.skipped}
+			n := number.MustNew(tt.aspn, tt.num, skips...)
+			assert.Equal(t, []int{tt.skipped}, skips, "MustNew does not change the argument")
+			assertSingleSkipped(t, n, ref, s, "before changing the slice")
+
+			skips[0] = tt.changed
+			assertSingleSkipped(t, n, ref, s, "after changing the slice")
+		})
+	}
+
+	t.Run("Franco-Belgian", func(t *testing.T) {
+		t.Parallel()
+
+		skips := []int{0}
+		n, err := number.New(4, 3, skips...)
+		require.NoError(t, err)
+
+		x, err := n.FromASPN(2)
+		require.NoError(t, err)
+		assert.Equal(t, 1, x)
+
+		skips[0] = 1
+		x, err = n.FromASPN(2)
+		require.NoError(t, err)
+		assert.Equal(t, 1, x, "FromASPN is unchanged")
+
+		_, err = n.ToASPN(0)
+		assertOnlyError(t, err, number.ErrSkipped, "ToASPN(0) after changing the slice")
+		assert.True(t, n.Equal(number.FrancoBelgian()), "equals the built-in numbering")
+	})
+}
+
 // K-16, G-6: Builtins returns a new slice owned by the caller; changing it
 // changes neither later results nor the built-in functions nor other slices.
 func TestBuiltins_Ownership(t *testing.T) {
