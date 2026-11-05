@@ -3,6 +3,7 @@ package spelling_test
 import (
 	"encoding/json"
 	jsonv2 "encoding/json/v2"
+	"strings"
 	"testing"
 
 	"github.com/go-muse/musex/alteration"
@@ -293,6 +294,82 @@ func TestJSONNull(t *testing.T) {
 			assertUnset(t, receiver)
 		}
 	})
+}
+
+// spaceVariant is a way to surround a JSON value with the whitespace of JSON:
+// space, tab, carriage return, and line feed.
+type spaceVariant struct {
+	name  string
+	lead  string
+	trail string
+}
+
+// spaceVariants puts each of the four whitespace characters before the value
+// only, after it only, on both sides, and repeated, so that a method that
+// skips only some of the characters or only one side fails. The last two
+// variants mix all four characters in different orders.
+func spaceVariants() []spaceVariant {
+	chars := []struct {
+		name string
+		text string
+	}{
+		{"space", " "},
+		{"tab", "\t"},
+		{"CR", "\r"},
+		{"LF", "\n"},
+	}
+
+	var variants []spaceVariant
+
+	for _, c := range chars {
+		variants = append(variants,
+			spaceVariant{"leading " + c.name, c.text, ""},
+			spaceVariant{"trailing " + c.name, "", c.text},
+			spaceVariant{"both " + c.name, c.text, c.text},
+			spaceVariant{"repeated " + c.name, strings.Repeat(c.text, 3), strings.Repeat(c.text, 3)},
+		)
+	}
+
+	return append(variants,
+		spaceVariant{"all four", " \t\r\n", "\r\n\t "},
+		spaceVariant{"all four reversed", "\n\r\t ", " \t\r\n"},
+	)
+}
+
+// K-29, K-30: UnmarshalJSON called directly gets the bytes as they are: the
+// libraries cut the whitespace around a value before the call, so only a
+// direct call shows that the method reads a value with whitespace around it
+// in the same way as without it.
+func TestUnmarshalJSONSurroundingSpace(t *testing.T) {
+	t.Parallel()
+
+	values := []struct {
+		name string
+		json string
+		want spelling.Spelling
+	}{
+		{"null", `null`, spelling.Spelling{}},
+		{"machine form", `"C+1"`, spelling.CSharp()},
+		{"unset mark", `"unset"`, spelling.Spelling{}},
+		{"escaped machine form", `"C\u002B1"`, spelling.CSharp()},
+	}
+
+	for _, v := range values {
+		for _, sp := range spaceVariants() {
+			t.Run(v.name+"/"+sp.name, func(t *testing.T) {
+				t.Parallel()
+
+				data := sp.lead + v.json + sp.trail
+				require.NotEqual(t, v.json, data, "the data must have whitespace around the value")
+
+				// A set receiver different from every result shows the change.
+				receiver := spelling.DFlat()
+				require.NoError(t, receiver.UnmarshalJSON([]byte(data)))
+				assert.Equal(t, v.want, receiver)
+				assert.Equal(t, v.want.IsValid(), receiver.IsValid())
+			})
+		}
+	}
 }
 
 // K-29: JSON that is not a string with a machine form is a reading error; the

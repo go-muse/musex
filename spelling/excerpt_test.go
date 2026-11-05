@@ -440,6 +440,180 @@ func TestUnmarshalJSONExcerptBoundary(t *testing.T) {
 	}
 }
 
+// ownQuotation returns the part of the error text that the package writes
+// about the data: from the quotation to the separator ": " that starts the
+// nested JSON diagnostic, or to the end of the text. This is the same part of
+// the text that T2a inspects (architecture, KR-S15: the text before the
+// quotation has no '"', and the quotation is separated from the nested
+// diagnostic by ": "). The nested diagnostic is not part of it: its content
+// may change and the tests do not check it, so it may mention any text or
+// number. The data must not contain ": ", or the separator could not be told
+// from the data.
+func ownQuotation(t *testing.T, msg, data string) string {
+	t.Helper()
+
+	require.NotContains(t, data, ": ", "the data must not contain the separator")
+
+	i := strings.Index(msg, `"`)
+	require.GreaterOrEqual(t, i, 0, "the error text must have a quotation")
+
+	own := msg[i:]
+	if j := strings.Index(own, ": "); j >= 0 {
+		own = own[:j]
+	}
+
+	return own
+}
+
+// assertWholeDataCited checks that the error of data cites the whole data,
+// whitespace included, and not the value that the libraries would hand over
+// after cutting the whitespace: the part of the text that the package writes
+// about the data has neither the quotation nor the length of that value. The
+// nested diagnostic is not inspected; see ownQuotation.
+func assertWholeDataCited(t *testing.T, err error, data string) {
+	t.Helper()
+
+	stripped := strings.Trim(data, " \t\r\n")
+	require.NotEqual(t, data, stripped, "the data must have whitespace around the value")
+
+	own := ownQuotation(t, requireErrorText(t, err, len(data)), data)
+	assert.Falsef(t, strings.Contains(own, strconv.Quote(stripped)),
+		"the quotation must not be of the data without its whitespace: %s", strconv.Quote(stripped))
+
+	// Only a long data has a length in the text; the digits of a short one
+	// belong to its quotation (T2a covers a short data). The check is sound
+	// only if the two numbers do not nest and the data has no digits.
+	if len(data) > 32 {
+		require.NotContains(t, strconv.Itoa(len(data)), strconv.Itoa(len(stripped)))
+		require.False(t, strings.ContainsAny(data, "0123456789"), "the data must have no digits")
+		assert.Falsef(t, strings.Contains(own, strconv.Itoa(len(stripped))),
+			"the quotation must not give the length %d of the data without its whitespace", len(stripped))
+	}
+}
+
+// P5 and P6 with whitespace around the data: the quoted value is the whole
+// data, with the whitespace, and not the value cut out of it. A short data is
+// quoted whole without a length.
+func TestUnmarshalJSONExcerptSurroundingSpaceShort(t *testing.T) {
+	t.Parallel()
+
+	bases := []struct {
+		name string
+		json string
+	}{
+		{"P5 invalid escape", `"C\x2B1"`},
+		{"P5 no closing quote", `"C+1`},
+		{"P5 two values", `"C+1" "D"`},
+		{"P6 number", `1`},
+		{"P6 array", `[]`},
+	}
+
+	for _, b := range bases {
+		for _, sp := range spaceVariants() {
+			t.Run(b.name+"/"+sp.name, func(t *testing.T) {
+				t.Parallel()
+
+				data := sp.lead + b.json + sp.trail
+
+				err := readJSON(t, data)
+
+				assertShortInputError(t, err, data)
+				assertInvalidForm(t, formOnly, err)
+				assertWholeDataCited(t, err, data)
+			})
+		}
+	}
+}
+
+// P5 with whitespace around a long data: the excerpt is taken from the start
+// of the whole data and the length is the length of the whole data. The
+// leading whitespace shifts the excerpt, and the whitespace on either side
+// changes the length.
+func TestUnmarshalJSONExcerptSurroundingSpaceLong(t *testing.T) {
+	t.Parallel()
+
+	x := func(n int) string { return strings.Repeat("x", n) }
+
+	// The value is `"\q` + x(n) + `"`: a string with an invalid escape.
+	invalid := func(n int) string { return `"\q` + x(n) + `"` }
+
+	cases := []struct {
+		name string
+		data string
+		// k is the excerpt length by the rule of the boundary.
+		k int
+	}{
+		// The data is longer than 32 bytes, the value is not (29 and 30 bytes).
+		{"short value, both sides", " \t\r\n" + invalid(25) + "\r\n\t ", 32},
+		{"short value, leading", " \t\r\n" + invalid(26), 32},
+		{"short value, trailing", invalid(26) + "\r\n\t ", 32},
+		{"short value, leading space only", "    " + invalid(26), 32},
+		{"short value, leading tab only", "\t\t\t\t" + invalid(26), 32},
+		{"short value, leading CR only", "\r\r\r\r" + invalid(26), 32},
+		{"short value, leading LF only", "\n\n\n\n" + invalid(26), 32},
+		{"short value, trailing space only", invalid(26) + "    ", 32},
+		{"short value, trailing tab only", invalid(26) + "\t\t\t\t", 32},
+		{"short value, trailing CR only", invalid(26) + "\r\r\r\r", 32},
+		{"short value, trailing LF only", invalid(26) + "\n\n\n\n", 32},
+		// Both are longer than 32 bytes; the lengths and the excerpts differ.
+		{"long value, both sides", " \t\r\n" + invalid(60) + "\r\n\t ", 32},
+		{"long value, leading", " \t\r\n" + invalid(60), 32},
+		{"long value, trailing", invalid(60) + "\r\n\t ", 32},
+		{"long value, leading space", strings.Repeat(" ", 5) + invalid(60) + strings.Repeat(" ", 5), 32},
+		{"long value, leading tab", strings.Repeat("\t", 5) + invalid(60) + strings.Repeat("\t", 5), 32},
+		{"long value, leading CR", strings.Repeat("\r", 5) + invalid(60) + strings.Repeat("\r", 5), 32},
+		{"long value, leading LF", strings.Repeat("\n", 5) + invalid(60) + strings.Repeat("\n", 5), 32},
+		// The leading whitespace moves a 3-byte rune across the boundary of
+		// the data (bytes 30-32, so k is 30), while in the value it ends at
+		// byte 30 and the excerpt of the value is 32 bytes.
+		{"rune across the boundary of the data", "  \"" + x(27) + "€" + x(10), 30},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			require.Greater(t, len(tc.data), 32, "a long data")
+
+			err := readJSON(t, tc.data)
+
+			assertLongInputError(t, err, tc.data, tc.k)
+			assertInvalidForm(t, formOnly, err)
+			assertWholeDataCited(t, err, tc.data)
+		})
+	}
+}
+
+// The whitespace inside a JSON string is content, not whitespace around the
+// value: it is not cut, so the content is not a machine form, and the error
+// quotes the decoded content.
+func TestUnmarshalJSONSpaceInsideString(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		data string
+		// content is the decoded content of the JSON string.
+		content string
+	}{
+		{"leading space", ` " C+1" `, " C+1"},
+		{"trailing space", "\t\"C+1 \"\n", "C+1 "},
+		{"escaped tab", ` "\tC+1" `, "\tC+1"},
+		{"space in the unset mark", "\r\n\"unset \" ", "unset "},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := readJSON(t, tc.data)
+
+			assertShortInputError(t, err, tc.content)
+			assertInvalidForm(t, formOnly, err)
+		})
+	}
+}
+
 // T2 and the former classes on the short inputs of the existing tables: the
 // whole input is quoted.
 func TestReadErrorExcerptShortInput(t *testing.T) {
