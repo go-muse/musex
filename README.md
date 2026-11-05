@@ -23,7 +23,7 @@ The [Roadmap and package guide](ROADMAP.md) lists the planned packages and links
 
 ## Concept
 
-A written name combines a letter with an alteration. An octave identifies a register across naming traditions. A pitch class identifies a position that repeats in each octave, and set-class catalogs classify twelve-position pitch-class collections by transpositional and inversional equivalence. In the traditional twelve-position system with C at 0, C♯ and D♭ are different spellings of class 1.
+A written name combines a letter with an alteration. An octave identifies a register across naming traditions. A written pitch pairs a written name with a positional octave, preserving both parts independently of any musical system or score notation. A pitch class identifies a position that repeats in each octave, and set-class catalogs classify twelve-position pitch-class collections by transpositional and inversional equivalence. In the traditional twelve-position system with C at 0, C♯ and D♭ are different spellings of class 1.
 
 ```mermaid
 flowchart LR
@@ -32,6 +32,8 @@ flowchart LR
     S -.->|mapped by a musical system| PC["Pitch class · 1 mod 12"]
     O["Octave containing middle C"] -->|ASPN numbering| N["4"]
     O -->|Russian naming catalog| W["первая"]
+    S -->|supplies the written name| P["Pitch · C♯ in ASPN 4"]
+    O -->|supplies the positional octave| P
 ```
 
 The dotted arrow requires the planned musical system. The next diagram shows the planned model for modes and scales. In the ascending G major scale from G3 to G4, F♯ names the seventh degree and F♯4 is its written pitch.
@@ -53,3 +55,5 @@ flowchart LR
 **Keeping triplet subdivisions exact across a measure.** An editor placing triplet eighth notes in a measure scales an eighth note (`1/8` of a whole note) by `2/3` to get `1/12`. Adding two triplet eighths on the same twelfth-note grid keeps the subdivision `2/12` while reducing to `1/6` of a whole note when only the net span is needed, and advancing to the seventh twelfth-note position `6/12` matches the half-measure mark `1/2` by value while preserving the active `1/12` grid.
 
 **Cross-referencing Forte and Carter set-class catalogs.** An analyst comparing an article that cites Forte set class `4-Z15` with a study based on Elliott Carter's *Harmony Book* can look up the class in the twelve-tone catalog, inspect its Rahn and Forte prime forms and interval-class vector, navigate to its Z-partner `4-Z29` or directed $T_n$-types `4-Z15A` and `4-Z15B`, and resolve its corresponding Carter chord number (`18`).
+
+**Tracking written notes across registers and accidentals.** An exercise builder or score editor starts from F♯ in the octave containing middle C (ASPN 4, *первая* in the Russian catalog), generates matching F♯ landmarks across neighboring registers, and raises or strips the accidental while keeping the letter F and its positional octave intact. Because each pitch preserves both its written spelling and its positional octave, C♯ and D♭ in ASPN 4 remain distinct written pitches, and notated B♯3 and C4—which share positional octave ASPN 4 in the traditional system—retain their separate spellings (B♯, ASPN 4) and (C, ASPN 4).
