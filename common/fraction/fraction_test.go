@@ -131,6 +131,37 @@ func assertReducedPairInt(t *testing.T, f fraction.Fraction, wantNum, wantDen in
 
 func assertMustPanicsWithError(t *testing.T, fn func(), wantErr error) {
 	t.Helper()
+	assert.ErrorIs(t, recoverPanicError(t, fn), wantErr)
+}
+
+// allSentinels lists the six sentinel errors of the package.
+func allSentinels() []error {
+	return []error{
+		fraction.ErrInvalid,
+		fraction.ErrZeroDenominator,
+		fraction.ErrDivisionByZero,
+		fraction.ErrNotRepresentable,
+		fraction.ErrOutOfRange,
+		fraction.ErrInvalidText,
+	}
+}
+
+// assertErrorMatchesOnly checks that err matches want and no other sentinel.
+func assertErrorMatchesOnly(t *testing.T, err, want error) {
+	t.Helper()
+	require.Error(t, err)
+	for _, s := range allSentinels() {
+		if s == want {
+			assert.ErrorIs(t, err, s)
+		} else {
+			assert.NotErrorIs(t, err, s, "error %v must not match %v", err, s)
+		}
+	}
+}
+
+// recoverPanicError runs fn and returns the error value it panicked with.
+func recoverPanicError(t *testing.T, fn func()) error {
+	t.Helper()
 	var recovered any
 	func() {
 		defer func() {
@@ -138,10 +169,10 @@ func assertMustPanicsWithError(t *testing.T, fn func(), wantErr error) {
 		}()
 		fn()
 	}()
-	require.NotNil(t, recovered, "expected panic with %v", wantErr)
+	require.NotNil(t, recovered, "expected panic")
 	err, ok := recovered.(error)
 	require.True(t, ok, "expected recovered value to implement error, got %T", recovered)
-	assert.ErrorIs(t, err, wantErr)
+	return err
 }
 
 // TestReadyValues verifies criterion K-1 (Zero, One, MinusOne).
@@ -789,6 +820,113 @@ func TestWithDenominator(t *testing.T) {
 		assertMustPanicsWithError(t, func() {
 			_ = f.MustWithBigDenominator(nil)
 		}, fraction.ErrZeroDenominator)
+	})
+}
+
+// TestWithBigDenominator_BeyondMaxComponent verifies the check order of
+// WithBigDenominator/MustWithBigDenominator when the target denominator or the
+// resulting numerator exceeds MaxComponent: invalid receiver, then non-positive
+// or nil denominator, then divisibility by the reduced denominator, then range.
+func TestWithBigDenominator_BeyondMaxComponent(t *testing.T) {
+	t.Parallel()
+
+	maxBig := fraction.MaxComponentBig()
+	one := big.NewInt(1)
+	pow2x255 := new(big.Int).Lsh(one, 255)                       // MaxComponent + 1; 2^255 mod 3 == 2
+	threePow2x254 := new(big.Int).Lsh(big.NewInt(3), 254)        // 3 * 2^254 > MaxComponent, divisible by 3
+	negPow2x255 := new(big.Int).Neg(pow2x255)                    // negative and beyond the range
+	maxDivBy7 := new(big.Int).Div(maxBig, big.NewInt(7))         // 2^3-1 divides 2^255-1, so the quotient is exact
+	negMax := new(big.Int).Neg(maxBig)                           // -MaxComponent
+	bigFrac := func(num *big.Int, den int64) fraction.Fraction { // value num/den with exact stored pair
+		return fraction.MustFromBigInt(num, big.NewInt(den))
+	}
+
+	t.Run("errors", func(t *testing.T) {
+		t.Parallel()
+
+		cases := []struct {
+			name    string
+			f       fraction.Fraction
+			den     *big.Int
+			wantErr error
+		}{
+			{name: "invalid_receiver_beats_huge_incompatible_den", f: fraction.Fraction{}, den: pow2x255, wantErr: fraction.ErrInvalid},
+			{name: "invalid_receiver_beats_nil_den", f: fraction.Fraction{}, den: nil, wantErr: fraction.ErrInvalid},
+			{name: "invalid_receiver_beats_zero_den", f: fraction.Fraction{}, den: big.NewInt(0), wantErr: fraction.ErrInvalid},
+			{name: "nil_den_beats_everything_else", f: bigFrac(one, 3), den: nil, wantErr: fraction.ErrZeroDenominator},
+			{name: "zero_den", f: bigFrac(one, 3), den: big.NewInt(0), wantErr: fraction.ErrZeroDenominator},
+			{name: "negative_den_beyond_range_is_zero_denominator", f: bigFrac(one, 3), den: negPow2x255, wantErr: fraction.ErrZeroDenominator},
+			{name: "negative_den_beats_incompatibility", f: bigFrac(one, 3), den: big.NewInt(-2), wantErr: fraction.ErrZeroDenominator},
+			{name: "1/3_incompatible_and_too_large_is_not_representable", f: bigFrac(one, 3), den: pow2x255, wantErr: fraction.ErrNotRepresentable},
+			{name: "1/3_compatible_and_too_large_is_out_of_range", f: bigFrac(one, 3), den: threePow2x254, wantErr: fraction.ErrOutOfRange},
+			{name: "-1/3_compatible_and_too_large_is_out_of_range", f: bigFrac(big.NewInt(-1), 3), den: threePow2x254, wantErr: fraction.ErrOutOfRange},
+			{name: "1/-3_negative_stored_den_compatible_and_too_large", f: bigFrac(one, -3), den: threePow2x254, wantErr: fraction.ErrOutOfRange},
+			{name: "stored_2/6_reduces_to_1/3_incompatible_with_2^255", f: bigFrac(big.NewInt(2), 6), den: pow2x255, wantErr: fraction.ErrNotRepresentable},
+			// Divisibility uses the reduced denominator: 6/12 reduces to 1/2, and 2 divides 2^255,
+			// whereas the stored denominator 12 does not; only the range check can fail.
+			{name: "stored_6/12_reduces_to_1/2_compatible_with_2^255", f: bigFrac(big.NewInt(6), 12), den: pow2x255, wantErr: fraction.ErrOutOfRange},
+			{name: "integer_1/1_with_den_2^255_is_out_of_range", f: bigFrac(one, 1), den: pow2x255, wantErr: fraction.ErrOutOfRange},
+			{name: "zero_0/3_with_den_2^255_is_out_of_range", f: bigFrac(big.NewInt(0), 3), den: pow2x255, wantErr: fraction.ErrOutOfRange},
+			{name: "numerator_beyond_range_positive", f: fraction.MustFromBigInt(maxBig, one), den: big.NewInt(2), wantErr: fraction.ErrOutOfRange},
+			{name: "numerator_beyond_range_negative", f: fraction.MustFromBigInt(negMax, one), den: big.NewInt(2), wantErr: fraction.ErrOutOfRange},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				var before *big.Int
+				if tc.den != nil {
+					before = new(big.Int).Set(tc.den)
+				}
+
+				got, err := tc.f.WithBigDenominator(tc.den)
+				assertErrorMatchesOnly(t, err, tc.wantErr)
+				assert.Equal(t, fraction.Fraction{}, got)
+				assert.False(t, got.IsValid())
+
+				err = recoverPanicError(t, func() { _ = tc.f.MustWithBigDenominator(tc.den) })
+				assertErrorMatchesOnly(t, err, tc.wantErr)
+
+				if tc.den != nil {
+					assert.Equal(t, 0, tc.den.Cmp(before), "den must not be modified")
+				}
+			})
+		}
+	})
+
+	t.Run("no_false_out_of_range", func(t *testing.T) {
+		t.Parallel()
+
+		cases := []struct {
+			name    string
+			f       fraction.Fraction
+			den     *big.Int
+			wantNum *big.Int
+		}{
+			{name: "1/MaxComponent_to_MaxComponent", f: fraction.MustFromBigInt(one, maxBig), den: maxBig, wantNum: one},
+			{name: "1/7_to_MaxComponent", f: bigFrac(one, 7), den: maxBig, wantNum: maxDivBy7},
+			{name: "MaxComponent/1_to_1", f: fraction.MustFromBigInt(maxBig, one), den: one, wantNum: maxBig},
+			{name: "-MaxComponent/1_to_1", f: fraction.MustFromBigInt(negMax, one), den: one, wantNum: negMax},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				got, err := tc.f.WithBigDenominator(tc.den)
+				require.NoError(t, err)
+				assert.NotErrorIs(t, err, fraction.ErrOutOfRange)
+
+				gotNum, gotDen, ok := got.BigPair()
+				require.True(t, ok)
+				assert.Equal(t, 0, gotNum.Cmp(tc.wantNum))
+				assert.Equal(t, 0, gotDen.Cmp(tc.den))
+				assert.True(t, got.Equal(tc.f))
+
+				assert.Equal(t, got, tc.f.MustWithBigDenominator(tc.den))
+			})
+		}
 	})
 }
 
