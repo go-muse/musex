@@ -3,6 +3,7 @@ package octave_test
 import (
 	"fmt"
 	"maps"
+	"slices"
 	"testing"
 
 	"github.com/go-muse/musex/octave"
@@ -30,6 +31,10 @@ func TestNewNumbering(t *testing.T) {
 		{name: "O(4) is 3", o: oct(4), num: 3, want: c3()},
 		{name: "O(3, FB) is 4", o: octave.MustFromNumber(3, fb()), num: 4, want: number.ASPN()},
 		{name: "O(4) is 4, skip 0 1", o: oct(4), num: 4, skipped: []int{0, 1}, want: number.MustNew(4, 4, 0, 1)},
+		{name: "O(4) is 3, skip 7 0 (unsorted)", o: oct(4), num: 3, skipped: []int{7, 0}, want: number.MustNew(4, 3, 0, 7)},
+		{name: "O(4) is 3, skip 1 0 (unsorted, below)", o: oct(4), num: 3, skipped: []int{1, 0}, want: number.MustNew(4, 3, 0, 1)},
+		{name: "O(4) is 3, skip 5 4 (unsorted, above)", o: oct(4), num: 3, skipped: []int{5, 4}, want: number.MustNew(4, 3, 4, 5)},
+		{name: "O(4) is 3, skip 9 -2 0 4 (unsorted, both sides)", o: oct(4), num: 3, skipped: []int{9, -2, 0, 4}, want: number.MustNew(4, 3, -2, 0, 4, 9)},
 		{name: "O(4) is 3, empty skip", o: oct(4), num: 3, skipped: []int{}, want: c3()},
 		{name: "O(MIN) is MAX", o: oct(minInt), num: maxInt, want: number.MustNew(minInt, maxInt)},
 		{name: "O(MAX) is MIN", o: oct(maxInt), num: minInt, want: number.MustNew(maxInt, minInt)},
@@ -262,10 +267,11 @@ func TestNewNumberingOwnership(t *testing.T) {
 	t.Run("NewNumbering", func(t *testing.T) {
 		t.Parallel()
 
-		skips := []int{0, 7}
+		// The slice is not sorted: sorting it in place would change it.
+		skips := []int{7, 0}
 		n, err := octave.NewNumbering(oct(4), 3, skips...)
 		require.NoError(t, err)
-		assert.Equal(t, []int{0, 7}, skips, "the call does not change the slice")
+		assert.Equal(t, []int{7, 0}, skips, "the call does not change the slice")
 
 		skips[0] = 1
 		skips[1] = 3
@@ -280,20 +286,57 @@ func TestNewNumberingOwnership(t *testing.T) {
 	t.Run("MustNewNumbering", func(t *testing.T) {
 		t.Parallel()
 
-		skips := []int{0}
+		// The slice is not sorted: sorting it in place would change it.
+		skips := []int{7, 0}
 		n := octave.MustNewNumbering(oct(4), 3, skips...)
+		assert.Equal(t, []int{7, 0}, skips, "the call does not change the slice")
+
 		skips[0] = 2
-		assert.True(t, n.Equal(fb()), "numbering after changes: %v", n)
+		skips[1] = 1
+		assert.True(t, n.Equal(number.MustNew(4, 3, 0, 7)), "numbering after changes: %v", n)
+		assert.Equal(t, -1, oct(1).MustNumber(n), "number of O(1) after changes: 0 is still skipped")
+		assert.Equal(t, 8, oct(8).MustNumber(n), "number of O(8) after changes: 7 is still skipped")
 	})
 
-	t.Run("error", func(t *testing.T) {
-		t.Parallel()
+	// The slice is unchanged after an error and after a panic, for each cause
+	// and for slices that sorting, zeroing or truncating would change.
+	errorCases := []struct {
+		name    string
+		o       octave.Octave
+		num     int
+		skipped []int
+		want    cause
+	}{
+		{name: "invalid octave, skip 7 0", o: octave.Octave{}, num: 3, skipped: []int{7, 0}, want: causeInvalid},
+		{name: "invalid octave, skip 9 -2 0", o: octave.Octave{}, num: 3, skipped: []int{9, -2, 0}, want: causeInvalid},
+		{name: "invalid octave, num is skipped", o: octave.Octave{}, num: 3, skipped: []int{3, 0}, want: causeInvalid},
+		{name: "num is skipped, skip 3 0", o: oct(4), num: 3, skipped: []int{3, 0}, want: causeInvalidDefinition},
+		{name: "num is skipped, skip 7 3 0", o: oct(4), num: 3, skipped: []int{7, 3, 0}, want: causeInvalidDefinition},
+		{name: "repeated skip 5 0 5", o: oct(4), num: 3, skipped: []int{5, 0, 5}, want: causeInvalidDefinition},
+	}
 
-		skips := []int{3, 0}
-		_, err := octave.NewNumbering(oct(4), 3, skips...)
-		assertCause(t, err, causeInvalidDefinition, "NewNumbering")
-		assert.Equal(t, []int{3, 0}, skips, "the call does not change the slice on error")
-	})
+	for _, tc := range errorCases {
+		for _, must := range []bool{false, true} {
+			t.Run(fmt.Sprintf("error/%s/must=%t", tc.name, must), func(t *testing.T) {
+				t.Parallel()
+
+				skips := slices.Clone(tc.skipped)
+				var err error
+				if must {
+					v, panicked := panicValue(func() { octave.MustNewNumbering(tc.o, tc.num, skips...) })
+					require.True(t, panicked, "MustNewNumbering: expected a panic")
+					err, _ = v.(error)
+				} else {
+					var n number.Numbering
+					n, err = octave.NewNumbering(tc.o, tc.num, skips...)
+					assert.False(t, n.IsDefined(), "value on error is the zero Numbering")
+				}
+
+				assertCause(t, err, tc.want, "cause")
+				assert.Equal(t, tc.skipped, skips, "the call does not change the slice on error or panic")
+			})
+		}
+	}
 }
 
 // K-27, G-10: the map passed to NewCatalog is neither changed nor retained:
