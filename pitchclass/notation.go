@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
 // modSeparator separates the number of a class or an operator from N in the
@@ -13,6 +14,10 @@ const modSeparator = " mod "
 // letterStyleLimit is the largest number of positions for which the letter
 // styles are defined: they have symbols only for 10 and 11.
 const letterStyleLimit = 12
+
+// notationExcerptLimit is the maximum number of input bytes quoted in an
+// invalid-notation error.
+const notationExcerptLimit = 64
 
 // Style is a style of the literary notation of class numbers, used by
 // [Class.Notation] and [ParseNotation]. The styles differ only in how they
@@ -359,5 +364,27 @@ func parseStyled(text string, s Style) (int, bool) {
 
 // errNotation returns the error for a text that is not a valid notation.
 func errNotation(s string) error {
-	return fmt.Errorf("%w: %q", ErrNotation, s)
+	return fmt.Errorf("%w: %s", ErrNotation, notationExcerpt(s))
+}
+
+// notationExcerpt quotes s in full or quotes a bounded prefix followed by
+// the original byte length, without splitting a valid UTF-8 character.
+func notationExcerpt(s string) string {
+	if len(s) <= notationExcerptLimit {
+		return strconv.Quote(s)
+	}
+
+	end := 0
+	for end < notationExcerptLimit {
+		// Decode from s, not a truncated slice: a valid rune may cross
+		// the limit. Invalid UTF-8 bytes are single-byte units.
+		_, size := utf8.DecodeRuneInString(s[end:])
+		if end+size > notationExcerptLimit {
+			break
+		}
+
+		end += size
+	}
+
+	return fmt.Sprintf("%q... (%d bytes)", s[:end], len(s))
 }
