@@ -12,7 +12,7 @@
 - [x] **4. [`octave/number`](guide/packages/octave/number.md)** — octave numbering schemes and their visible numbers.
 - [x] **5. [`octave/naming`](guide/packages/octave/naming.md)** — catalogs of visible octave names.
 - [x] **6. [`octave`](guide/packages/octave.md)** — octave identity and conversion to visible labels.
-- [ ] **7. `pitch`** — a written note name in a positional octave.
+- [x] **7. [`pitch`](guide/packages/pitch.md)** — a written note name in a positional octave.
 - [x] **8. [`pitchclass`](guide/packages/pitchclass.md)** — a position class within an octave.
 - [ ] **8a. `pcset`** — sets of pitch classes and set operations.
 - [x] **8b. [`setclass/catalog`](guide/packages/setclass-catalog.md)** — Forte and Carter set-class catalogs for 12 positions.
