@@ -41,10 +41,15 @@ When an exact unit policy (same unit, larger unit, smaller unit, or explicit tar
 
 ## Whole-part extraction and division with remainder
 
-Separating a fraction into an integer whole part and a fractional remainder — or dividing a dividend by a non-zero step — supports two conventions that agree on non-negative values but differ on negative values:
+Separating a fraction into an integer whole part and a fractional remainder — or dividing a dividend by a non-zero step — supports two rounding conventions:
 
-- **Truncation toward zero.** The integer quotient rounds toward zero and the remainder keeps the sign of the dividend (`0/1` when the remainder is zero). For example, `-13/12` splits into whole part `-1` and reduced fractional part `-1/12`, matching signed mixed-number decomposition.
+- **Truncation toward zero.** The integer quotient rounds toward zero and a non-zero remainder keeps the sign of the dividend. For example, `-13/12` splits into whole part `-1` and fractional remainder `-1/12`, matching signed mixed-number decomposition.
 - **Floor (Euclidean) division.** For a positive step, the integer quotient rounds toward negative infinity (`floor`) so that the remainder is always non-negative and strictly smaller than the step (`0 <= remainder < step`). For example, at position `-1/12` relative to a cycle of length `1`, floor division gives cycle index `-1` and in-cycle offset `11/12`.
+
+The remainder's representation depends on the operation, not on the rounding convention:
+
+- **Whole-part extraction.** The fractional remainder preserves the magnitude of the stored denominator without reduction, including when it is zero: `6/3 → 2 + 0/3` and `14/12 → 1 + 2/12` under either convention. For a negative value, `-13/12 → -1 + (-1/12)` toward zero and `-13/12 → -2 + 11/12` toward negative infinity.
+- **Division by a supplied step.** The remainder is always in canonical reduced form, with a positive denominator and `0/1` for zero. For example, dividing `6/3` by step `1` gives quotient `2` and remainder `0/1` under either convention; dividing `-1/12` by step `1/4` toward negative infinity gives quotient `-1` and remainder `1/6`.
 
 ## Divisibility and arithmetic progressions
 
