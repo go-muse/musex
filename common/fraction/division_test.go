@@ -419,6 +419,82 @@ func TestDivisibilityAndProgression(t *testing.T) {
 	})
 }
 
+// TestInProgression_IntermediateBeyondMaxComponent verifies that InProgression
+// is decided only by the integer step count k = (f - start) / step, even when
+// the difference f - start (or its numerator) exceeds MaxComponent. Below,
+// M = MaxComponent = 2^255 - 1, which is odd, divisible by 7, and not
+// divisible by 2, 3, or 5.
+func TestInProgression_IntermediateBeyondMaxComponent(t *testing.T) {
+	t.Parallel()
+
+	// frac returns sign*M/den with the exact stored pair.
+	frac := func(sign int64, den int64) fraction.Fraction {
+		num := new(big.Int).Mul(fraction.MaxComponentBig(), big.NewInt(sign))
+		return fraction.MustFromBigInt(num, big.NewInt(den))
+	}
+	mMinus1 := fraction.MustFromBigInt(new(big.Int).Sub(fraction.MaxComponentBig(), big.NewInt(1)), big.NewInt(1))
+
+	cases := []struct {
+		name      string
+		f         fraction.Fraction
+		start     fraction.Fraction
+		step      fraction.Fraction
+		wantSteps int
+		wantOK    bool
+		wantErr   error
+	}{
+		// f - start = 2M, 2M / M = 2.
+		{name: "positive_count_difference_2M", f: frac(1, 1), start: frac(-1, 1), step: frac(1, 1), wantSteps: 2, wantOK: true},
+		// f - start = -2M, -2M / M = -2.
+		{name: "negative_count_difference_-2M", f: frac(-1, 1), start: frac(1, 1), step: frac(1, 1), wantSteps: -2, wantOK: true},
+		// f - start = M/2 + M/3 = 5M/6 (numerator 5M > M), step M/6, k = 5.
+		{name: "fractional_operands_numerator_5M_positive", f: frac(1, 2), start: frac(-1, 3), step: frac(1, 6), wantSteps: 5, wantOK: true},
+		// f - start = -M/2 - M/3 = -5M/6, step M/6, k = -5.
+		{name: "fractional_operands_numerator_5M_negative", f: frac(-1, 2), start: frac(1, 3), step: frac(1, 6), wantSteps: -5, wantOK: true},
+		// Control: equal operands at the limit give 0 steps.
+		{name: "equal_operands_at_limit", f: frac(1, 1), start: frac(1, 1), step: frac(1, 1), wantSteps: 0, wantOK: true},
+		// 2M / 4 = M/2, not an integer because M is odd.
+		{name: "not_integer_2M_over_4", f: frac(1, 1), start: frac(-1, 1), step: fraction.MustNew(4, 1), wantOK: false},
+		// 2M / (M-1) = 2 + 2/(M-1), not an integer because M-1 > 2.
+		{name: "not_integer_2M_over_M_minus_1", f: frac(1, 1), start: frac(-1, 1), step: mMinus1, wantOK: false},
+		// (5M/6) / (M/5) = 25/6, not an integer.
+		{name: "not_integer_fractional_operands", f: frac(1, 2), start: frac(-1, 3), step: frac(1, 5), wantOK: false},
+		// k = 2M does not fit in int.
+		{name: "count_beyond_int_positive", f: frac(1, 1), start: frac(-1, 1), step: fraction.One(), wantErr: fraction.ErrNotRepresentable},
+		// k = -2M does not fit in int.
+		{name: "count_beyond_int_negative", f: frac(-1, 1), start: frac(1, 1), step: fraction.One(), wantErr: fraction.ErrNotRepresentable},
+		// k = (5M/6) / (1/6) = 5M does not fit in int.
+		{name: "count_beyond_int_fractional_operands", f: frac(1, 2), start: frac(-1, 3), step: fraction.MustNew(1, 6), wantErr: fraction.ErrNotRepresentable},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			steps, ok, err := tc.f.InProgression(tc.start, tc.step)
+
+			if tc.wantErr != nil {
+				assertErrorMatchesOnly(t, err, tc.wantErr)
+				assert.False(t, ok)
+				assert.Equal(t, 0, steps)
+
+				panicErr := recoverPanicError(t, func() { _, _ = tc.f.MustInProgression(tc.start, tc.step) })
+				assertErrorMatchesOnly(t, panicErr, tc.wantErr)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.NotErrorIs(t, err, fraction.ErrOutOfRange)
+			assert.Equal(t, tc.wantOK, ok)
+			assert.Equal(t, tc.wantSteps, steps)
+
+			mSteps, mOK := tc.f.MustInProgression(tc.start, tc.step)
+			assert.Equal(t, tc.wantSteps, mSteps)
+			assert.Equal(t, tc.wantOK, mOK)
+		})
+	}
+}
+
 // TestExplicitRoundingAndFloat64 verifies criterion K-22 (RoundToInt, RoundToBigInt, RoundToDenominator, RoundToBigDenominator, Float64).
 func TestExplicitRoundingAndFloat64(t *testing.T) {
 	t.Parallel()
