@@ -161,6 +161,15 @@
 // functions and methods whose names start with Must panic, with the error
 // as the panic value.
 //
+// An error of [Parse], [ParseNotation], or [ParseOperator] quotes the
+// rejected text, unless it reports a modulus below 1, a style that is not
+// valid or not defined for the modulus, or a multiplier that is not
+// invertible. A text of up to 64 bytes is quoted in full. A longer text is
+// quoted by at most its first 64 bytes, without splitting a valid UTF-8
+// character, followed by its length in bytes. So the length of an error
+// message of these functions is bounded however long the text is. The
+// exact text of errors is not part of the API.
+//
 // # Invalid values
 //
 // The zero values Class{} and Operator{} are neither a class nor an
