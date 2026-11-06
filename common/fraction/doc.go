@@ -126,6 +126,14 @@
 // corresponding Must* wrapper that returns the value on success and panics with
 // the underlying error on failure.
 //
+// Every error returned by [Parse] quotes the rejected text, and so do the
+// panic value of [MustParse] and every error of [Fraction.UnmarshalText]
+// except [ErrInvalid] for a nil receiver. A text of up to 64 bytes is quoted
+// in full. A longer text is quoted by at most its first 64 bytes, without
+// splitting a valid UTF-8 character, followed by its length in bytes. So
+// the length of these error messages is bounded however long the text is.
+// The exact text of errors is not part of the API.
+//
 // # Concurrency
 //
 // [Fraction] values are immutable and the package maintains no mutable global

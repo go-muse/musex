@@ -45,30 +45,29 @@ var (
 
 const maxErrorQuoteBytes = 64
 
+// quoteInputExcerpt quotes text in full when it is at most maxErrorQuoteBytes
+// bytes long; otherwise it quotes at most the first maxErrorQuoteBytes bytes
+// without splitting a valid UTF-8 character, followed by an ellipsis and the
+// full length of text in bytes.
+func quoteInputExcerpt(text string) string {
+	if len(text) <= maxErrorQuoteBytes {
+		return strconv.Quote(text)
+	}
+	k := 0
+	for k < maxErrorQuoteBytes {
+		_, width := utf8.DecodeRuneInString(text[k:])
+		if k+width > maxErrorQuoteBytes {
+			break
+		}
+		k += width
+	}
+	return strconv.Quote(text[:k]) + "... (" + strconv.Itoa(len(text)) + " bytes)"
+}
+
 // parseError formats a text parsing error wrapping exactly one sentinel baseErr
-// while bounding the quoted excerpt of text to at most 64 bytes plus the full
-// byte length.
+// and quoting text in full up to maxErrorQuoteBytes bytes, or quoting at most
+// its first maxErrorQuoteBytes bytes without splitting a valid UTF-8 character
+// followed by its byte length.
 func parseError(baseErr error, text string) error {
-	truncated := false
-	limit := len(text)
-	if limit > maxErrorQuoteBytes {
-		limit = maxErrorQuoteBytes
-		for limit > 0 && !utf8.RuneStart(text[limit]) {
-			limit--
-		}
-		truncated = true
-	}
-	quoted := strconv.Quote(text[:limit])
-	for len(quoted) > maxErrorQuoteBytes && limit > 0 {
-		limit--
-		for limit > 0 && !utf8.RuneStart(text[limit]) {
-			limit--
-		}
-		quoted = strconv.Quote(text[:limit])
-		truncated = true
-	}
-	if !truncated {
-		return fmt.Errorf("%w: %s (len=%d)", baseErr, quoted, len(text))
-	}
-	return fmt.Errorf("%w: %s... (len=%d)", baseErr, quoted, len(text))
+	return fmt.Errorf("%w: %s", baseErr, quoteInputExcerpt(text))
 }
