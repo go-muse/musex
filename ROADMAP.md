@@ -14,7 +14,7 @@
 - [x] **6. [`octave`](guide/packages/octave.md)** — octave identity and conversion to visible labels.
 - [x] **7. [`pitch`](guide/packages/pitch.md)** — a written note name in a positional octave.
 - [x] **8. [`pitchclass`](guide/packages/pitchclass.md)** — a position class within an octave.
-- [ ] **8a. `pcset`** — sets of pitch classes and set operations.
+- [x] **8a. [`pcset`](guide/packages/pcset.md)** — sets of pitch classes and set operations.
 - [x] **8b. [`setclass/catalog`](guide/packages/setclass-catalog.md)** — Forte and Carter set-class catalogs for 12 positions.
 - [ ] **8c. `setclass`** — set classes, prime forms, and relations between them.
 - [ ] **8d. `pcseq`** — pitch-class sequences and twelve-tone rows.
