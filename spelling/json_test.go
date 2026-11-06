@@ -372,6 +372,76 @@ func TestUnmarshalJSONSurroundingSpace(t *testing.T) {
 	}
 }
 
+// K-29: only the four whitespace characters of JSON (RFC 8259) are allowed
+// around a value. Any other character before or after it makes the JSON
+// malformed, even when Unicode treats it as whitespace. The libraries check
+// the syntax before they call UnmarshalJSON, so only a direct call shows that
+// the method itself does not skip a wider set of characters.
+func TestUnmarshalJSONNonJSONSpace(t *testing.T) {
+	t.Parallel()
+
+	// The characters are given by code points and are encoded in UTF-8.
+	chars := []struct {
+		name string
+		text string
+	}{
+		{"VERTICAL TAB U+000B", string(rune(0x000b))},
+		{"FORM FEED U+000C", string(rune(0x000c))},
+		{"NEXT LINE U+0085", string(rune(0x0085))},
+		{"NO-BREAK SPACE U+00A0", string(rune(0x00a0))},
+	}
+
+	// Positions put the character where JSON allows whitespace, alone and
+	// together with the allowed whitespace on either side of it.
+	positions := []struct {
+		name string
+		wrap func(c, value string) string
+	}{
+		{"leading", func(c, v string) string { return c + v }},
+		{"trailing", func(c, v string) string { return v + c }},
+		{"both", func(c, v string) string { return c + v + c }},
+		{"after JSON space", func(c, v string) string { return " " + c + v }},
+		{"before JSON space", func(c, v string) string { return v + c + "\n" }},
+		{"between JSON spaces", func(c, v string) string { return "\t " + c + "\r\n" + v + " \t" }},
+	}
+
+	// Each value is read without error when it is surrounded by JSON
+	// whitespace only, so the error is caused by the character.
+	values := []struct {
+		name string
+		json string
+	}{
+		{"null", `null`},
+		{"machine form", `"C+1"`},
+		{"unset mark", `"unset"`},
+		{"escaped machine form", `"C\u002B1"`},
+	}
+
+	for _, c := range chars {
+		for _, p := range positions {
+			for _, v := range values {
+				t.Run(c.name+"/"+p.name+"/"+v.name, func(t *testing.T) {
+					t.Parallel()
+
+					data := []byte(p.wrap(c.text, v.json))
+
+					require.Contains(t, string(data), c.text, "the data must contain the character")
+					require.False(t, json.Valid(data), "the data must not be valid JSON")
+
+					// A set receiver different from every result of reading
+					// the values shows the change.
+					receiver := spelling.DFlat()
+					err := receiver.UnmarshalJSON(data)
+
+					assertInvalidForm(t, formOnly, err)
+					assert.Equal(t, spelling.DFlat(), receiver, "the receiver must keep its value")
+					assert.True(t, receiver.IsValid(), "the receiver must stay a set name")
+				})
+			}
+		}
+	}
+}
+
 // K-29: JSON that is not a string with a machine form is a reading error; the
 // field keeps its value.
 func TestJSONInvalid(t *testing.T) {
