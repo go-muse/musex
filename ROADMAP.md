@@ -15,7 +15,7 @@
 - [ ] **7. `pitch`** — a written note name in a positional octave.
 - [x] **8. [`pitchclass`](guide/packages/pitchclass.md)** — a position class within an octave.
 - [ ] **8a. `pcset`** — sets of pitch classes and set operations.
-- [ ] **8b. `setclass/catalog`** — Forte and Carter set-class catalogs for 12 positions.
+- [x] **8b. [`setclass/catalog`](guide/packages/setclass-catalog.md)** — Forte and Carter set-class catalogs for 12 positions.
 - [ ] **8c. `setclass`** — set classes, prime forms, and relations between them.
 - [ ] **8d. `pcseq`** — pitch-class sequences and twelve-tone rows.
 - [ ] **9. `system`** — musical positions, steps, equivalence, and written-octave rules.

@@ -23,7 +23,7 @@ The [Roadmap and package guide](ROADMAP.md) lists the planned packages and links
 
 ## Concept
 
-A written name combines a letter with an alteration. An octave identifies a register across naming traditions. A pitch class identifies a position that repeats in each octave. In the traditional twelve-position system with C at 0, C♯ and D♭ are different spellings of class 1.
+A written name combines a letter with an alteration. An octave identifies a register across naming traditions. A pitch class identifies a position that repeats in each octave, and set-class catalogs classify twelve-position pitch-class collections by transpositional and inversional equivalence. In the traditional twelve-position system with C at 0, C♯ and D♭ are different spellings of class 1.
 
 ```mermaid
 flowchart LR
@@ -51,3 +51,5 @@ flowchart LR
 **Reading the same score across octave conventions.** A teacher working with a French score and a Russian textbook sees octave 3 in the score and *первая* (“first”) in the textbook. Both refer to the register containing middle C. A teaching tool can look up the register using Franco-Belgian numbering and display its Russian name alongside its ASPN number, 4. The student can then match the passages in both sources.
 
 **Keeping triplet subdivisions exact across a measure.** An editor placing triplet eighth notes in a measure scales an eighth note (`1/8` of a whole note) by `2/3` to get `1/12`. Adding two triplet eighths on the same twelfth-note grid keeps the subdivision `2/12` while reducing to `1/6` of a whole note when only the net span is needed, and advancing to the seventh twelfth-note position `6/12` matches the half-measure mark `1/2` by value while preserving the active `1/12` grid.
+
+**Cross-referencing Forte and Carter set-class catalogs.** An analyst comparing an article that cites Forte set class `4-Z15` with a study based on Elliott Carter's *Harmony Book* can look up the class in the twelve-tone catalog, inspect its Rahn and Forte prime forms and interval-class vector, navigate to its Z-partner `4-Z29` or directed $T_n$-types `4-Z15A` and `4-Z15B`, and resolve its corresponding Carter chord number (`18`).
