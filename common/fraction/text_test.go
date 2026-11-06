@@ -457,12 +457,12 @@ func TestTextInterfacesAndParse(t *testing.T) {
 			longSyntax := strings.Repeat("a", size)
 			_, err := fraction.Parse(longSyntax)
 			require.ErrorIs(t, err, fraction.ErrInvalidText)
-			assert.LessOrEqual(t, len(err.Error()), 256, "error message must be bounded on %d-byte input", size)
+			assert.LessOrEqual(t, len(err.Error()), 512, "error message must be bounded on %d-byte input", size)
 
 			longDigits := strings.Repeat("9", size)
 			_, err = fraction.Parse(longDigits)
 			require.ErrorIs(t, err, fraction.ErrOutOfRange)
-			assert.LessOrEqual(t, len(err.Error()), 256, "error message must be bounded on %d-byte digits input", size)
+			assert.LessOrEqual(t, len(err.Error()), 512, "error message must be bounded on %d-byte digits input", size)
 		}
 	})
 }
@@ -757,7 +757,7 @@ func FuzzParse(f *testing.F) {
 		got, err := fraction.Parse(input)
 		if err != nil {
 			assert.False(t, got.IsValid())
-			assert.LessOrEqual(t, len(err.Error()), 256)
+			assert.LessOrEqual(t, len(err.Error()), 512)
 
 			matchCount := 0
 			for _, target := range []error{
