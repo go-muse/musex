@@ -19,7 +19,7 @@
 - [ ] **8c. `setclass`** — set classes, prime forms, and relations between them.
 - [ ] **8d. `pcseq`** — pitch-class sequences and twelve-tone rows.
 - [ ] **9. `system`** — musical positions, steps, equivalence, and written-octave rules.
-- [ ] **10. `cents`** — cent values, note offsets, and distances.
+- [x] **10. [`cents`](guide/packages/cents.md)** — cent values, note offsets, and distances.
 - [ ] **11. `tuning/temperament`** — temperament tables expressed in cents.
 - [ ] **12. `tuning`** — a temperament, reference pitch, and frequency calculations.
 - [ ] **13. `notation`** — parsing and formatting note names and pitches.
