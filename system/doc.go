@@ -24,8 +24,8 @@
 //
 //   - [New], [FromSteps] and [NewRegular] create a system from offsets, from
 //     steps between letters, or from a large and a small step;
-//     [Traditional], [Positions19] and [QuarterTones24] return the built-in
-//     systems, [Builtins] lists them and [LookupBuiltin] finds one by name.
+//     twenty functions return the built-in systems (see "Built-in systems"
+//     below), [Builtins] lists them and [LookupBuiltin] finds one by name.
 //   - [System.Definition], [System.Classes], [System.Boundary],
 //     [System.Offset], [System.Steps], [System.StepAfter],
 //     [System.NaturalClass], [System.Chromatic], [System.Alterations] and
@@ -65,6 +65,44 @@
 // admissible in [QuarterTones24] but not in [Traditional]. Packages
 // [github.com/go-muse/musex/pitch], [github.com/go-muse/musex/octave] and
 // [github.com/go-muse/musex/spelling] know nothing about systems.
+//
+// # Built-in systems
+//
+// The package has twenty built-in systems, each a fixed *System with the
+// boundary letter C, built from the letter offsets and the chromatic unit of a
+// published notation. The admissible values are all multiples of the smallest
+// accidental of that notation, measured in chromatic units: the integers for
+// notations with sharps and flats only, multiples of 1/d otherwise. In catalog
+// order ([Builtins]):
+//
+//   - [Traditional] ("traditional"): N = 12, c = 1, integers;
+//   - [HeptatonicSecondGenerated8] ("8-heptatonic-2nd-generated"): N = 8,
+//     c = 1, integers;
+//   - [Blackwood15] ("15-blackwood", c = 1, integers), [UpsAndDowns15]
+//     ("15-ups-and-downs", c = 3, multiples of 1/3, E = F and B on offset N)
+//     and [Porcupine15] ("15-porcupine", c = 1, integers): N = 15;
+//   - [Blackwood17] ("17-blackwood", integers) and [QuarterTones17]
+//     ("17-quarter-tone", multiples of 1/2): N = 17, c = 2;
+//   - [Positions19] ("19-position"): N = 19, c = 1, integers;
+//   - [UpsAndDowns22] ("22-ups-and-downs", c = 3, multiples of 1/3),
+//     [QuarterTones22] ("22-quarter-tone", c = 2, multiples of 1/2) and
+//     [Porcupine22] ("22-porcupine", c = 1, integers): N = 22;
+//   - [QuarterTones24] ("24-quarter-tone"): N = 24, c = 2, multiples of 1/2;
+//   - [SharpsAndFlats31] ("31-sharps-and-flats", integers) and [Fokker31]
+//     ("31-fokker", multiples of 1/2): N = 31, c = 2;
+//   - [ExtendedPythagorean41] ("41-extended-pythagorean", integers) and
+//     [UpsAndDowns41] ("41-ups-and-downs", multiples of 1/4): N = 41, c = 4;
+//   - [ExtendedPythagorean53] ("53-extended-pythagorean", c = 5, integers),
+//     [UpsAndDowns53] ("53-ups-and-downs", c = 5, multiples of 1/5) and
+//     [ArelEzgiUzdilek53] ("53-arel-ezgi-uzdilek", c = 4, multiples of 1/4):
+//     N = 53;
+//   - [ManeriSims72] ("72-maneri-sims"): N = 72, c = 6, multiples of 1/6.
+//
+// Systems with the same offsets differ in c or in the admissible values and
+// are not Equal. The graphemes of accidentals (arrows, quarter-tone signs and
+// the like) are not part of a system: mapping them to alteration values is a
+// matter of notation. Other systems, including systems with another boundary
+// letter, are created with [New], [FromSteps] or [NewRegular].
 //
 // # Octave and written octave
 //
