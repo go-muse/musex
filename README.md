@@ -23,20 +23,20 @@ The [Roadmap and package guide](ROADMAP.md) lists the planned packages and links
 
 ## Concept
 
-A written name combines a letter with an alteration. An octave identifies a register across naming traditions. A written pitch pairs a written name with a positional octave, preserving both parts independently of any musical system or score notation. A pitch class identifies a position that repeats in each octave, and set classes and their twelve-position catalogs classify pitch-class collections by transpositional, inversional, and affine equivalence. In the traditional twelve-position system with C at 0, C♯ and D♭ are different spellings of class 1.
+A written name combines a letter with an alteration. An octave identifies a register across naming traditions. A written pitch pairs a written name with a positional octave, preserving both parts independently of any musical system or score notation. A pitch class identifies a position that repeats in each octave, and set classes and their twelve-position catalogs classify pitch-class collections by transpositional, inversional, and affine equivalence. A musical system maps admissible spellings to pitch classes and written pitches to positions, steps, and written octaves; no system is assumed by default. In the traditional twelve-position system with C at 0, C♯ and D♭ are different spellings of class 1.
 
 ```mermaid
 flowchart LR
     L["Letter · C"] -->|supplies the letter| S["Spelling · C♯"]
     A["Alteration · +1"] -->|raises by one chromatic unit| S
-    S -.->|mapped by a musical system| PC["Pitch class · 1 mod 12"]
+    S -->|mapped by a musical system| PC["Pitch class · 1 mod 12"]
     O["Octave containing middle C"] -->|ASPN numbering| N["4"]
     O -->|Russian naming catalog| W["первая"]
     S -->|supplies the written name| P["Pitch · C♯ in ASPN 4"]
     O -->|supplies the positional octave| P
 ```
 
-The dotted arrow requires the planned musical system. The next diagram shows the planned model for modes and scales. In the ascending G major scale from G3 to G4, F♯ names the seventh degree and F♯4 is its written pitch.
+The next diagram shows the planned model for modes and scales. In the ascending G major scale from G3 to G4, F♯ names the seventh degree and F♯4 is its written pitch.
 
 ```mermaid
 flowchart LR
@@ -63,3 +63,5 @@ flowchart LR
 **Matching a chord against scale templates and comparing interval content.** An analysis tool receives the pitch-class set `{0, 4, 7}` in the twelve-position system and checks which transpositions of the major-scale template `{0, 2, 4, 5, 7, 9, 11}` cover all three positions. The positional search returns tonics 0, 5, and 7—identifying C, F, and G major as the major scales containing a C major triad. Comparing `{0, 4, 7}` with its inversion `{0, 3, 7}` also shows that both triads share the interval-class vector `<0, 0, 1, 1, 1, 0>`, explaining why major and minor triads contain the same pair distances despite their opposite orientation.
 
 **Reducing a chord to its prime form and counting embedded subsets.** An analytical pass reduces the pitch-class set `{2, 6, 9}` (D major) to [set class](guide/packages/setclass.md) `3-11` (`(0, 3, 7)`) under transpositional and inversional equivalence or separates it from D minor (`{2, 5, 9}`) as directed type `3-11B` (`(0, 4, 7)`) under transposition alone. Querying Lewin's embedding number `EMB(3-11, 7-35)` shows that the diatonic collection contains six major and minor triads (three of each directed type), while Burnside enumeration counts set classes in microtonal divisions without materializing every subset.
+
+**Keeping the written octave when an accidental changes.** A notation editor stores the record B3 in the traditional [musical system](guide/packages/system.md). Raising it with the system keeps the written octave and gives B♯3, which sounds with C4—one step above B3—whereas raising the pitch alone keeps its positional octave and gives B♯2. The same system tells the editor that B♯3 and C4 are enharmonically equivalent, that E5 lies 16 steps above C4, and spells the class three steps above C4 as D♯4 with the sharps rule or E♭4 with the flats rule; in the 19-position system the same rules keep C♯ and D♭ apart as different positions.

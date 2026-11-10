@@ -1,0 +1,29 @@
+# Musical systems
+
+A musical system is the set of rules that connects written note names to positions. It fixes the number *N* of classes of positions in an octave, the boundary letter at which each octave of positions begins, the offsets of the seven natural letters from that letter, the chromatic unit *c* (how many classes one sharp moves a name), and the rule of admissible alteration values. From these rules an admissible [spelling](spelling.md) (*l*, *a*) gets the [pitch class](pitchclass.md) (*p*(*l*) + *a*·*c*) mod *N*, and a [written pitch](pitch.md) gets a position on the axis: its octave times *N* plus its class. The traditional system has *N* = 12, C at 0, the offsets C 0 D 2 E 4 F 5 G 7 A 9 B 11, *c* = 1 and all integer alterations, so C♯ and D♭ share class 1 while B♯ and C share class 0.
+
+There is no default system. Every question about names and pitches—is this name admissible, which class does it have, which of two pitches is higher, how many steps lie between them—is asked of an explicit system. The same name can be admissible in one system and not in another: D raised by a quarter tone exists in the 24-class quarter-tone system but not in the traditional one. Three systems are built in: the traditional system, the 19-position system (steps 3 and 2, so C♯ and D♭ differ while B♯ and C♭ coincide), and the 24-class quarter-tone system (*c* = 2, alterations in halves). Other systems are defined from offsets, from the steps between letters, or from a large and a small step, as in 17-, 22-, 31-, 41- or 53-position systems; the boundary letter may be any of the seven letters.
+
+## Positions, steps, and enharmonic equivalence
+
+Positions are never exposed as numbers: a system has no reference pitch and no public origin. It compares pitches by position, tests whether a pitch lies between two others (both ends included), sorts pitches by position, and measures the distance between two pitches in steps of the system. Two names are enharmonically equivalent when they have the same class, and two pitches when they have the same position; equivalence never makes different written names equal. A system lists all admissible names of a class within an alteration limit, and it reports whether it is regular—whether its steps follow the large-large-small-large-large-large-small pattern of the diatonic scale with *c* = large − small.
+
+## Octave and written octave
+
+The octave of a written pitch is the octave of positions that holds it, not the number printed next to the letter. A name whose shift leaves its octave of positions has a carry: in the traditional system B♯ has the carry +1 and C♭ the carry −1. The written octave is the octave minus the carry, so the record B♯3 is the pitch (B♯, octave 4), sounding together with C4, and the record C♭4 is the pitch (C♭, octave 3). A system converts in both directions between a pitch and its written octave; the visible octave number belongs to notation.
+
+Changing an accidental can either keep the octave or keep the written octave. The pitch package keeps the octave: raising (B, octave 3) gives (B♯, octave 3), written B♯2. A system can keep the written octave instead: raising the record B3 gives B♯3, the pitch (B♯, octave 4), one step higher. The same holds for lowering, for changes by several or fractional units, for respelling a pitch with another name (the record C4 respelled as B♯ is B♯4, twelve steps higher), and for returning to the natural name.
+
+A letter may stand exactly on the next boundary, with offset *N*. In a five-class system with the offsets C 0, D 1, E 2, F 2, G 3, A 4, B 5, the natural B has class 0 and carry +1: the record B4 sounds with C5.
+
+## Choosing a spelling
+
+When a name has to be built from a class or a position—moving a pitch by a number of steps, walking step by step between two pitches, or turning a class and an octave into a pitch—the choice of name is always explicit. Two neutral rules work in any system: *sharps* and *flats* take the admissible name with the smallest accidental, preferring raised or lowered names on a tie. The *chromatic scale* rule follows the traditional spelling of the chromatic scale for a major or minor tonic and an ascending or descending direction (C major ascending is C C♯ D D♯ E F F♯ G G♯ A B♭ B) and applies only to systems with the traditional layout. A custom rule calls a user function that is checked to return an admissible name of the requested class.
+
+## Alteration rules and limits
+
+The admissible alteration values are a union of up to eight progressions: single values or all values *r* + *n*/*d* with a step 1/*d*, optionally bounded. Rules are compared as sets, so halves equal the union of integers and integers plus one half; one system's names are contained in another's exactly when its rule is contained in the other's rule. Systems have at most 65,536 classes, a chromatic unit of at most 65,536, and steps no finer than 1/65,536; these are engineering limits that keep every computation exact. Results beyond the integer range, such as an octave past the end of the axis, are reported as errors rather than truncated.
+
+First released in v0.14.0.
+
+[Package reference](https://pkg.go.dev/github.com/go-muse/musex/system) · [Go examples](../../system/example_test.go) · [Roadmap](../../ROADMAP.md)

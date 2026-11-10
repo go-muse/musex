@@ -18,7 +18,7 @@
 - [x] **8b. [`setclass/catalog`](guide/packages/setclass-catalog.md)** — Forte and Carter set-class catalogs for 12 positions.
 - [x] **8c. [`setclass`](guide/packages/setclass.md)** — set classes, prime forms, and relations between them.
 - [ ] **8d. `pcseq`** — pitch-class sequences and twelve-tone rows.
-- [ ] **9. `system`** — musical positions, steps, equivalence, and written-octave rules.
+- [x] **9. [`system`](guide/packages/system.md)** — musical positions, steps, equivalence, and written-octave rules.
 - [x] **10. [`cents`](guide/packages/cents.md)** — cent values, note offsets, and distances.
 - [ ] **11. `tuning/temperament`** — temperament tables expressed in cents.
 - [ ] **12. `tuning`** — a temperament, reference pitch, and frequency calculations.
