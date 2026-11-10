@@ -74,7 +74,7 @@
 // octave of positions: its carry k = ⌊(p(l) + a·c)/N⌋ ([System.Carry]) is not
 // 0. The written octave w, the octave whose number is written with the letter,
 // is w = Octave − k. In the traditional system B♯ has the carry 1, so the
-// record "B♯3" is the pitch (B♯, Octave 4) and sounds with C4; C♭ has the
+// record "B♯3" is the pitch (B♯, Octave 4) and has the position of C4; C♭ has the
 // carry −1, so "C♭4" is the pitch (C♭, Octave 3). [System.WrittenOctave]
 // returns w for a pitch, and [System.FromWritten] returns the pitch for a name
 // and w; the written octave is an [github.com/go-muse/musex/octave.Octave],
@@ -84,7 +84,7 @@
 //
 // The methods of [github.com/go-muse/musex/pitch.Pitch] that change the
 // alteration, such as Raise, keep the Octave: (B, Octave 3) raised gives
-// (B♯, Octave 3), which is written "B♯2" and sounds with C3. The methods
+// (B♯, Octave 3), which is written "B♯2" and has the position of C3. The methods
 // [System.RaiseWritten], [System.LowerWritten], [System.RaiseWrittenBy],
 // [System.LowerWrittenBy], [System.RaiseWrittenByAlteration],
 // [System.LowerWrittenByAlteration], [System.RespellWritten] and
@@ -100,7 +100,7 @@
 // An offset can equal N. Such a letter stands on the boundary of the next
 // octave of positions: its natural name has the class 0 and the carry 1. In
 // the five-class system with the offsets C 0, D 1, E 2, F 2, G 3, A 4, B 5, the
-// record "B4" is the pitch (B, Octave 5) and sounds with C5.
+// record "B4" is the pitch (B, Octave 5) and has the position of C5.
 //
 // # Alteration rules
 //

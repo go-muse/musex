@@ -10,11 +10,11 @@ Positions are never exposed as numbers: a system has no reference pitch and no p
 
 ## Octave and written octave
 
-The octave of a written pitch is the octave of positions that holds it, not the number printed next to the letter. A name whose shift leaves its octave of positions has a carry: in the traditional system B♯ has the carry +1 and C♭ the carry −1. The written octave is the octave minus the carry, so the record B♯3 is the pitch (B♯, octave 4), sounding together with C4, and the record C♭4 is the pitch (C♭, octave 3). A system converts in both directions between a pitch and its written octave; the visible octave number belongs to notation.
+The octave of a written pitch is the octave of positions that holds it, not the number printed next to the letter. A name whose shift leaves its octave of positions has a carry: in the traditional system B♯ has the carry +1 and C♭ the carry −1. The written octave is the octave minus the carry, so the record B♯3 is the pitch (B♯, octave 4), at the position of C4, and the record C♭4 is the pitch (C♭, octave 3). A system converts in both directions between a pitch and its written octave; the visible octave number belongs to notation.
 
 Changing an accidental can either keep the octave or keep the written octave. The pitch package keeps the octave: raising (B, octave 3) gives (B♯, octave 3), written B♯2. A system can keep the written octave instead: raising the record B3 gives B♯3, the pitch (B♯, octave 4), one step higher. The same holds for lowering, for changes by several or fractional units, for respelling a pitch with another name (the record C4 respelled as B♯ is B♯4, twelve steps higher), and for returning to the natural name.
 
-A letter may stand exactly on the next boundary, with offset *N*. In a five-class system with the offsets C 0, D 1, E 2, F 2, G 3, A 4, B 5, the natural B has class 0 and carry +1: the record B4 sounds with C5.
+A letter may stand exactly on the next boundary, with offset *N*. In a five-class system with the offsets C 0, D 1, E 2, F 2, G 3, A 4, B 5, the natural B has class 0 and carry +1: the record B4 has the position of C5.
 
 ## Choosing a spelling
 
