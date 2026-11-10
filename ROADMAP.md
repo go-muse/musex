@@ -20,7 +20,7 @@
 - [ ] **8d. `pcseq`** — pitch-class sequences and twelve-tone rows.
 - [x] **9. [`system`](guide/packages/system.md)** — musical positions, steps, equivalence, and written-octave rules.
 - [x] **10. [`cents`](guide/packages/cents.md)** — cent values, note offsets, and distances.
-- [ ] **11. `tuning/temperament`** — temperament tables expressed in cents.
+- [x] **11. [`tuning/temperament`](guide/packages/tuning/temperament.md)** — temperament tables expressed in cents.
 - [ ] **12. `tuning`** — a temperament, reference pitch, and frequency calculations.
 - [ ] **13. `notation`** — parsing and formatting note names and pitches.
 - [ ] **14. `settings`** — a compatible set of system, tuning, and notation settings.
