@@ -84,20 +84,26 @@ func TestConcurrentUse(t *testing.T) {
 func TestConcurrentBuiltins(t *testing.T) {
 	t.Parallel()
 
+	rows := builtinTable()
 	got := make([][]*system.System, workers)
 	var wg sync.WaitGroup
 	for i := range workers {
 		wg.Go(func() {
 			got[i] = slices.Collect(system.Builtins())
-			lookup, _ := system.LookupBuiltin("traditional")
-			got[i] = append(got[i], lookup, system.Positions19(), system.QuarterTones24())
+			for _, row := range rows {
+				lookup, _ := system.LookupBuiltin(row.name)
+				got[i] = append(got[i], lookup, row.get())
+			}
 		})
 	}
 	wg.Wait()
 
-	want := []*system.System{
-		system.Traditional(), system.Positions19(), system.QuarterTones24(),
-		system.Traditional(), system.Positions19(), system.QuarterTones24(),
+	want := make([]*system.System, 0, 3*len(rows))
+	for _, row := range rows {
+		want = append(want, row.get())
+	}
+	for _, row := range rows {
+		want = append(want, row.get(), row.get())
 	}
 	for i := range workers {
 		require.Len(t, got[i], len(want))
