@@ -32,7 +32,7 @@ func TestSequenceCoreMustVariants(t *testing.T) {
 	assert.Equal(t, mustClass(t, 1, 12), s.MustAt(1))
 	_, err = s.At(3)
 	assert.PanicsWithValue(t, err, func() { s.MustAt(3) })
-	assert.Equal(t, []int{1, 2, 0}, s.MustTranspose(1).Numbers())
+	assert.Equal(t, []int{1, 2, 3}, s.MustTranspose(1).Numbers())
 	assert.Equal(t, []int{0, 11, 10}, s.MustInvert(0).Numbers())
 	assert.Equal(t, []int{0, 2, 4}, s.MustMultiply(2).Numbers())
 	assert.Equal(t, []int{0, 5, 10}, s.MustApply(mustOperator(t, 5, 0, 12)).Numbers())
