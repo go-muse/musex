@@ -50,8 +50,6 @@ func TestModeFloatDecimalControlExamples(t *testing.T) {
 		mode   rounding.Mode
 		want   string
 	}{
-		{"two_to_60", float64(uint64(1) << 60), 0, rounding.HalfEven, "1152921504606846976"},
-		{"one_e_23", 1e23, 0, rounding.Up, "99999999999999991611392"},
 		{"decimal_tie_half_up", 0.145, 2, rounding.HalfUp, "0.15"},
 		{"decimal_tie_half_even", 0.145, 2, rounding.HalfEven, "0.14"},
 		{"decimal_tie_half_down", 0.145, 2, rounding.HalfDown, "0.14"},
@@ -74,6 +72,23 @@ func TestModeFloatDecimalControlExamples(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})
+	}
+	for _, tt := range []struct {
+		name string
+		x    float64
+		want string
+	}{
+		{"two_to_60", float64(uint64(1) << 60), "1152921504606846976"},
+		{"one_e_23", 1e23, "99999999999999991611392"},
+	} {
+		for i, mode := range testModes {
+			t.Run(fmt.Sprintf("%s/%s", tt.name, testModeNames[i]), func(t *testing.T) {
+				t.Parallel()
+				got, err := mode.FloatDecimal(tt.x, 0)
+				require.NoError(t, err)
+				assert.Equal(t, tt.want, got)
+			})
+		}
 	}
 }
 

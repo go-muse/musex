@@ -51,9 +51,6 @@ func TestModeQuoRemControlEdges(t *testing.T) {
 		{"down", rounding.Down, 7, 3, 2, 1, nil},
 		{"up", rounding.Up, 7, 3, 3, -2, nil},
 		{"negative_divisor", rounding.Down, 7, -3, -3, -2, nil},
-		{"positive_node", rounding.HalfEven, 6, 3, 2, 0, nil},
-		{"negative_node", rounding.HalfUp, -6, 3, -2, 0, nil},
-		{"zero", rounding.AwayFromZero, 0, 5, 0, 0, nil},
 		{"min_over_minus_one", rounding.Down, math.MinInt, -1, 0, 0, rounding.ErrOutOfRange},
 		{"max_over_one", rounding.Up, math.MaxInt, 1, math.MaxInt, 0, nil},
 		{"max_half_even", rounding.HalfEven, math.MaxInt, 2, 1 << 62, -1, nil},
@@ -75,6 +72,25 @@ func TestModeQuoRemControlEdges(t *testing.T) {
 			assert.Equal(t, tt.q, q)
 			assert.Equal(t, tt.r, r)
 		})
+	}
+	for _, tt := range []struct {
+		name string
+		n, d int
+		q    int
+	}{
+		{"positive_node", 6, 3, 2},
+		{"negative_node", -6, 3, -2},
+		{"zero", 0, 5, 0},
+	} {
+		for i, mode := range testModes {
+			t.Run(fmt.Sprintf("%s/%s", tt.name, testModeNames[i]), func(t *testing.T) {
+				t.Parallel()
+				q, r, err := mode.QuoRem(tt.n, tt.d)
+				require.NoError(t, err)
+				assert.Equal(t, tt.q, q)
+				assert.Zero(t, r)
+			})
+		}
 	}
 }
 
@@ -158,6 +174,12 @@ func TestModeIntMultipleEdgesAndErrors(t *testing.T) {
 			assert.Zero(t, got)
 		})
 	}
+	t.Run("max_down", func(t *testing.T) {
+		t.Parallel()
+		got, err := rounding.Down.IntMultiple(math.MaxInt, 2)
+		require.NoError(t, err)
+		assert.Equal(t, math.MaxInt-1, got)
+	})
 	for i, mode := range testModes {
 		t.Run(fmt.Sprintf("min_node/%s", testModeNames[i]), func(t *testing.T) {
 			t.Parallel()
