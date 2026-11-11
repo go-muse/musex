@@ -32,6 +32,9 @@
 //     [Cents.Composition] read a value; [Cents.Quo] returns the [Quotient] of
 //     two values, such as an amount of a unit; [Cents.Multiplier] and
 //     [Cents.ApplyTo] work with frequencies.
+//   - [MinNormalFrequency] and [MaxFrequency] bound frequencies;
+//     [IsValidFrequency], [IsNormalFrequency], [ValidFrequency], and
+//     [NormalFrequency] check them.
 //   - [Schisma] to [LargeLimma] and [NamedValues] give 19 named small
 //     intervals; [MIDITuningUnit] to [Meride] and [NamedUnits] give 8 named
 //     units.
@@ -142,10 +145,25 @@
 // including math.MinInt and math.MaxInt: only the exact result decides an
 // error. Only the Must functions panic.
 //
-// [Cents.Multiplier] and [Cents.ApplyTo] round the exact frequency once to a
-// float64 and return [ErrOutOfRange] if the rounded result is not a normal
-// positive finite float64: an overflow, or a result below 2^-1022, which
-// includes a subnormal result of a valid subnormal input frequency.
+// [MinNormalFrequency] and [MaxFrequency] bound frequencies and frequency
+// multipliers for all musex packages; they are defined only here.
+// [IsValidFrequency] defines a valid frequency argument as finite, positive,
+// and at most MaxFrequency, so a positive subnormal number is valid.
+// [IsNormalFrequency] defines a normal frequency as one between
+// MinNormalFrequency and MaxFrequency, inclusive.
+//
+// The inputs of [Cents.ApplyTo] and [Between] and the ratio of
+// [FromRatioFloat] follow the valid-frequency rule. The results of
+// [Cents.Multiplier] and [Cents.ApplyTo] follow the normal-frequency rule:
+// the exact result is rounded once to a 53-bit mantissa with an unlimited
+// exponent, and [ErrOutOfRange] is returned if that value is below
+// MinNormalFrequency or above MaxFrequency. This includes a subnormal result
+// of a valid subnormal input frequency.
+//
+// [ValidFrequency] returns [ErrInvalidArgument] for an invalid input.
+// [NormalFrequency] is a check of a computed result and returns
+// [ErrOutOfRange] for every violation, NaN and infinities included. For input
+// values use ValidFrequency; for computed values use NormalFrequency.
 //
 // # Named values
 //
@@ -279,8 +297,10 @@
 // # Performance
 //
 // Creating a value allocates memory for its record; ==, [Cents.Equal], and
-// copying do not allocate. Operations decide the sign, the order, the range,
-// and the rounding of irrational values from intervals of growing precision,
+// copying do not allocate. The frequency checks take constant time and do not
+// allocate unless they return an error. Operations decide the sign, the order,
+// the range, and the rounding of irrational values from intervals of growing
+// precision,
 // so comparing nearly equal values and writing many digits take longer than
 // usual. The cost of parsing is bounded by MaxDigits and MaxFactors, so
 // [Parse], [Cents.UnmarshalText], [ParseScala], and [ParseScalaApprox] are

@@ -19,8 +19,10 @@ var (
 	// ErrOutOfRange reports that the exact result is outside the range
 	// -MaxMagnitude to MaxMagnitude cents, that the correctly rounded result
 	// of [Cents.Multiplier] or [Cents.ApplyTo] is not a normal positive finite
-	// float64 (overflow, underflow to zero, or the subnormal range), or that
-	// the step number of [Cents.NearestStep] does not fit in an int.
+	// float64 (overflow, underflow to zero, or the subnormal range), that a
+	// number checked by [NormalFrequency] is not a normal frequency, NaN and
+	// infinities included, or that the step number of [Cents.NearestStep] does
+	// not fit in an int.
 	ErrOutOfRange = errors.New("cents: value out of range")
 
 	// ErrTooComplex reports that the exact record of the result exceeds the
@@ -36,10 +38,12 @@ var (
 	ErrPrimeLimit = errors.New("cents: prime factor greater than 31")
 
 	// ErrInvalidArgument reports an invalid argument: NaN or an infinity, a
-	// ratio or a frequency that is not positive, a zero denominator, a number
-	// of steps or a rounding denominator less than 1, a zero divisor, a zero
-	// value as the divisor of [Cents.Quo], a negative tolerance, or a base of
-	// a composition that is not a prime.
+	// ratio or a frequency rejected by [IsValidFrequency], a zero denominator,
+	// a number of steps or a rounding denominator less than 1, a zero divisor,
+	// a zero value as the divisor of [Cents.Quo], a negative tolerance, or a
+	// base of a composition that is not a prime. [NormalFrequency] instead
+	// reports [ErrOutOfRange] for every number that is not a normal frequency,
+	// NaN and infinities included.
 	ErrInvalidArgument = errors.New("cents: invalid argument")
 
 	// ErrInvalidText reports a text that does not match the grammar of
