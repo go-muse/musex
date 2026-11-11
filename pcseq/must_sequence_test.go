@@ -142,7 +142,7 @@ func TestRowFormMustVariants(t *testing.T) {
 	r := mustRow(t, 3, 0, 1, 2)
 	label := mustLabel(t, pcseq.P, 0, 3)
 	assert.Equal(t, r, r.MustForm(label))
-	assert.Equal(t, []string{"P0"}, labelStrings(r.MustLabelsOf(r)))
+	assert.Equal(t, []string{"P0", "RI2"}, labelStrings(r.MustLabelsOf(r)))
 	_, err := r.Form(pcseq.FormLabel{})
 	assert.PanicsWithValue(t, err, func() { r.MustForm(pcseq.FormLabel{}) })
 	_, err = r.LabelsOf(pcseq.Row{})
