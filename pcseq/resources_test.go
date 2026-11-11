@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/go-muse/musex/pcseq"
+	"github.com/go-muse/musex/pitchclass"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -53,12 +54,14 @@ func TestAllocationsLengthAndModulusIndependence(t *testing.T) {
 				numbers[i] = i % 12
 			}
 			s := mustSequence(t, 12, numbers...)
+			op := mustOperator(t, 5, 2, 12)
 			measureSequenceAllocations(t, "New", func() (pcseq.Sequence, error) {
 				return pcseq.New(12, numbers...)
 			})
 			measureSequenceAllocations(t, "Transpose", func() (pcseq.Sequence, error) { return s.Transpose(2) })
 			measureSequenceAllocations(t, "Invert", func() (pcseq.Sequence, error) { return s.Invert(2) })
 			measureSequenceAllocations(t, "Multiply", func() (pcseq.Sequence, error) { return s.Multiply(2) })
+			measureSequenceAllocations(t, "Apply", func() (pcseq.Sequence, error) { return s.Apply(op) })
 			measureSequenceAllocations(t, "Retrograde", func() (pcseq.Sequence, error) { return s.Retrograde() })
 			measureSequenceAllocations(t, "RetrogradeInversion", func() (pcseq.Sequence, error) {
 				return s.RetrogradeInversion(2)
@@ -72,17 +75,48 @@ func TestAllocationsLengthAndModulusIndependence(t *testing.T) {
 
 	for _, tt := range []struct {
 		name string
-		call func(pcseq.Sequence, int) (pcseq.Sequence, error)
+		call func(int, []int, pcseq.Sequence, pitchclass.Operator) (pcseq.Sequence, error)
 	}{
-		{name: "Transpose", call: func(s pcseq.Sequence, n int) (pcseq.Sequence, error) { return s.Transpose(n) }},
-		{name: "Invert", call: func(s pcseq.Sequence, n int) (pcseq.Sequence, error) { return s.Invert(n) }},
-		{name: "Multiply", call: func(s pcseq.Sequence, n int) (pcseq.Sequence, error) { return s.Multiply(n) }},
+		{name: "New", call: func(modulus int, numbers []int, _ pcseq.Sequence, _ pitchclass.Operator) (pcseq.Sequence, error) {
+			return pcseq.New(modulus, numbers...)
+		}},
+		{name: "Transpose", call: func(_ int, _ []int, s pcseq.Sequence, _ pitchclass.Operator) (pcseq.Sequence, error) {
+			return s.Transpose(2)
+		}},
+		{name: "Invert", call: func(_ int, _ []int, s pcseq.Sequence, _ pitchclass.Operator) (pcseq.Sequence, error) {
+			return s.Invert(2)
+		}},
+		{name: "Multiply", call: func(_ int, _ []int, s pcseq.Sequence, _ pitchclass.Operator) (pcseq.Sequence, error) {
+			return s.Multiply(2)
+		}},
+		{name: "Apply", call: func(_ int, _ []int, s pcseq.Sequence, op pitchclass.Operator) (pcseq.Sequence, error) {
+			return s.Apply(op)
+		}},
+		{name: "Retrograde", call: func(_ int, _ []int, s pcseq.Sequence, _ pitchclass.Operator) (pcseq.Sequence, error) {
+			return s.Retrograde()
+		}},
+		{name: "RetrogradeInversion", call: func(_ int, _ []int, s pcseq.Sequence, _ pitchclass.Operator) (pcseq.Sequence, error) {
+			return s.RetrogradeInversion(2)
+		}},
+		{name: "Rotate", call: func(_ int, _ []int, s pcseq.Sequence, _ pitchclass.Operator) (pcseq.Sequence, error) {
+			return s.Rotate(3)
+		}},
+		{name: "Segment", call: func(_ int, _ []int, s pcseq.Sequence, _ pitchclass.Operator) (pcseq.Sequence, error) {
+			return s.Segment(0, s.Len())
+		}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			small := mustSequence(t, 12, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
-			large := mustSequence(t, 65_536, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
-			smallAllocations := sequenceAllocations(t, func() (pcseq.Sequence, error) { return tt.call(small, 2) })
-			largeAllocations := sequenceAllocations(t, func() (pcseq.Sequence, error) { return tt.call(large, 2) })
+			numbers := []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}
+			small := mustSequence(t, 12, numbers...)
+			large := mustSequence(t, 65_536, numbers...)
+			smallOperator := mustOperator(t, 5, 2, 12)
+			largeOperator := mustOperator(t, 5, 2, 65_536)
+			smallAllocations := sequenceAllocations(t, func() (pcseq.Sequence, error) {
+				return tt.call(12, numbers, small, smallOperator)
+			})
+			largeAllocations := sequenceAllocations(t, func() (pcseq.Sequence, error) {
+				return tt.call(65_536, numbers, large, largeOperator)
+			})
 			assert.LessOrEqual(t, smallAllocations, 2.0)
 			assert.LessOrEqual(t, largeAllocations, smallAllocations)
 		})

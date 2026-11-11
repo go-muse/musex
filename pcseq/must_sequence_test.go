@@ -115,7 +115,24 @@ func TestRowCoreMustVariants(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			assert.Panics(t, call)
+			var err error
+			switch name {
+			case "Transpose":
+				_, err = pcseq.Row{}.Transpose(1)
+			case "Invert":
+				_, err = pcseq.Row{}.Invert(1)
+			case "Multiply":
+				_, err = pcseq.Row{}.Multiply(2)
+			case "Apply":
+				_, err = pcseq.Row{}.Apply(mustOperator(t, 1, 0, 12))
+			case "Retrograde":
+				_, err = pcseq.Row{}.Retrograde()
+			case "RetrogradeInversion":
+				_, err = pcseq.Row{}.RetrogradeInversion(1)
+			case "Rotate":
+				_, err = pcseq.Row{}.Rotate(1)
+			}
+			assert.PanicsWithValue(t, err, call)
 		})
 	}
 }
