@@ -172,18 +172,15 @@ func TestModeBigOperationsErrors(t *testing.T) {
 	for _, tt := range []struct {
 		name string
 		call func() error
+		want error
 	}{
-		{"unset_precedes_nil_and_zero", func() error { _, _, err := rounding.Mode(0).QuoRemBig(nil, new(big.Int)); return err }},
-		{"unknown_after_nil", func() error { _, _, err := rounding.Mode(10).QuoRemBig(nil, new(big.Int)); return err }},
-		{"unknown_precedes_zero", func() error { _, _, err := rounding.Mode(10).QuoRemBig(validInt, new(big.Int)); return err }},
+		{"unset_precedes_nil_and_zero", func() error { _, _, err := rounding.Mode(0).QuoRemBig(nil, new(big.Int)); return err }, rounding.ErrUnset},
+		{"unknown_after_nil", func() error { _, _, err := rounding.Mode(10).QuoRemBig(nil, new(big.Int)); return err }, rounding.ErrUnset},
+		{"unknown_precedes_zero", func() error { _, _, err := rounding.Mode(10).QuoRemBig(validInt, new(big.Int)); return err }, rounding.ErrUnknownMode},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			want := rounding.ErrUnset
-			if tt.name != "unset_precedes_nil_and_zero" {
-				want = rounding.ErrUnknownMode
-			}
-			checkError(t, tt.call(), want)
+			checkError(t, tt.call(), tt.want)
 		})
 	}
 }
