@@ -165,22 +165,20 @@ func (r Row) Rotate(k int) (Row, error) {
 }
 
 // IsAllInterval reports whether every nonzero interval occurs exactly once.
-func (r Row) IsAllInterval() bool { return false }
-
-// IsDerived reports whether all discrete segments derive from the first.
-func (r Row) IsDerived(length int) (bool, error) { return false, nil }
-
-// Derive returns all derivation operators of every segment.
-func (r Row) Derive(length int) ([][]DerivationOperator, error) { return nil, nil }
-
-// IsCombinatorialPair reports whether two forms have complementary first-half content.
-func (r Row) IsCombinatorialPair(a, b FormLabel) (bool, error) { return false, nil }
-
-// CombinatorialForms returns combinatorial P, I, and RI labels.
-func (r Row) CombinatorialForms() ([]FormLabel, error) { return nil, nil }
-
-// CombinatorialRotations returns inversion-combinatorial rotated forms.
-func (r Row) CombinatorialRotations() ([]RotationCombinatoriality, error) { return nil, nil }
-
-// HexachordAnalysis analyzes the first-half hexachord of a twelve-tone row.
-func (r Row) HexachordAnalysis() (HexachordAnalysis, error) { return HexachordAnalysis{}, nil }
+func (r Row) IsAllInterval() bool {
+	if !r.IsValid() || r.modulus == 1 {
+		return false
+	}
+	if r.modulus == 2 {
+		return true
+	}
+	seen := make([]bool, r.modulus)
+	for _, class := range r.Sequence().MustIntervals() {
+		interval := class.Number()
+		if interval == 0 || seen[interval] {
+			return false
+		}
+		seen[interval] = true
+	}
+	return true
+}
