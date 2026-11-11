@@ -1,9 +1,6 @@
 package pcseq
 
-import (
-	"errors"
-	"fmt"
-)
+import "errors"
 
 // Operation-specific modulus limits.
 const (
@@ -36,46 +33,46 @@ var (
 
 func checkModulus(modulus int) error {
 	if modulus < 1 {
-		return fmt.Errorf("%w: %d", ErrInvalidModulus, modulus)
+		return ErrInvalidModulus
 	}
 	return checkModulusLimit(modulus, MaxModulus)
 }
 
 func checkModulusLimit(modulus, limit int) error {
 	if modulus > limit {
-		return fmt.Errorf("%w: %d exceeds %d", ErrModulusTooLarge, modulus, limit)
+		return ErrModulusTooLarge
 	}
 	return nil
 }
 
 func invalidValue() error {
-	return fmt.Errorf("%w: zero or invalid operand", ErrInvalidValue)
+	return ErrInvalidValue
 }
 
 func modulusMismatch(a, b int) error {
-	return fmt.Errorf("%w: %d and %d", ErrModulusMismatch, a, b)
+	return ErrModulusMismatch
 }
 
 func invalidNumber(number, modulus int) error {
-	return fmt.Errorf("%w: %d is outside 0..%d", ErrInvalidNumber, number, modulus-1)
+	return ErrInvalidNumber
 }
 
 func invalidSegment() error {
-	return fmt.Errorf("%w: position or length is out of range", ErrInvalidSegment)
+	return ErrInvalidSegment
 }
 
 func invalidPartition() error {
-	return fmt.Errorf("%w: segment length must be positive and divide the sequence length", ErrInvalidPartition)
+	return ErrInvalidPartition
 }
 
 func invalidFormLabel() error {
-	return fmt.Errorf("%w: unknown kind or index outside the modulus", ErrInvalidFormLabel)
+	return ErrInvalidFormLabel
 }
 
 func invalidNotation() error {
-	return fmt.Errorf("%w: malformed or unsupported text", ErrNotation)
+	return ErrNotation
 }
 
 func invalidSegmentContent() error {
-	return fmt.Errorf("%w: lengths or sets do not partition the aggregate", ErrInvalidSegmentContent)
+	return ErrInvalidSegmentContent
 }
