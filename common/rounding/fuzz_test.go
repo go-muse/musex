@@ -40,6 +40,7 @@ func FuzzQuoRem(f *testing.F) {
 	f.Add(uint8(1), 7, 3, 8)
 	f.Add(uint8(9), math.MaxInt, 2, math.MinInt)
 	f.Add(uint8(5), math.MinInt, -1, 0)
+	f.Add(uint8(9), -163, -55, 8)
 	f.Fuzz(func(t *testing.T, rawMode uint8, n, d, otherN int) {
 		mode := rounding.Mode(rawMode)
 		q, r, err := mode.QuoRem(n, d)
@@ -79,7 +80,8 @@ func FuzzQuoRem(f *testing.F) {
 		otherWantQ := roundRat(mode, new(big.Rat).SetFrac(bigInt(otherN), bigInt(d)))
 		if intInRange(otherWantQ) {
 			require.NoError(t, otherErr)
-			if n <= otherN {
+			// A negative divisor reverses the order of exact quotients.
+			if (n <= otherN) == (d > 0) {
 				assert.LessOrEqual(t, q, otherQ)
 			} else {
 				assert.GreaterOrEqual(t, q, otherQ)
