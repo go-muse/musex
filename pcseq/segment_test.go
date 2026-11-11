@@ -160,12 +160,12 @@ func TestContentInvariances(t *testing.T) {
 	for i := range parts {
 		self, err := parts[i].InvariancesTo(parts[i])
 		require.NoError(t, err)
-		assert.Contains(t, self.Transpositions, 4)
-		contentBefore, err := parts[i].Content()
+		assert.Equal(t, []int{0}, self.Transpositions)
+		nextContent, err := parts[(i+1)%len(parts)].Content()
 		require.NoError(t, err)
-		contentAfter, err := transformedParts[i].Content()
+		transformedContent, err := transformedParts[i].Content()
 		require.NoError(t, err)
-		assert.True(t, contentBefore.Equal(contentAfter))
+		assert.True(t, nextContent.Equal(transformedContent))
 	}
 
 	unrelated := mustSequence(t, 12, 0, 1, 2, 4)
