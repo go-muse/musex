@@ -64,4 +64,6 @@ Calculations that need the exact binary value below 2⁵³ can use the exact rat
 
 The canonical configuration values are `down`, `up`, `toward-zero`, `away-from-zero`, `half-up`, `half-down`, `half-away-from-zero`, `half-toward-zero`, and `half-even`. They are case-sensitive and have no aliases or surrounding whitespace, giving each rule one stable spelling for settings and text-based data exchange.
 
-[Package reference](https://pkg.go.dev/github.com/go-muse/musex/common/rounding) · [Go examples](../../../common/rounding/example_test.go)
+First released in v0.16.0.
+
+[Package reference](https://pkg.go.dev/github.com/go-muse/musex/common/rounding) · [Go examples](../../../common/rounding/example_test.go) · [Roadmap](../../../ROADMAP.md)
