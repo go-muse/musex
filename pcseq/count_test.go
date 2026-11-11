@@ -38,12 +38,13 @@ func TestRowCountMachineAndBig(t *testing.T) {
 	got, err := pcseq.RowCount(21)
 	assert.Zero(t, got)
 	assert.ErrorIs(t, err, pcseq.ErrOverflow)
+	overflowErr := err
 	exact, err := pcseq.RowCountBig(21)
 	require.NoError(t, err)
 	expected, ok := new(big.Int).SetString("51090942171709440000", 10)
 	require.True(t, ok)
 	assert.Equal(t, expected, exact)
-	assert.PanicsWithValue(t, err, func() { pcseq.MustRowCount(21) })
+	assert.PanicsWithValue(t, overflowErr, func() { pcseq.MustRowCount(21) })
 
 	_, err = pcseq.RowCount(0)
 	assert.ErrorIs(t, err, pcseq.ErrInvalidModulus)
