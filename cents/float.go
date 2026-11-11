@@ -6,7 +6,73 @@ import (
 	"strconv"
 )
 
-var gridDen = big.NewInt(GridDenominator)
+// Frequency bounds used by all musex packages. Frequencies and frequency
+// multipliers are float64 values, and their bounds are defined only here.
+const (
+	// MinNormalFrequency is 2^-1022, the smallest positive normal float64.
+	// A normal frequency is at least MinNormalFrequency; a valid frequency
+	// argument may be smaller (subnormal).
+	MinNormalFrequency float64 = 0x1p-1022
+
+	// MaxFrequency is the largest finite float64 (math.MaxFloat64), the upper
+	// bound of valid and of normal frequencies.
+	MaxFrequency float64 = math.MaxFloat64
+)
+
+var (
+	gridDen               = big.NewInt(GridDenominator)
+	minNormalFrequencyBig = new(big.Float).SetFloat64(MinNormalFrequency)
+	maxFrequencyBig       = new(big.Float).SetFloat64(MaxFrequency)
+)
+
+// IsValidFrequency reports whether f is a valid frequency argument: finite
+// and positive, 0 < f <= MaxFrequency; subnormal numbers are valid.
+// [Cents.ApplyTo] and [Between] accept exactly such frequencies, and
+// [FromRatioFloat] accepts such ratios.
+func IsValidFrequency(f float64) bool {
+	return f > 0 && f <= MaxFrequency
+}
+
+// IsNormalFrequency reports whether f is a normal frequency:
+// MinNormalFrequency <= f <= MaxFrequency. Every normal frequency is valid.
+// The results of [Cents.Multiplier] and [Cents.ApplyTo] are normal
+// frequencies.
+func IsNormalFrequency(f float64) bool {
+	return IsValidFrequency(f) && f >= MinNormalFrequency
+}
+
+// ValidFrequency returns f if [IsValidFrequency] reports true, and otherwise
+// 0 and an error matching [ErrInvalidArgument], as [Cents.ApplyTo] does for
+// its input.
+func ValidFrequency(f float64) (float64, error) {
+	if !IsValidFrequency(f) {
+		return 0, errorf(ErrInvalidArgument, "ValidFrequency(%v): frequency must be positive and finite", f)
+	}
+	return f, nil
+}
+
+// MustValidFrequency is like [ValidFrequency] but panics with the error. It
+// is meant for literals and values known to be valid.
+func MustValidFrequency(f float64) float64 {
+	return must(ValidFrequency(f))
+}
+
+// NormalFrequency returns f if [IsNormalFrequency] reports true, and
+// otherwise 0 and an error matching [ErrOutOfRange] for any violation, NaN
+// and infinities included, as [Cents.ApplyTo] does for its result. Use it for
+// computed values; for input values use [ValidFrequency].
+func NormalFrequency(f float64) (float64, error) {
+	if !IsNormalFrequency(f) {
+		return 0, errorf(ErrOutOfRange, "NormalFrequency(%v): frequency must be a normal positive finite float64", f)
+	}
+	return f, nil
+}
+
+// MustNormalFrequency is like [NormalFrequency] but panics with the error. It
+// is meant for literals and values known to be valid.
+func MustNormalFrequency(f float64) float64 {
+	return must(NormalFrequency(f))
+}
 
 // shortest returns the shortest decimal representation of x, as written by
 // strconv.FormatFloat(x, 'g', -1, 64), as an exact rational. x is finite.
@@ -84,10 +150,11 @@ func MustFromFloat(x float64) Cents {
 // is understood as its shortest decimal representation, as in [FromFloat].
 // The result is an ordinary exact value on the grid: FromRatioFloat(1.5) is
 // 701.955001 cents, not FromRatio(3, 2). It returns [ErrInvalidArgument] if
-// r is not positive, NaN, or an infinity; subnormal positive numbers are
-// accepted, and the result is always within the range.
+// r is not a valid frequency ratio ([IsValidFrequency]): not positive, NaN,
+// or an infinity; subnormal positive numbers are accepted, and the result is
+// always within the range.
 func FromRatioFloat(r float64) (Cents, error) {
-	if !finite(r) || r <= 0 {
+	if !IsValidFrequency(r) {
 		return Cents{}, errorf(ErrInvalidArgument, "FromRatioFloat(%v): ratio must be positive and finite", r)
 	}
 	return finish(gridLog(shortest(r)), "FromRatioFloat")
@@ -104,9 +171,10 @@ func MustFromRatioFloat(r float64) Cents {
 // cent, with the frequencies understood as their shortest decimal
 // representations. Between(440, 442) is 7.851415 cents, and Between(442,
 // 440) is -7.851415 cents. It returns [ErrInvalidArgument] if a frequency is
-// not positive, NaN, or an infinity; the result is always within the range.
+// not valid ([IsValidFrequency]): not positive, NaN, or an infinity; the
+// result is always within the range.
 func Between(f1, f2 float64) (Cents, error) {
-	if !finite(f1) || f1 <= 0 || !finite(f2) || f2 <= 0 {
+	if !IsValidFrequency(f1) || !IsValidFrequency(f2) {
 		return Cents{}, errorf(ErrInvalidArgument, "Between(%v, %v): frequencies must be positive and finite", f1, f2)
 	}
 	r := new(big.Rat).Quo(shortest(f2), shortest(f1))
@@ -186,12 +254,14 @@ func (c Cents) Composition() (num, den *big.Int, powers []Power) {
 	return num, den, powers
 }
 
-// Multiplier returns the frequency multiplier 2^(c/1200), correctly rounded
-// to a float64 (to nearest, ties to even). It is exact for 0 (1) and for
-// multiples of 1200 cents whose result is a normal float64. It returns
-// [ErrOutOfRange] if the rounded result is not a normal positive finite
-// float64: at least 1228800 cents overflow, and at most -1226401 cents give
-// a subnormal result.
+// Multiplier returns the frequency multiplier 2^(c/1200). The exact result
+// is rounded once to a 53-bit mantissa with an unlimited exponent (to
+// nearest, ties to even). It returns [ErrOutOfRange] if that value is below
+// [MinNormalFrequency] or above [MaxFrequency] (an overflow); otherwise it is
+// returned as a float64, and every returned result satisfies
+// [IsNormalFrequency]. At least 1228800 cents overflow, and at most -1226401
+// cents give a subnormal result. It is exact for 0 (1) and for multiples of
+// 1200 cents whose result is a normal float64.
 func (c Cents) Multiplier() (float64, error) {
 	f, err := apply(c.value(), 1)
 	if err != nil {
@@ -206,15 +276,17 @@ func (c Cents) MustMultiplier() float64 {
 	return must(c.Multiplier())
 }
 
-// ApplyTo returns the frequency freq·2^(c/1200), with a single correct
-// rounding of the exact product to a float64 (to nearest, ties to even).
-// freq is its exact binary value. ApplyTo(440) is 440 for 0 and 880 for 1200
-// cents, exactly. It returns [ErrInvalidArgument] if freq is not positive,
-// NaN, or an infinity; a subnormal positive freq is accepted. It returns
-// [ErrOutOfRange] if the rounded result is not a normal positive finite
-// float64 (overflow, or a result below 2^-1022).
+// ApplyTo returns the frequency freq·2^(c/1200). The exact result is rounded
+// once to a 53-bit mantissa with an unlimited exponent (to nearest, ties to
+// even). freq is its exact binary value. ApplyTo(440) is 440 for 0 and 880
+// for 1200 cents, exactly. It returns [ErrInvalidArgument] if freq is not a
+// valid frequency ([IsValidFrequency]): not positive, NaN, or an infinity; a
+// subnormal positive freq is accepted. It returns [ErrOutOfRange] if the
+// rounded value is below [MinNormalFrequency] or above [MaxFrequency] (an
+// overflow); otherwise it is returned as a float64, and every returned result
+// satisfies [IsNormalFrequency].
 func (c Cents) ApplyTo(freq float64) (float64, error) {
-	if !finite(freq) || freq <= 0 {
+	if !IsValidFrequency(freq) {
 		return 0, errorf(ErrInvalidArgument, "ApplyTo(%v): frequency must be positive and finite", freq)
 	}
 	f, err := apply(c.value(), freq)
@@ -237,7 +309,8 @@ func (e errNotNormal) Error() string { return string(e) }
 
 // apply returns freq·2^(v/1200) rounded to a 53-bit mantissa without a limit
 // on the exponent, or an error if the rounded result is not a normal finite
-// float64. freq is positive and finite.
+// float64. freq is positive and finite. The rounded value y is positive and
+// has a mantissa of at most 53 bits.
 func apply(rc *record, freq float64) (float64, error) {
 	frac, exp := math.Frexp(freq)
 	m := big.NewInt(int64(frac * (1 << 53)))
@@ -246,10 +319,10 @@ func apply(rc *record, freq float64) (float64, error) {
 	if y == nil {
 		y = approxApply(rc, m, exp)
 	}
-	switch e := y.MantExp(nil); {
-	case e < -1021:
+	switch {
+	case y.Cmp(minNormalFrequencyBig) < 0:
 		return 0, errNotNormal("result below the normal float64 range")
-	case e > 1024:
+	case y.Cmp(maxFrequencyBig) > 0:
 		return 0, errNotNormal("result overflows float64")
 	}
 	f, _ := y.Float64()
