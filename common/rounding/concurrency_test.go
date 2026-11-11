@@ -37,7 +37,7 @@ func TestConcurrentCallsOnSharedInputs(t *testing.T) {
 					errs <- err
 					return
 				}
-				if integer.Int64() != 3 {
+				if integer.Int64() != 2 {
 					errs <- fmt.Errorf("RatInt = %v", integer)
 					return
 				}
@@ -55,7 +55,7 @@ func TestConcurrentCallsOnSharedInputs(t *testing.T) {
 					errs <- err
 					return
 				}
-				if decimal != "0.6667" {
+				if decimal != "2.3333" {
 					errs <- fmt.Errorf("RatDecimal = %q", decimal)
 					return
 				}

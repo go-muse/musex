@@ -94,7 +94,10 @@ func TestModeUnmarshalText(t *testing.T) {
 		t.Run(fmt.Sprintf("invalid_%q", text), func(t *testing.T) {
 			t.Parallel()
 			mode := rounding.HalfUp
-			before := append([]byte(nil), text...)
+			var before []byte
+			if text != nil {
+				before = append([]byte{}, text...)
+			}
 			checkError(t, mode.UnmarshalText(text), rounding.ErrInvalidArgument)
 			assert.Equal(t, rounding.HalfUp, mode)
 			assert.Equal(t, before, text)

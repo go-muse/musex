@@ -56,7 +56,7 @@ func TestBigResultsDoNotAliasInputsOrEachOther(t *testing.T) {
 		assert.Equal(t, "1/2", x.RatString())
 		assert.Equal(t, "1", k.String())
 		k.SetInt64(200)
-		assert.Equal(t, "100", v.String())
+		assert.Equal(t, "100", v.RatString())
 	})
 }
 

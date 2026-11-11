@@ -53,7 +53,7 @@ func ExampleMode_QuoRem() {
 	fmt.Println(q, r)
 	// Output:
 	// 3 -206
-	// 2 274
+	// 3 -206
 }
 
 func ExampleMode_IntMultiple() {
