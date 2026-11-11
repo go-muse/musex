@@ -35,6 +35,11 @@ func ParseFormLabel(s string, modulus int) (FormLabel, error) {
 	if split == 0 || split == len(s) {
 		return FormLabel{}, invalidNotation()
 	}
+	for i := range split {
+		if s[i] < 'A' || s[i] > 'Z' {
+			return FormLabel{}, invalidNotation()
+		}
+	}
 	index, ok := parseDecimal(s[split:])
 	if !ok {
 		return FormLabel{}, invalidNotation()
