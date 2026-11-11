@@ -16,7 +16,7 @@ func ExampleSequence() {
 	fmt.Println(retrograde)
 	// Output:
 	// <7, 11, 9, 6, 7> mod 12
-	// <9, 1, 11, 8, 7, 9> mod 12
+	// <9, 1, 11, 8, 9> mod 12
 	// <7, 6, 9, 11, 7> mod 12
 }
 

@@ -40,10 +40,12 @@ func TestSequenceStringMustVariants(t *testing.T) {
 
 func TestRowStringMustVariants(t *testing.T) {
 	t.Parallel()
+	_, err := pcseq.ParseRow("<0, 0> mod 2")
+	assert.PanicsWithValue(t, err, func() { pcseq.MustParseRow("<0, 0> mod 2") })
 	row := mustRow(t, 12, 3, 7, 11, 1, 5, 0, 2, 10, 6, 4, 8, 9)
 	assert.Equal(t, "⟨3, 7, E, 1, 5, 0, 2, T, 6, 4, 8, 9⟩", row.MustNotation(pitchclass.TE))
 	assert.Equal(t, "⟨37E1502T6489⟩", row.MustCompactNotation(pitchclass.TE))
-	_, err := row.Notation(pitchclass.Style(99))
+	_, err = row.Notation(pitchclass.Style(99))
 	assert.PanicsWithValue(t, err, func() { row.MustNotation(pitchclass.Style(99)) })
 	_, err = row.CompactNotation(pitchclass.Decimal)
 	assert.PanicsWithValue(t, err, func() { row.MustCompactNotation(pitchclass.Decimal) })

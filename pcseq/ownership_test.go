@@ -32,7 +32,25 @@ func TestOwnershipSlicesAndInputs(t *testing.T) {
 	segments[0] = pcseq.Sequence{}
 	freshSegments, err := s.DiscreteSegments(1)
 	require.NoError(t, err)
-	assert.Equal(t, s.Numbers(), freshSegments[0].Numbers())
+	assert.Equal(t, []int{7}, freshSegments[0].Numbers())
+
+	overlapping, err := s.OverlappingSegments(2)
+	require.NoError(t, err)
+	overlapping[0] = pcseq.Sequence{}
+	freshOverlapping, err := s.OverlappingSegments(2)
+	require.NoError(t, err)
+	assert.Equal(t, []int{7, 11}, freshOverlapping[0].Numbers())
+
+	first := mustSequence(t, 12, 0, 11, 2, 1)
+	second := mustSequence(t, 12, 5, 6, 3, 4)
+	invariance, err := first.InvariancesTo(second)
+	require.NoError(t, err)
+	invariance.Transpositions[0] = 99
+	invariance.Inversions[0] = 99
+	freshInvariance, err := first.InvariancesTo(second)
+	require.NoError(t, err)
+	assert.Equal(t, []int{4}, freshInvariance.Transpositions)
+	assert.Equal(t, []int{5}, freshInvariance.Inversions)
 
 	row := mustRow(t, 12, 3, 7, 11, 1, 5, 0, 2, 10, 6, 4, 8, 9)
 	form, err := row.Form(mustLabel(t, pcseq.P, 0, 12))
@@ -105,12 +123,34 @@ func TestOwnershipBigIntegers(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "479001600", second.String())
 
+	classes, err := pcseq.RowClassCountBig(12, pcseq.TIR)
+	require.NoError(t, err)
+	classes.SetInt64(0)
+	freshClasses, err := pcseq.RowClassCountBig(12, pcseq.TIR)
+	require.NoError(t, err)
+	assert.Equal(t, "9985920", freshClasses.String())
+
 	lengths, err := pcseq.CountRowsWithSegmentLengthsBig(12, 6, 6)
 	require.NoError(t, err)
 	lengths.SetInt64(0)
 	freshLengths, err := pcseq.CountRowsWithSegmentLengthsBig(12, 6, 6)
 	require.NoError(t, err)
 	assert.Equal(t, "518400", freshLengths.String())
+
+	contents := partitionContents(t, 12, 6, 6)
+	contentCount, err := pcseq.CountRowsWithSegmentContentsBig(12, contents...)
+	require.NoError(t, err)
+	contentCount.SetInt64(0)
+	freshContentCount, err := pcseq.CountRowsWithSegmentContentsBig(12, contents...)
+	require.NoError(t, err)
+	assert.Equal(t, "518400", freshContentCount.String())
+
+	allInterval, err := pcseq.AllIntervalCountBig(12, pcseq.AllIntervalTotal)
+	require.NoError(t, err)
+	allInterval.SetInt64(0)
+	freshAllInterval, err := pcseq.AllIntervalCountBig(12, pcseq.AllIntervalTotal)
+	require.NoError(t, err)
+	assert.Equal(t, "46272", freshAllInterval.String())
 }
 
 func TestOwnershipComparableValues(t *testing.T) {

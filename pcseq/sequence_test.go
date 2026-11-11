@@ -152,7 +152,7 @@ func TestSequenceCoreComparisonAndMapKeys(t *testing.T) {
 	assert.False(t, a.Equal(differentModulus))
 	assert.Negative(t, a.Compare(differentModulus))
 	assert.Positive(t, differentModulus.Compare(a))
-	assert.Positive(t, shorter.Compare(a))
+	assert.Negative(t, shorter.Compare(a))
 	assert.Negative(t, a.Compare(lexicallyGreater))
 
 	keys := map[pcseq.Sequence]int{a: 1}
@@ -290,17 +290,17 @@ func TestTransformSequenceOperations(t *testing.T) {
 		call     func() (pcseq.Sequence, error)
 		expected []int
 	}{
-		{name: "transpose", call: func() (pcseq.Sequence, error) { return s.Transpose(2) }, expected: []int{9, 1, 11, 8, 5, 7, 10, 10}},
-		{name: "negative transpose", call: func() (pcseq.Sequence, error) { return s.Transpose(-1) }, expected: []int{6, 10, 8, 5, 2, 4, 7, 7}},
-		{name: "invert two", call: func() (pcseq.Sequence, error) { return s.Invert(2) }, expected: []int{7, 3, 5, 8, 11, 9, 6, 6}},
-		{name: "multiply two", call: func() (pcseq.Sequence, error) { return s.Multiply(2) }, expected: []int{2, 10, 6, 0, 6, 10, 4, 4}},
+		{name: "transpose", call: func() (pcseq.Sequence, error) { return s.Transpose(2) }, expected: []int{9, 1, 11, 8, 5, 7, 10}},
+		{name: "negative transpose", call: func() (pcseq.Sequence, error) { return s.Transpose(-1) }, expected: []int{6, 10, 8, 5, 2, 4, 7}},
+		{name: "invert two", call: func() (pcseq.Sequence, error) { return s.Invert(2) }, expected: []int{7, 3, 5, 8, 11, 9, 6}},
+		{name: "multiply two", call: func() (pcseq.Sequence, error) { return s.Multiply(2) }, expected: []int{2, 10, 6, 0, 6, 10, 4}},
 		{name: "apply affine", call: func() (pcseq.Sequence, error) {
 			return s.Apply(mustOperator(t, 5, 2, 12))
-		}, expected: []int{1, 9, 11, 8, 5, 3, 6, 6}},
+		}, expected: []int{1, 9, 11, 8, 5, 3, 6}},
 		{name: "retrograde", call: func() (pcseq.Sequence, error) { return s.Retrograde() }, expected: []int{8, 5, 3, 6, 9, 11, 7}},
 		{name: "retrograde inversion", call: func() (pcseq.Sequence, error) { return s.RetrogradeInversion(2) }, expected: []int{6, 9, 11, 8, 5, 3, 7}},
-		{name: "minimum transpose", call: func() (pcseq.Sequence, error) { return s.Transpose(math.MinInt) }, expected: []int{11, 3, 1, 10, 7, 9, 0, 0}},
-		{name: "maximum invert", call: func() (pcseq.Sequence, error) { return s.Invert(math.MaxInt) }, expected: []int{0, 8, 10, 1, 4, 2, 11, 11}},
+		{name: "minimum transpose", call: func() (pcseq.Sequence, error) { return s.Transpose(math.MinInt) }, expected: []int{11, 3, 1, 10, 7, 9, 0}},
+		{name: "maximum invert", call: func() (pcseq.Sequence, error) { return s.Invert(math.MaxInt) }, expected: []int{0, 8, 10, 1, 4, 2, 11}},
 		{name: "minimum multiply", call: func() (pcseq.Sequence, error) { return s.Multiply(math.MinInt) }, expected: []int{4, 8, 0, 0, 0, 8, 8}},
 	}
 	for _, tt := range tests {
@@ -448,10 +448,10 @@ func TestTransformRotationAlgebra(t *testing.T) {
 		require.NoError(t, err)
 		applied, err = applied.Retrograde()
 		require.NoError(t, err)
-		applied, err = applied.Rotate(-k)
-		if k == math.MinInt {
-			applied, err = applied.Rotate(math.MinInt)
-		}
+		rotation, err := pitchclass.Reduce(k, s.Len())
+		require.NoError(t, err)
+		inverseRotation := (s.Len() - rotation.Number()) % s.Len()
+		applied, err = applied.Rotate(inverseRotation)
 		require.NoError(t, err)
 		assert.Equal(t, applied, rOfRotation)
 	}

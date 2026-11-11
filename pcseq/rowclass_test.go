@@ -129,7 +129,7 @@ func TestRowClassModelRotationAndTTOGroups(t *testing.T) {
 	assert.Equal(t, 24, rotations.Size())
 	tto, err := pcseq.NewRowClass(op24, pcseq.TTOR)
 	require.NoError(t, err)
-	assert.Positive(t, tto.Size())
+	assert.Equal(t, 96, tto.Size())
 	assert.True(t, tto.Contains(op24))
 
 	rotation, err := op24.Rotate(6)
@@ -144,6 +144,54 @@ func TestRowClassModelRotationAndTTOGroups(t *testing.T) {
 	equivalent, err = pcseq.AreEquivalentRows(op24, affine, pcseq.TTOR)
 	require.NoError(t, err)
 	assert.True(t, equivalent)
+
+	tirMembers, err := tir.Members()
+	require.NoError(t, err)
+	require.Len(t, tirMembers, 48)
+	assert.Equal(t, tir.Representative(), tirMembers[0])
+	rotationMembers, err := rotations.Members()
+	require.NoError(t, err)
+	require.Len(t, rotationMembers, 24)
+	assert.Equal(t, rotations.Representative(), rotationMembers[0])
+	ttoMembers, err := tto.Members()
+	require.NoError(t, err)
+	require.Len(t, ttoMembers, 96)
+	assert.Equal(t, tto.Representative(), ttoMembers[0])
+
+	for _, tt := range []struct {
+		name    string
+		class   pcseq.RowClass
+		members []pcseq.Row
+	}{
+		{name: "TIR", class: tir, members: tirMembers},
+		{name: "TIRRotations", class: rotations, members: rotationMembers},
+		{name: "TTOR", class: tto, members: ttoMembers},
+	} {
+		t.Run(tt.name+" canonical members", func(t *testing.T) {
+			t.Parallel()
+			unique := make(map[pcseq.Row]struct{}, len(tt.members))
+			for i, member := range tt.members {
+				unique[member] = struct{}{}
+				assert.True(t, tt.class.Contains(member))
+				if i > 0 {
+					assert.Negative(t, tt.members[i-1].Compare(member))
+				}
+			}
+			assert.Len(t, unique, tt.class.Size())
+			assert.Equal(t, tt.members[0], tt.class.Representative())
+		})
+	}
+
+	rotationsEquivalent, err := pcseq.NewRowClass(rotation, pcseq.TIRRotations)
+	require.NoError(t, err)
+	assert.Equal(t, rotations.Representative(), rotationsEquivalent.Representative())
+	assert.True(t, rotations.Equal(rotationsEquivalent))
+	assert.True(t, rotations == rotationsEquivalent)
+	ttoEquivalent, err := pcseq.NewRowClass(affine, pcseq.TTOR)
+	require.NoError(t, err)
+	assert.Equal(t, tto.Representative(), ttoEquivalent.Representative())
+	assert.True(t, tto.Equal(ttoEquivalent))
+	assert.True(t, tto == ttoEquivalent)
 
 	for _, tt := range []struct {
 		name     string
