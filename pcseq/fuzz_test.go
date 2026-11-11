@@ -73,6 +73,8 @@ func FuzzTransformInvariants(f *testing.F) {
 
 		retro, err := s.Retrograde()
 		require.NoError(t, err)
+		retroTransposed, err := retro.Transpose(n)
+		require.NoError(t, err)
 		retro, err = retro.Retrograde()
 		require.NoError(t, err)
 		assert.Equal(t, s, retro)
@@ -80,8 +82,6 @@ func FuzzTransformInvariants(f *testing.F) {
 		transposed, err := s.Transpose(n)
 		require.NoError(t, err)
 		transposedRetro, err := transposed.Retrograde()
-		require.NoError(t, err)
-		retroTransposed, err := retro.Transpose(n)
 		require.NoError(t, err)
 		assert.Equal(t, transposedRetro, retroTransposed)
 
