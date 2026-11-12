@@ -8,6 +8,10 @@ import (
 )
 
 // WithSpelling returns a pitch with spelling s and the positional octave of p.
+// It preserves the positional octave, not the written register. If the new
+// spelling crosses a positional-octave boundary, the written register and the
+// system position (and therefore the sounding pitch at a fixed tuning) can
+// change even though the positional octave stays the same.
 //
 // If p or s is invalid, WithSpelling returns Pitch{} and an error matching
 // [ErrInvalid].
@@ -20,7 +24,8 @@ func (p Pitch) WithSpelling(s spelling.Spelling) (Pitch, error) {
 }
 
 // MustWithSpelling is like [Pitch.WithSpelling] but panics with the returned
-// error if p or s is invalid.
+// error if p or s is invalid. It preserves the positional octave, not the
+// written register.
 func (p Pitch) MustWithSpelling(s spelling.Spelling) Pitch {
 	return must(p.WithSpelling(s))
 }
@@ -63,7 +68,11 @@ func (p Pitch) MustWithASPN(aspn int) Pitch {
 }
 
 // Natural returns the pitch with the same letter and positional octave as p
-// and alteration value 0 (natural).
+// and alteration value 0 (natural). It preserves the positional octave, not
+// the written register. If the natural spelling crosses a positional-octave
+// boundary, the written register and the system position (and therefore the
+// sounding pitch at a fixed tuning) can change even though the positional
+// octave stays the same.
 //
 // Letter and octave are preserved without enharmonic substitution: for
 // (B♯, ASPN 4), Natural returns (B, ASPN 4), not C. For the zero value
@@ -78,7 +87,11 @@ func (p Pitch) Natural() Pitch {
 
 // Raise returns p with its alteration value raised by 1 chromatic unit,
 // keeping the same letter and positional octave (for example, (B, ASPN 4)
-// becomes (B♯, ASPN 4)).
+// becomes (B♯, ASPN 4)). It preserves the positional octave, not the written
+// register. If the raised spelling crosses a positional-octave boundary, the
+// written register and the system position (and therefore the sounding pitch
+// at a fixed tuning) can change even though the positional octave stays the
+// same.
 //
 // If p is invalid, Raise returns Pitch{} and an error matching [ErrInvalid].
 // If the resulting alteration exceeds the guaranteed range of package
@@ -98,14 +111,18 @@ func (p Pitch) Raise() (Pitch, error) {
 }
 
 // MustRaise is like [Pitch.Raise] but panics with the returned error if Raise
-// fails.
+// fails. It preserves the positional octave, not the written register.
 func (p Pitch) MustRaise() Pitch {
 	return must(p.Raise())
 }
 
 // Lower returns p with its alteration value lowered by 1 chromatic unit,
 // keeping the same letter and positional octave (for example, (C, ASPN 4)
-// becomes (C♭, ASPN 4)).
+// becomes (C♭, ASPN 4)). It preserves the positional octave, not the written
+// register. If the lowered spelling crosses a positional-octave boundary, the
+// written register and the system position (and therefore the sounding pitch
+// at a fixed tuning) can change even though the positional octave stays the
+// same.
 //
 // If p is invalid, Lower returns Pitch{} and an error matching [ErrInvalid].
 // If the resulting alteration exceeds the guaranteed range of package
@@ -125,13 +142,17 @@ func (p Pitch) Lower() (Pitch, error) {
 }
 
 // MustLower is like [Pitch.Lower] but panics with the returned error if Lower
-// fails.
+// fails. It preserves the positional octave, not the written register.
 func (p Pitch) MustLower() Pitch {
 	return must(p.Lower())
 }
 
 // RaiseBy returns p with its alteration value raised by n chromatic units (or
-// lowered for negative n), keeping the same letter and positional octave.
+// lowered for negative n), keeping the same letter and positional octave. It
+// preserves the positional octave, not the written register. If the new
+// spelling crosses a positional-octave boundary, the written register and the
+// system position (and therefore the sounding pitch at a fixed tuning) can
+// change even though the positional octave stays the same.
 //
 // Validity of p is checked before range: if p is invalid, RaiseBy returns
 // Pitch{} and an error matching [ErrInvalid] for any n. If p is valid and the
@@ -152,14 +173,18 @@ func (p Pitch) RaiseBy(n int) (Pitch, error) {
 }
 
 // MustRaiseBy is like [Pitch.RaiseBy] but panics with the returned error if
-// RaiseBy fails.
+// RaiseBy fails. It preserves the positional octave, not the written register.
 func (p Pitch) MustRaiseBy(n int) Pitch {
 	return must(p.RaiseBy(n))
 }
 
 // LowerBy returns p with its alteration value lowered by n chromatic units (or
 // raised for negative n), keeping the same letter and positional octave.
-// LowerBy handles n == math.MinInt exactly without sign overflow.
+// LowerBy handles n == math.MinInt exactly without sign overflow. It preserves
+// the positional octave, not the written register. If the new spelling crosses
+// a positional-octave boundary, the written register and the system position
+// (and therefore the sounding pitch at a fixed tuning) can change even though
+// the positional octave stays the same.
 //
 // Validity of p is checked before range: if p is invalid, LowerBy returns
 // Pitch{} and an error matching [ErrInvalid] for any n. If p is valid and the
@@ -180,7 +205,7 @@ func (p Pitch) LowerBy(n int) (Pitch, error) {
 }
 
 // MustLowerBy is like [Pitch.LowerBy] but panics with the returned error if
-// LowerBy fails.
+// LowerBy fails. It preserves the positional octave, not the written register.
 func (p Pitch) MustLowerBy(n int) Pitch {
 	return must(p.LowerBy(n))
 }
