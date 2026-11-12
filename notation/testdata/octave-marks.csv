@@ -1,0 +1,58 @@
+нотация,aspn,запись_до,источник,место,пометка
+aspn,0,C0,OMT,L1740–1744; L1748,номера 0–8 — клавиатура фортепиано (L1740–1744)
+aspn,1,C1,OMT,L1740–1744; L1748,номера 0–8 — клавиатура фортепиано (L1740–1744)
+aspn,2,C2,OMT,L1740–1744; L1748,номера 0–8 — клавиатура фортепиано (L1740–1744)
+aspn,3,C3,OMT,L1740–1744; L1748,номера 0–8 — клавиатура фортепиано (L1740–1744)
+aspn,4,C4,OMT,L1740–1744; L1748,номера 0–8 — клавиатура фортепиано (L1740–1744)
+aspn,5,C5,OMT,L1740–1744; L1748,номера 0–8 — клавиатура фортепиано (L1740–1744)
+aspn,6,C6,OMT,L1740–1744; L1748,номера 0–8 — клавиатура фортепиано (L1740–1744)
+aspn,7,C7,OMT,L1740–1744; L1748,номера 0–8 — клавиатура фортепиано (L1740–1744)
+aspn,8,C8,OMT,L1740–1744; L1748,номера 0–8 — клавиатура фортепиано (L1740–1744)
+helmholtz,0,C͵͵,WP-en-Helm,«Variations»,слабый
+helmholtz,1,C͵,WP-en-Helm,«Variations»,слабый
+helmholtz,2,C,WP-en-Helm,«Variations»,слабый
+helmholtz,3,c,WP-en-Helm,«Variations»,слабый
+helmholtz,4,c′,WP-en-Helm,«Variations»,слабый
+helmholtz,5,c′′,WP-en-Helm,«Variations»,слабый
+helmholtz,6,c′′′,WP-en-Helm,«Variations»,слабый
+helmholtz,7,c′′′′,WP-en-Helm,«Variations»,слабый
+helmholtz,8,c′′′′′,WP-en-Helm,«Variations»,слабый
+helmholtz-en,0,CCC,WP-en-Helm,«Variations»,слабый
+helmholtz-en,1,CC,WP-en-Helm,«Variations»,слабый
+helmholtz-en,2,C,WP-en-Helm,«Variations»,слабый
+helmholtz-numbered,0,C2,WP-en-Helm,«Variations»,слабый; для 0 и 1 также 2C и 1C
+helmholtz-numbered,1,C1,WP-en-Helm,«Variations»,слабый; для 0 и 1 также 2C и 1C
+helmholtz-numbered,2,C,WP-en-Helm,«Variations»,слабый; для 0 и 1 также 2C и 1C
+helmholtz-numbered,3,c,WP-en-Helm,«Variations»,слабый; для 0 и 1 также 2C и 1C
+helmholtz-numbered,4,c1,WP-en-Helm,«Variations»,слабый; для 0 и 1 также 2C и 1C
+helmholtz-numbered,5,c2,WP-en-Helm,«Variations»,слабый; для 0 и 1 также 2C и 1C
+helmholtz-numbered,6,c3,WP-en-Helm,«Variations»,слабый; для 0 и 1 также 2C и 1C
+helmholtz-numbered,7,c4,WP-en-Helm,«Variations»,слабый; для 0 и 1 также 2C и 1C
+helmholtz-numbered,8,c5,WP-en-Helm,«Variations»,слабый; для 0 и 1 также 2C и 1C
+am,0,C₂,АМ,L339,"номер ASPN — по названию октавы (octave-naming, данные)"
+am,1,C₁,АМ,L339,"номер ASPN — по названию октавы (octave-naming, данные)"
+am,2,C,АМ,L333,"номер ASPN — по названию октавы (octave-naming, данные)"
+am,3,c,АМ,L335,"номер ASPN — по названию октавы (octave-naming, данные)"
+am,4,c¹,АМ,L337,"номер ASPN — по названию октавы (octave-naming, данные)"
+am,5,c²,АМ,L337,"номер ASPN — по названию октавы (octave-naming, данные)"
+am,6,c³,АМ,L337,"номер ASPN — по названию октавы (octave-naming, данные)"
+am,7,c⁴,АМ,L337,"номер ASPN — по названию октавы (octave-naming, данные)"
+am,8,c⁵,АМ,L337,"номер ASPN — по названию октавы (octave-naming, данные)"
+lilypond,0,"c,,,",LilyPond; WP-en-Helm,«Absolute octave entry»; «Variations»,
+lilypond,1,"c,,",LilyPond; WP-en-Helm,«Absolute octave entry»; «Variations»,
+lilypond,2,"c,",LilyPond; WP-en-Helm,«Absolute octave entry»; «Variations»,
+lilypond,3,c,LilyPond; WP-en-Helm,«Absolute octave entry»; «Variations»,
+lilypond,4,c',LilyPond; WP-en-Helm,«Absolute octave entry»; «Variations»,
+lilypond,5,c'',LilyPond; WP-en-Helm,«Absolute octave entry»; «Variations»,
+lilypond,6,c''',LilyPond; WP-en-Helm,«Absolute octave entry»; «Variations»,
+lilypond,7,c'''',LilyPond; WP-en-Helm,«Absolute octave entry»; «Variations»,
+lilypond,8,c''''',LilyPond; WP-en-Helm,«Absolute octave entry»; «Variations»,
+abc,0,"C,,,,",ABC; WP-en-Helm,«4.1 Pitch»; «4.6 Clefs and transposition»; «Variations»,номер ASPN буквы C выведен из средней линии альтового ключа (обоснование 3)
+abc,1,"C,,,",ABC; WP-en-Helm,«4.1 Pitch»; «4.6 Clefs and transposition»; «Variations»,номер ASPN буквы C выведен из средней линии альтового ключа (обоснование 3)
+abc,2,"C,,",ABC; WP-en-Helm,«4.1 Pitch»; «4.6 Clefs and transposition»; «Variations»,номер ASPN буквы C выведен из средней линии альтового ключа (обоснование 3)
+abc,3,"C,",ABC; WP-en-Helm,«4.1 Pitch»; «4.6 Clefs and transposition»; «Variations»,номер ASPN буквы C выведен из средней линии альтового ключа (обоснование 3)
+abc,4,C,ABC; WP-en-Helm,«4.1 Pitch»; «4.6 Clefs and transposition»; «Variations»,номер ASPN буквы C выведен из средней линии альтового ключа (обоснование 3)
+abc,5,c,ABC; WP-en-Helm,«4.1 Pitch»; «4.6 Clefs and transposition»; «Variations»,номер ASPN буквы C выведен из средней линии альтового ключа (обоснование 3)
+abc,6,c',ABC; WP-en-Helm,«4.1 Pitch»; «4.6 Clefs and transposition»; «Variations»,номер ASPN буквы C выведен из средней линии альтового ключа (обоснование 3)
+abc,7,c'',ABC; WP-en-Helm,«4.1 Pitch»; «4.6 Clefs and transposition»; «Variations»,номер ASPN буквы C выведен из средней линии альтового ключа (обоснование 3)
+abc,8,c''',ABC; WP-en-Helm,«4.1 Pitch»; «4.6 Clefs and transposition»; «Variations»,номер ASPN буквы C выведен из средней линии альтового ключа (обоснование 3)
