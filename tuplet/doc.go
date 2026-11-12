@@ -173,8 +173,9 @@
 // cause: errors.Is(err, tuplet.ErrOutOfRange) and
 // errors.Is(err, fraction.ErrOutOfRange) both hold when an applied duration
 // leaves the fraction range. When several conditions fail, the first one in
-// the documented order of the operation is reported. Error values return zero
-// results.
+// the documented order of the operation is reported. A failing call returns
+// zero results (such as Tuplet{}, the unset fraction, 0, false, "", or nil),
+// except that [Tuplet.AppendText] returns its argument b unchanged.
 //
 // [ErrNotRepresentable] of this package and fraction.ErrNotRepresentable are
 // different: [FromUnitRatio] returns ErrNotRepresentable when normal·ratio is
