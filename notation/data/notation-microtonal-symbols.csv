@@ -1,0 +1,116 @@
+семейство,значение,код_знака,источник,место
+unicode-stein,-2,U+1D12B,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-stein,-3/2,U+E281,SMuFL-notation,Stein-Zimmermann accidentals (24-EDO)
+unicode-stein,-1,U+266D,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-stein,-1/2,U+E280,SMuFL-notation,Stein-Zimmermann accidentals (24-EDO)
+unicode-stein,0,U+266E,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-stein,1/2,U+E282,SMuFL-notation,Stein-Zimmermann accidentals (24-EDO)
+unicode-stein,1,U+266F,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-stein,3/2,U+E283,SMuFL-notation,Stein-Zimmermann accidentals (24-EDO)
+unicode-stein,2,U+1D12A,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-gould,-5/2,U+E279,SMuFL-notation,Gould arrow quartertone accidentals (24-EDO)
+unicode-gould,-2,U+1D12B,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-gould,-3/2,U+E271,SMuFL-notation,Gould arrow quartertone accidentals (24-EDO)
+unicode-gould,-1,U+266D,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-gould,-1/2,U+E270,SMuFL-notation,Gould arrow quartertone accidentals (24-EDO)
+unicode-gould,0,U+266E,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-gould,1/2,U+E272,SMuFL-notation,Gould arrow quartertone accidentals (24-EDO)
+unicode-gould,1,U+266F,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-gould,3/2,U+E274,SMuFL-notation,Gould arrow quartertone accidentals (24-EDO)
+unicode-gould,2,U+1D12A,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-gould,5/2,U+E276,SMuFL-notation,Gould arrow quartertone accidentals (24-EDO)
+unicode-sims,-2,U+1D12B,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-sims,-1,U+266D,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-sims,-1/2,U+E2A2,SMuFL-notation,Sims accidentals (72-EDO)
+unicode-sims,-1/3,U+E2A1,SMuFL-notation,Sims accidentals (72-EDO)
+unicode-sims,-1/6,U+E2A0,SMuFL-notation,Sims accidentals (72-EDO)
+unicode-sims,0,U+266E,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-sims,1/6,U+E2A3,SMuFL-notation,Sims accidentals (72-EDO)
+unicode-sims,1/3,U+E2A4,SMuFL-notation,Sims accidentals (72-EDO)
+unicode-sims,1/2,U+E2A5,SMuFL-notation,Sims accidentals (72-EDO)
+unicode-sims,1,U+266F,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-sims,2,U+1D12A,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-wyschnegradsky,-2,U+1D12B,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-wyschnegradsky,-11/6,U+E435,SMuFL-notation,Wyschnegradsky accidentals (72-EDO)
+unicode-wyschnegradsky,-5/3,U+E434,SMuFL-notation,Wyschnegradsky accidentals (72-EDO)
+unicode-wyschnegradsky,-3/2,U+E433,SMuFL-notation,Wyschnegradsky accidentals (72-EDO)
+unicode-wyschnegradsky,-4/3,U+E432,SMuFL-notation,Wyschnegradsky accidentals (72-EDO)
+unicode-wyschnegradsky,-7/6,U+E431,SMuFL-notation,Wyschnegradsky accidentals (72-EDO)
+unicode-wyschnegradsky,-1,U+266D,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-wyschnegradsky,-5/6,U+E42F,SMuFL-notation,Wyschnegradsky accidentals (72-EDO)
+unicode-wyschnegradsky,-2/3,U+E42E,SMuFL-notation,Wyschnegradsky accidentals (72-EDO)
+unicode-wyschnegradsky,-1/2,U+E42D,SMuFL-notation,Wyschnegradsky accidentals (72-EDO)
+unicode-wyschnegradsky,-1/3,U+E42C,SMuFL-notation,Wyschnegradsky accidentals (72-EDO)
+unicode-wyschnegradsky,-1/6,U+E42B,SMuFL-notation,Wyschnegradsky accidentals (72-EDO)
+unicode-wyschnegradsky,0,U+266E,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-wyschnegradsky,1/6,U+E420,SMuFL-notation,Wyschnegradsky accidentals (72-EDO)
+unicode-wyschnegradsky,1/3,U+E421,SMuFL-notation,Wyschnegradsky accidentals (72-EDO)
+unicode-wyschnegradsky,1/2,U+E422,SMuFL-notation,Wyschnegradsky accidentals (72-EDO)
+unicode-wyschnegradsky,2/3,U+E423,SMuFL-notation,Wyschnegradsky accidentals (72-EDO)
+unicode-wyschnegradsky,5/6,U+E424,SMuFL-notation,Wyschnegradsky accidentals (72-EDO)
+unicode-wyschnegradsky,1,U+266F,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-wyschnegradsky,7/6,U+E426,SMuFL-notation,Wyschnegradsky accidentals (72-EDO)
+unicode-wyschnegradsky,4/3,U+E427,SMuFL-notation,Wyschnegradsky accidentals (72-EDO)
+unicode-wyschnegradsky,3/2,U+E428,SMuFL-notation,Wyschnegradsky accidentals (72-EDO)
+unicode-wyschnegradsky,5/3,U+E429,SMuFL-notation,Wyschnegradsky accidentals (72-EDO)
+unicode-wyschnegradsky,11/6,U+E42A,SMuFL-notation,Wyschnegradsky accidentals (72-EDO)
+unicode-wyschnegradsky,2,U+1D12A,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-aeu,-9/4,U+1D12B,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-aeu,-2,U+E440,SMuFL-notation,Arel-Ezgi-Uzdilek (AEU) accidentals
+unicode-aeu,-5/4,U+266D,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-aeu,-1,U+E441,SMuFL-notation,Arel-Ezgi-Uzdilek (AEU) accidentals
+unicode-aeu,-1/4,U+E443,SMuFL-notation,Arel-Ezgi-Uzdilek (AEU) accidentals
+unicode-aeu,0,U+266E,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-aeu,1/4,U+E444,SMuFL-notation,Arel-Ezgi-Uzdilek (AEU) accidentals
+unicode-aeu,1,U+266F,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-aeu,5/4,U+E446,SMuFL-notation,Arel-Ezgi-Uzdilek (AEU) accidentals
+unicode-aeu,2,U+E447,SMuFL-notation,Arel-Ezgi-Uzdilek (AEU) accidentals
+unicode-aeu,9/4,U+1D12A,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-persian,-2,U+1D12B,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-persian,-1,U+266D,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-persian,-1/2,U+E460,SMuFL-notation,Persian accidentals
+unicode-persian,0,U+266E,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-persian,1/2,U+E461,SMuFL-notation,Persian accidentals
+unicode-persian,1,U+266F,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-persian,2,U+1D12A,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-arabic,-2,U+ED30,SMuFL-notation,Arabic accidentals
+unicode-arabic,-3/2,U+ED31,SMuFL-notation,Arabic accidentals
+unicode-arabic,-1,U+ED32,SMuFL-notation,Arabic accidentals
+unicode-arabic,-1/2,U+ED33,SMuFL-notation,Arabic accidentals
+unicode-arabic,0,U+ED34,SMuFL-notation,Arabic accidentals
+unicode-arabic,1/2,U+ED35,SMuFL-notation,Arabic accidentals
+unicode-arabic,1,U+ED36,SMuFL-notation,Arabic accidentals
+unicode-arabic,3/2,U+ED37,SMuFL-notation,Arabic accidentals
+unicode-arabic,2,U+ED38,SMuFL-notation,Arabic accidentals
+unicode-stockhausen,-2,U+1D12B,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-stockhausen,-1,U+266D,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-stockhausen,-1/2,U+ED59,SMuFL-notation,Stockhausen accidentals (24-EDO)
+unicode-stockhausen,0,U+266E,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-stockhausen,1/2,U+ED58,SMuFL-notation,Stockhausen accidentals (24-EDO)
+unicode-stockhausen,1,U+266F,SMuFL-notation,Standard accidentals (12-EDO)
+unicode-stockhausen,3/2,U+ED5A,SMuFL-notation,Stockhausen accidentals (24-EDO)
+unicode-stockhausen,2,U+1D12A,SMuFL-notation,Standard accidentals (12-EDO)
+ascii-updown,-2-1/c,v𝄫,WP-en-22ET,Notation
+ascii-updown,-2,𝄫,WP-en-22ET,Notation
+ascii-updown,-2+1/c,^𝄫,WP-en-22ET,Notation
+ascii-updown,-1-1/c,v♭,WP-en-22ET,Notation
+ascii-updown,-1,♭,WP-en-22ET,Notation
+ascii-updown,-1+1/c,^♭,WP-en-22ET,Notation
+ascii-updown,-1/c,v,WP-en-22ET,Notation
+ascii-updown,0,♮,WP-en-22ET,Notation
+ascii-updown,1/c,^,WP-en-22ET,Notation
+ascii-updown,1-1/c,v♯,WP-en-22ET,Notation
+ascii-updown,1,♯,WP-en-22ET,Notation
+ascii-updown,1+1/c,^♯,WP-en-22ET,Notation
+ascii-updown,2-1/c,v𝄪,WP-en-22ET,Notation
+ascii-updown,2,𝄪,WP-en-22ET,Notation
+ascii-updown,2+1/c,^𝄪,WP-en-22ET,Notation
+ascii-fokker,-2,bb,HF-Fokker,Equal Temperament and the Thirty-one-keyed organ
+ascii-fokker,-3/2,b-,HF-Fokker,Equal Temperament and the Thirty-one-keyed organ
+ascii-fokker,-1,b,HF-Fokker,Equal Temperament and the Thirty-one-keyed organ
+ascii-fokker,-1/2,-,HF-Fokker,Equal Temperament and the Thirty-one-keyed organ
+ascii-fokker,0,♮,HF-Fokker,Equal Temperament and the Thirty-one-keyed organ
+ascii-fokker,1/2,+,HF-Fokker,Equal Temperament and the Thirty-one-keyed organ
+ascii-fokker,1,#,HF-Fokker,Equal Temperament and the Thirty-one-keyed organ
+ascii-fokker,3/2,#+,HF-Fokker,Equal Temperament and the Thirty-one-keyed organ
+ascii-fokker,2,x,HF-Fokker,Equal Temperament and the Thirty-one-keyed organ
