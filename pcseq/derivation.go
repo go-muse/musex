@@ -79,11 +79,8 @@ func (o DerivationOperator) Apply(s Sequence) (Sequence, error) {
 		return s.Invert(o.index)
 	case DerivationTR:
 		return s.MustRetrograde().Transpose(o.index)
-	case DerivationIR:
-		return s.MustRetrograde().Invert(o.index)
-	default:
-		return Sequence{}, invalidValue()
 	}
+	return s.MustRetrograde().Invert(o.index)
 }
 
 // String returns T<n>, I<n>, T<n>R, I<n>R, or DerivationOperator(invalid).
@@ -99,11 +96,8 @@ func (o DerivationOperator) String() string {
 		return "I" + index
 	case DerivationTR:
 		return "T" + index + "R"
-	case DerivationIR:
-		return "I" + index + "R"
-	default:
-		return "DerivationOperator(invalid)"
 	}
+	return "I" + index + "R"
 }
 
 // IsDerived reports whether all discrete segments derive from the first.

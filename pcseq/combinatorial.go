@@ -70,10 +70,7 @@ func (r Row) CombinatorialForms() ([]FormLabel, error) {
 		for n := range r.modulus {
 			label := FormLabel{kind: kind, index: n, modulus: r.modulus}
 			candidate := formUnchecked(r, label)
-			matches, err := combinatorialContent(r, candidate)
-			if err != nil {
-				return nil, err
-			}
+			matches := must(combinatorialContent(r, candidate))
 			if matches {
 				forms = append(forms, label)
 			}
@@ -100,10 +97,7 @@ func (r Row) CombinatorialRotations() ([]RotationCombinatoriality, error) {
 		for n := range r.modulus {
 			label := FormLabel{kind: I, index: n, modulus: r.modulus}
 			candidate := formUnchecked(rotated, label)
-			matches, err := combinatorialContent(rotated, candidate)
-			if err != nil {
-				return nil, err
-			}
+			matches := must(combinatorialContent(rotated, candidate))
 			if matches {
 				forms = append(forms, label)
 			}
@@ -151,11 +145,7 @@ func (r Row) HexachordAnalysis() (HexachordAnalysis, error) {
 	if !r.IsValid() {
 		return HexachordAnalysis{}, invalidValue()
 	}
-	content, err := firstHalfContent(r)
-	if err != nil {
-		return HexachordAnalysis{}, err
-	}
-	return AnalyzeHexachord(content)
+	return AnalyzeHexachord(must(firstHalfContent(r)))
 }
 
 // IsAllCombinatorial reports whether all three lists are nonempty.
