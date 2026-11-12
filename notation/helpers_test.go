@@ -109,6 +109,10 @@ func letterByName(t testHelper, name string) letter.Letter {
 	return 0
 }
 
+func isNameKey(text string) bool {
+	return len(text) > 0 && text[0] >= 'A' && text[0] <= 'G'
+}
+
 func nameByParts(t testHelper, text string) spelling.Spelling {
 	t.Helper()
 	require.NotEmpty(t, text)
@@ -188,7 +192,7 @@ func expectedBuiltIns(t testHelper) []expectedNotation {
 		for _, entry := range splitEntries(row[5]) {
 			nameText, formText := assignment(t, entry)
 			for _, alias := range strings.Split(formText, "|") {
-				if strings.HasPrefix(nameText, "A") || strings.HasPrefix(nameText, "B") || strings.HasPrefix(nameText, "C") || strings.HasPrefix(nameText, "D") || strings.HasPrefix(nameText, "E") || strings.HasPrefix(nameText, "F") || strings.HasPrefix(nameText, "G") {
+				if isNameKey(nameText) {
 					name := nameByParts(t, nameText)
 					aliasExceptions[name] = append(aliasExceptions[name], symbolText(t, alias))
 				}
@@ -212,7 +216,7 @@ func expectedBuiltIns(t testHelper) []expectedNotation {
 		}
 		for _, entry := range splitEntries(row[5]) {
 			valueText, formsText := assignment(t, entry)
-			if len(valueText) == 1 && strings.Contains("ABCDEFG", valueText) {
+			if isNameKey(valueText) {
 				continue
 			}
 			value := alterationValue(t, valueText)
