@@ -287,3 +287,36 @@ func TestNotationMultipleAliasesDoNotCreateFalseAmbiguity(t *testing.T) {
 	require.True(t, n.MustParse("see").Equal(spelling.C()))
 	require.True(t, n.MustParse("cee").Equal(spelling.C()))
 }
+
+func TestNotationABCCaseAliasRoundTrip(t *testing.T) {
+	t.Parallel()
+	rules := explicitNameRules(t,
+		notation.NameForm{Name: spelling.C(), Text: "C", Aliases: []string{"c"}},
+	)
+	n, err := notation.New(notation.Definition{Rules: rules, OctaveStyle: notation.OctaveStyleABC})
+	require.NoError(t, err)
+
+	tests := []struct {
+		name      string
+		w         int
+		canonical string
+		alias     string
+	}{
+		{"upper with comma", 3, "C,", "C,"},
+		{"upper base", 4, "C", "C"},
+		{"lower base", 5, "c", "c"},
+		{"lower with apostrophe", 6, "c'", "c'"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			expected := pitch.MustFromASPN(spelling.C(), tt.w)
+			require.Equal(t, tt.canonical, n.MustFormatPitch(expected, system.Traditional(), notation.OctaveContext{}))
+			for _, input := range []string{tt.canonical, tt.alias} {
+				parsed, err := n.ParsePitch(input, system.Traditional(), notation.OctaveContext{})
+				require.NoError(t, err)
+				require.True(t, parsed.Equal(expected))
+			}
+		})
+	}
+}
