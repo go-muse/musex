@@ -42,7 +42,7 @@
 ## 3. Long-term plans
 
 - [x] **26. [`common/fraction`](guide/packages/common/fraction.md)** — exact signed fractions for musical quantities. Preserve the supplied numerator and denominator, compare by numeric value or by the supplied pair, and support arithmetic with explicitly chosen result forms. Review consumers individually, starting with fractional alterations and covering position cycles, systems, cents, tuplets, durations, and track timing.
-- [ ] **27. `tuplet`** — tuplets such as triplets.
+- [x] **27. [`tuplet`](guide/packages/tuplet.md)** — tuplets such as duplets, triplets, and quintuplets. Keep the written pair of actual and normal counts, compare by notation or by coefficient, apply exact coefficients to durations, nest tuplets, and derive default pairs for binary or ternary division.
 - [ ] **28. `duration`** — musical durations.
 - [ ] **29. `chord`** — chords built from notes and durations.
 - [ ] **30. `track`** — tracks and their events.
