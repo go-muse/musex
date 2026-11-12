@@ -4,7 +4,10 @@ import (
 	"testing"
 
 	"github.com/go-muse/musex/notation"
+	"github.com/go-muse/musex/octave/number"
+	"github.com/go-muse/musex/pitch"
 	"github.com/go-muse/musex/spelling"
+	"github.com/go-muse/musex/system"
 
 	"github.com/stretchr/testify/require"
 )
@@ -205,6 +208,36 @@ func TestNotationFullGrammarAmbiguity(t *testing.T) {
 			notation.OctaveStyleHelmholtzNumbered,
 			"",
 		},
+		{
+			"AM user alias case collision",
+			[]notation.NameForm{{Name: spelling.C(), Text: "A", Aliases: []string{"C"}}, {Name: spelling.D(), Text: "c"}},
+			notation.OctaveStyleAM,
+			"",
+		},
+		{
+			"Helmholtz user alias suffix collision",
+			[]notation.NameForm{{Name: spelling.C(), Text: "A", Aliases: []string{"C′"}}, {Name: spelling.D(), Text: "C"}},
+			notation.OctaveStyleHelmholtz,
+			"",
+		},
+		{
+			"LilyPond user alias suffix collision",
+			[]notation.NameForm{{Name: spelling.C(), Text: "A", Aliases: []string{"C,"}}, {Name: spelling.D(), Text: "C"}},
+			notation.OctaveStyleLilyPond,
+			"",
+		},
+		{
+			"ABC user alias mixed suffix collision",
+			[]notation.NameForm{{Name: spelling.C(), Text: "A", Aliases: []string{"C,'"}}, {Name: spelling.D(), Text: "C"}},
+			notation.OctaveStyleABC,
+			"",
+		},
+		{
+			"Helmholtz numbered user alias collision",
+			[]notation.NameForm{{Name: spelling.C(), Text: "A", Aliases: []string{"2C"}}, {Name: spelling.D(), Text: "C"}},
+			notation.OctaveStyleHelmholtzNumbered,
+			"",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -242,8 +275,13 @@ func TestNotationMultipleAliasesDoNotCreateFalseAmbiguity(t *testing.T) {
 		notation.NameForm{Name: spelling.D(), Text: "D"},
 	)
 	n := customNotation(t, rules, notation.OctaveStyleNumber, "")
+	ctx := notation.OctaveContext{Numbering: number.ASPN()}
+	p := pitch.MustFromASPN(spelling.C(), 4)
+	require.Equal(t, "C4", n.MustFormatPitch(p, system.Traditional(), ctx))
 	for _, alias := range []string{"see4", "cee4"} {
-		require.NotPanics(t, func() { _ = alias })
+		parsed, err := n.ParsePitch(alias, system.Traditional(), ctx)
+		require.NoError(t, err)
+		require.True(t, parsed.Equal(p))
 	}
 	require.Equal(t, "C", n.MustFormat(spelling.C()))
 	require.True(t, n.MustParse("see").Equal(spelling.C()))
