@@ -49,9 +49,10 @@ func TestNameRulesGeneratedDomainExceptionsAndOwnership(t *testing.T) {
 	for _, alias := range []string{"C♮", "Cn"} {
 		require.True(t, rules.MustParse(alias).Equal(spelling.C()))
 	}
-	for _, alias := range []string{"C♯", "Cs"} {
-		require.True(t, rules.MustParse(alias).Equal(spelling.CSharp()))
-	}
+	require.True(t, rules.MustParse("C♯").Equal(spelling.CSharp()))
+	parsed, err := rules.Parse("Cs")
+	require.ErrorIs(t, err, notation.ErrParse)
+	require.False(t, parsed.IsValid())
 	require.Equal(t, "C-sharp", rules.MustFormat(spelling.CSharp()))
 
 	names := rules.Names()
