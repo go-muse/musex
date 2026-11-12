@@ -143,11 +143,13 @@ func TestNames_AnyNormal(t *testing.T) {
 		t.Run(tt.tp.String(), func(t *testing.T) {
 			t.Parallel()
 
-			name, ok := tt.tp.MustName()
+			name, ok, err := tt.tp.Name()
+			require.NoError(t, err)
 			assert.True(t, ok)
 			assert.Equal(t, tt.name, name)
 
-			russian, ok := tt.tp.MustRussianName()
+			russian, ok, err := tt.tp.RussianName()
+			require.NoError(t, err)
 			assert.True(t, ok)
 			assert.Equal(t, tt.russian, russian)
 		})

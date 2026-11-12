@@ -66,7 +66,6 @@ func TestParse_RoundTrip(t *testing.T) {
 			parsed, err := tuplet.Parse(tp.String())
 			require.NoError(t, err)
 			assert.Equal(t, tp, parsed)
-			assert.Equal(t, tp, tuplet.MustParse(tp.String()))
 
 			text, err := tp.MarshalText()
 			require.NoError(t, err)
@@ -312,11 +311,21 @@ func TestParseName_Names(t *testing.T) {
 	t.Parallel()
 
 	for _, nt := range namedTuplets {
-		name, _ := nt.fn().MustName()
-		russian, _ := nt.fn().MustRussianName()
+		name, ok, err := nt.fn().Name()
+		require.NoError(t, err)
+		require.True(t, ok)
 
-		assert.Equal(t, nt.fn(), tuplet.MustParseName(name))
-		assert.Equal(t, nt.fn(), tuplet.MustParseName(russian))
+		russian, ok, err := nt.fn().RussianName()
+		require.NoError(t, err)
+		require.True(t, ok)
+
+		fromName, err := tuplet.ParseName(name)
+		require.NoError(t, err)
+		assert.Equal(t, nt.fn(), fromName)
+
+		fromRussian, err := tuplet.ParseName(russian)
+		require.NoError(t, err)
+		assert.Equal(t, nt.fn(), fromRussian)
 	}
 }
 

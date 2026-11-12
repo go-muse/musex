@@ -397,3 +397,68 @@ func TestApplyChain_Errors(t *testing.T) {
 		})
 	}
 }
+
+// TestChain_UnsetBeforeOverflow covers the order E-2 -> E-5 of architecture
+// 4.2 for Flatten and ChainCoefficient and the order independence of 4.10:
+// a chain with an unset element gives ErrUnset without causes from
+// common/fraction, even when the other elements overflow int or the range of
+// common/fraction, wherever the unset element stands.
+func TestChain_UnsetBeforeOverflow(t *testing.T) {
+	t.Parallel()
+
+	var unset tuplet.Tuplet
+
+	maxActual := tuplet.MustNew(math.MaxInt, 1)
+	maxNormal := tuplet.MustNew(1, math.MaxInt)
+	double := tuplet.MustNew(2, 1)
+
+	chains := []struct {
+		name  string
+		chain []tuplet.Tuplet
+	}{
+		{name: "int overflow then unset", chain: []tuplet.Tuplet{maxActual, double, unset}},
+		{name: "unset inside int overflow", chain: []tuplet.Tuplet{maxActual, unset, double}},
+		{name: "normal int overflow then unset", chain: []tuplet.Tuplet{maxNormal, maxNormal, unset}},
+		{
+			name:  "range overflow then unset",
+			chain: []tuplet.Tuplet{maxNormal, maxNormal, maxNormal, maxNormal, maxNormal, unset},
+		},
+		{
+			name:  "unset inside range overflow",
+			chain: []tuplet.Tuplet{maxNormal, maxNormal, maxNormal, unset, maxNormal, maxNormal},
+		},
+		{
+			name:  "actual range overflow then unset",
+			chain: []tuplet.Tuplet{maxActual, maxActual, maxActual, maxActual, maxActual, unset},
+		},
+	}
+
+	for _, tt := range chains {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			flat, err := tuplet.Flatten(tt.chain...)
+			assertErr(t, err, tuplet.ErrUnset)
+			assert.Equal(t, tuplet.Tuplet{}, flat)
+
+			c, err := tuplet.ChainCoefficient(tt.chain...)
+			assertErr(t, err, tuplet.ErrUnset)
+			assert.Equal(t, fraction.Fraction{}, c)
+
+			applied, err := tuplet.ApplyChain(frac(1, 8), tt.chain...)
+			assertErr(t, err, tuplet.ErrUnset)
+			assert.Equal(t, fraction.Fraction{}, applied)
+
+			_ = assertPanicErr(t, func() { tuplet.MustFlatten(tt.chain...) }, tuplet.ErrUnset)
+			_ = assertPanicErr(t, func() { tuplet.MustChainCoefficient(tt.chain...) }, tuplet.ErrUnset)
+
+			for _, p := range permutations(tt.chain) {
+				_, err := tuplet.Flatten(p...)
+				assertErr(t, err, tuplet.ErrUnset)
+
+				_, err = tuplet.ChainCoefficient(p...)
+				assertErr(t, err, tuplet.ErrUnset)
+			}
+		})
+	}
+}
