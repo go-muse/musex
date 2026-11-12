@@ -358,6 +358,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/fraction$
         duration:
           list-mode: strict
           files:
