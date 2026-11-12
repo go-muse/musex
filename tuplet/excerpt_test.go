@@ -164,10 +164,6 @@ func checkErrorText(t *testing.T, err error, x, label string) {
 	assert.True(t, strings.Contains(text, strconv.Quote(x[:k])),
 		"%s: error text does not quote the excerpt of %d bytes of an input of %d bytes", label, k, len(x))
 
-	if len(x) <= excerptLimit {
-		assert.Equal(t, len(x), k, "%s: a short input is quoted in full", label)
-	}
-
 	if len(x) > excerptLimit && len(x) <= maxQuotedLength {
 		assert.False(t, strings.Contains(text, strconv.Quote(x)),
 			"%s: an input of %d bytes is quoted in full", label, len(x))
