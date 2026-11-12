@@ -247,7 +247,10 @@ func validateABCStyle(forms []nameEntry) error {
 						wB = 5
 					}
 					if baseA == baseB {
-						return ambiguousForms(a.text, b.text)
+						if a.name != b.name || wA != wB {
+							return ambiguousForms(a.text, b.text)
+						}
+						continue
 					}
 					d, ok := properPrefixRemainder(baseA, baseB)
 					if !ok || !onlyABCMarks(d) {
