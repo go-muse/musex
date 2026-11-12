@@ -43,8 +43,16 @@ func BenchmarkNotationIsDefined(b *testing.B) {
 func BenchmarkNotationEqual(b *testing.B) {
 	first := notation.MustBuiltIn(notation.UnicodeWyschnegradskyID)
 	second := notation.MustBuiltIn(notation.UnicodeWyschnegradskyID)
-	customFirst := customNotation(b, first.NameRules(), notation.OctaveStyleNone, "")
-	customSecond := customNotation(b, second.NameRules(), notation.OctaveStyleNone, "")
+	firstRules := explicitNameRules(b,
+		notation.NameForm{Name: spelling.C(), Text: "C", Aliases: []string{"cee", "natural"}},
+		notation.NameForm{Name: spelling.CSharp(), Text: "C♯", Aliases: []string{"sharp"}},
+	)
+	secondRules := explicitNameRules(b,
+		notation.NameForm{Name: spelling.CSharp(), Text: "C♯", Aliases: []string{"sharp"}},
+		notation.NameForm{Name: spelling.C(), Text: "C", Aliases: []string{"natural", "cee"}},
+	)
+	customFirst := customNotation(b, firstRules, notation.OctaveStyleNone, "")
+	customSecond := customNotation(b, secondRules, notation.OctaveStyleNone, "")
 	for _, tt := range []struct {
 		name string
 		a    notation.Notation
@@ -116,6 +124,15 @@ func BenchmarkNotation_Format(b *testing.B) {
 			}
 		})
 	}
+	b.Run("many Unicode runes", func(b *testing.B) {
+		n, name, _ := longUnicodeFixture(b)
+		for b.Loop() {
+			benchmarkString, benchmarkErr = n.Format(name)
+			if benchmarkErr != nil {
+				b.Fatal(benchmarkErr)
+			}
+		}
+	})
 }
 
 func BenchmarkNotation_Parse(b *testing.B) {
@@ -137,6 +154,15 @@ func BenchmarkNotation_Parse(b *testing.B) {
 			}
 		})
 	}
+	b.Run("many Unicode runes", func(b *testing.B) {
+		n, _, text := longUnicodeFixture(b)
+		for b.Loop() {
+			benchmarkName, benchmarkErr = n.Parse(text)
+			if benchmarkErr != nil {
+				b.Fatal(benchmarkErr)
+			}
+		}
+	})
 }
 
 func BenchmarkPitch_Format(b *testing.B) {
@@ -160,6 +186,16 @@ func BenchmarkPitch_Format(b *testing.B) {
 			}
 		})
 	}
+	b.Run("many Unicode runes", func(b *testing.B) {
+		n, name, _ := longUnicodeFixture(b)
+		p := pitch.MustFromASPN(name, 4)
+		for b.Loop() {
+			benchmarkString, benchmarkErr = n.FormatPitch(p, system.Traditional(), notation.OctaveContext{Numbering: number.ASPN()})
+			if benchmarkErr != nil {
+				b.Fatal(benchmarkErr)
+			}
+		}
+	})
 }
 
 func BenchmarkPitch_Parse(b *testing.B) {
@@ -183,6 +219,15 @@ func BenchmarkPitch_Parse(b *testing.B) {
 			}
 		})
 	}
+	b.Run("many Unicode runes", func(b *testing.B) {
+		n, _, text := longUnicodeFixture(b)
+		for b.Loop() {
+			benchmarkPitch, benchmarkErr = n.ParsePitch(text+"4", system.Traditional(), notation.OctaveContext{Numbering: number.ASPN()})
+			if benchmarkErr != nil {
+				b.Fatal(benchmarkErr)
+			}
+		}
+	})
 }
 
 func BenchmarkConvert(b *testing.B) {
@@ -207,6 +252,15 @@ func BenchmarkConvert(b *testing.B) {
 			}
 		})
 	}
+	b.Run("many Unicode runes", func(b *testing.B) {
+		n, _, text := longUnicodeFixture(b)
+		for b.Loop() {
+			benchmarkString, benchmarkErr = notation.Convert(text, n, n)
+			if benchmarkErr != nil {
+				b.Fatal(benchmarkErr)
+			}
+		}
+	})
 }
 
 func BenchmarkConvertPitch(b *testing.B) {
@@ -229,9 +283,27 @@ func BenchmarkConvertPitch(b *testing.B) {
 			}
 		})
 	}
+	b.Run("many Unicode runes", func(b *testing.B) {
+		n, _, text := longUnicodeFixture(b)
+		ctx := notation.OctaveContext{Numbering: number.ASPN()}
+		for b.Loop() {
+			benchmarkString, benchmarkErr = notation.ConvertPitch(text+"4", n, n, system.Traditional(), ctx, ctx)
+			if benchmarkErr != nil {
+				b.Fatal(benchmarkErr)
+			}
+		}
+	})
 }
 
 func TestBenchmarkRepresentativeInputs(t *testing.T) {
 	require.Equal(t, "C\ue42a", notation.MustBuiltIn(notation.UnicodeWyschnegradskyID).MustFormat(nameWithAlteration(letter.C, 11, 6)))
 	require.Equal(t, "C67", notation.MustBuiltIn(notation.EnglishUnicodeID).MustFormatPitch(pitch.MustFromASPN(spelling.C(), 67), system.Traditional(), notation.OctaveContext{Numbering: number.ASPN()}))
+}
+
+func longUnicodeFixture(b *testing.B) (notation.Notation, spelling.Spelling, string) {
+	b.Helper()
+	name := spelling.C()
+	text := "C" + strings.Repeat("♯", 64)
+	n := customNotation(b, explicitNameRules(b, notation.NameForm{Name: name, Text: text}), notation.OctaveStyleNumber, "")
+	return n, name, text
 }

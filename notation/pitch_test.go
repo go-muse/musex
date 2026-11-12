@@ -91,6 +91,12 @@ func TestPitchAMOutsideRange(t *testing.T) {
 		require.Empty(t, text)
 		requirePanicError(t, notation.ErrNoOctave, func() { n.MustFormatPitch(p, system.Traditional(), notation.OctaveContext{}) })
 	}
+	for _, input := range []string{"C₃", "c⁶"} {
+		parsed, err := n.ParsePitch(input, system.Traditional(), notation.OctaveContext{})
+		require.ErrorIs(t, err, notation.ErrNoOctave)
+		require.False(t, parsed.IsValid())
+		requirePanicError(t, notation.ErrNoOctave, func() { n.MustParsePitch(input, system.Traditional(), notation.OctaveContext{}) })
+	}
 }
 
 func TestPitchVisibleNumbering(t *testing.T) {
@@ -143,6 +149,7 @@ func TestPitchStrictNumbersAndNumberErrors(t *testing.T) {
 
 	_, err = n.FormatPitch(pitch.MustFromASPN(spelling.C(), math.MaxInt), system.Traditional(), notation.OctaveContext{Numbering: number.MiddleC5()})
 	require.ErrorIs(t, err, number.ErrOutOfRange)
+	require.ErrorIs(t, err, octave.ErrOutOfRange)
 }
 
 func TestPitchRequiredInputs(t *testing.T) {
@@ -167,9 +174,18 @@ func TestPitchRequiredInputs(t *testing.T) {
 	require.ErrorIs(t, err, notation.ErrUndefined)
 	require.False(t, parsed.IsValid())
 	var zero notation.Notation
+	text, err = zero.FormatPitch(p, system.Traditional(), notation.OctaveContext{Numbering: number.ASPN()})
+	require.ErrorIs(t, err, notation.ErrUndefined)
+	require.Empty(t, text)
+	requirePanicError(t, notation.ErrUndefined, func() {
+		zero.MustFormatPitch(p, system.Traditional(), notation.OctaveContext{Numbering: number.ASPN()})
+	})
 	parsed, err = zero.ParsePitch("C4", system.Traditional(), notation.OctaveContext{Numbering: number.ASPN()})
 	require.ErrorIs(t, err, notation.ErrUndefined)
 	require.False(t, parsed.IsValid())
+	requirePanicError(t, notation.ErrUndefined, func() {
+		zero.MustParsePitch("C4", system.Traditional(), notation.OctaveContext{Numbering: number.ASPN()})
+	})
 }
 
 func TestPitchWrittenOctaveVersusPitchOctave(t *testing.T) {
@@ -219,7 +235,7 @@ func TestPitchNameCatalogAndSeparator(t *testing.T) {
 
 func TestPitchEmptyCatalogForms(t *testing.T) {
 	t.Parallel()
-	rules := notation.MustBuiltIn(notation.EnglishUnicodeID).NameRules()
+	rules := explicitNameRules(t, notation.NameForm{Name: spelling.C(), Text: "C"})
 	var zero naming.Catalog
 	emptyFromNew, err := naming.New(nil)
 	require.NoError(t, err)

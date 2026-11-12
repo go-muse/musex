@@ -337,9 +337,14 @@ func TestBuiltInMicrotonalCodePoints(t *testing.T) {
 			t.Parallel()
 			n := notation.MustBuiltIn(family)
 			name := spelling.MustNew(letter.C, alterationValue(t, valueText))
-			expected := "C" + symbolText(t, code)
-			require.Equal(t, expected, n.MustFormat(name))
-			require.True(t, n.MustParse(expected).Equal(name))
+			canonical := "C"
+			alias := "C" + symbolText(t, code)
+			if valueText != "0" {
+				canonical = alias
+			}
+			require.Equal(t, canonical, n.MustFormat(name))
+			require.True(t, n.MustParse(alias).Equal(name))
+			require.Equal(t, canonical, n.MustFormat(n.MustParse(alias)))
 		})
 	}
 }
