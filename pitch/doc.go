@@ -55,8 +55,8 @@
 // and (B, ASPN 3) with w = 4 and w = 3, whereas (B♯, ASPN 3) corresponds to
 // notated "B♯2" and (C♭, ASPN 4) corresponds to notated "C♭5". Converting
 // between a positional octave and a written register number w is the
-// responsibility of a future system package, and formatting or parsing notated
-// pitch strings belongs to a future notation package.
+// responsibility of package [github.com/go-muse/musex/system], and formatting
+// or parsing notated pitch strings belongs to a future notation package.
 //
 // Pitches are compared by how they are written, component by component: two
 // pitches are equal with [Pitch.Equal] and == if and only if they have the
@@ -65,9 +65,11 @@
 // [octave.FromNumber] in [github.com/go-muse/musex/octave/number], or
 // [octave.FromName] in [github.com/go-muse/musex/octave/naming]). Enharmonic
 // spellings are never merged: (C♯, ASPN 4) is not equal to (D♭, ASPN 4), and
-// (B♯, ASPN 4) is not equal to (C, ASPN 4) or (C, ASPN 3). System positions,
-// pitch classes, enharmonic equivalence, frequencies in hertz, and cent
-// offsets belong to future system, tuning, and cents packages.
+// (B♯, ASPN 4) is not equal to (C, ASPN 4) or (C, ASPN 3). System positions
+// and enharmonic equivalence belong to package
+// [github.com/go-muse/musex/system], pitch classes to the pitch-class model,
+// and frequencies in hertz and cent offsets to future tuning and cents
+// packages.
 //
 // # Working with spelling and octave parts
 //
@@ -76,6 +78,39 @@
 // preserving both its letter and the positional [octave.Octave]: raising
 // (B, ASPN 4) by 1 yields (B♯, ASPN 4), and stripping the accidental of
 // (B♯, ASPN 4) with [Pitch.Natural] yields (B, ASPN 4), never C.
+//
+// [Pitch.WithSpelling], [Pitch.Natural], [Pitch.Raise], [Pitch.Lower],
+// [Pitch.RaiseBy], [Pitch.LowerBy], and the Must variants of the operations
+// that return errors preserve the positional octave, not the written register.
+// They do not guarantee preservation of the system position or sounding pitch.
+// If the new spelling crosses a positional-octave boundary, the written
+// register and the system position (and therefore the sounding pitch at a
+// fixed tuning) can change even though the positional octave stays the same.
+//
+// The following examples use the traditional system. Forms such as B3 and B♯2
+// are score-notation records, and forms such as C3 are system positions;
+// neither is a [Pitch.String] debug value.
+//
+//   - [Pitch.Raise] maps input (B, Octave 3), record B3 at position B3, to
+//     (B♯, Octave 3), record B♯2 at position C3.
+//   - [Pitch.Lower] maps input (C, Octave 4), record C4 at position C4, to
+//     (C♭, Octave 4), record C♭5 at position B4.
+//   - [Pitch.Natural] maps input (B♯, Octave 4), record B♯3 at position C4, to
+//     (B, Octave 4), record B4 at position B4.
+//
+// The first two examples change the written register opposite to the intuitive
+// expectation from raising or lowering. Natural does not turn B♯ into C: it
+// produces B with record B4.
+//
+// To keep the written register instead, explicitly choose package
+// [github.com/go-muse/musex/system] and call System.RaiseWritten,
+// System.LowerWritten, System.RaiseWrittenBy, System.LowerWrittenBy,
+// System.RaiseWrittenByAlteration, System.LowerWrittenByAlteration,
+// System.RespellWritten, or System.NaturalWritten (or the corresponding Must*
+// method, such as System.MustRaiseWritten). These methods preserve the written
+// register (written octave in system terminology), while the positional octave
+// of the result can change. Package pitch neither calls system nor selects a
+// musical system for the user.
 //
 // To shift a pitch by a fractional or arbitrary
 // [github.com/go-muse/musex/alteration.Alteration] value, or to inspect its

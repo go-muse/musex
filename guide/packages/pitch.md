@@ -8,6 +8,22 @@ The octave of a pitch identifies the positional octave section in a musical syst
 
 Two pitches are equal when both their spelling and their positional octave agree. Enharmonic writings remain distinct: C♯ and D♭ in ASPN 4 are different pitches, as are B♯ and C in ASPN 4. Raising or lowering an accidental, or returning a pitch to its natural form, changes only the alteration while keeping the letter and the positional octave (raising B in ASPN 4 gives B♯ in ASPN 4, and stripping the sharp returns B in ASPN 4).
 
+## Changing names: positional octave versus written register
+
+`WithSpelling`, `Natural`, `Raise`, `Lower`, `RaiseBy`, `LowerBy`, and the `Must*` variants of the operations that return errors preserve the positional octave, not the written register. They do not guarantee preservation of the system position or sounding pitch. If the new spelling crosses a positional-octave boundary, the written register and the system position (and therefore the sounding pitch at a fixed tuning) can change even though the positional octave stays the same.
+
+The following examples use the traditional system. The record forms below are score notation, not `Pitch.String` debug values; positions are positions in the musical system.
+
+| Operation | Input pitch, record, and position | Resulting pitch | Resulting record and position |
+|---|---|---|---|
+| `Raise` | (B, Octave 3), record B3, position B3 | (B♯, Octave 3) | record B♯2, position C3 |
+| `Lower` | (C, Octave 4), record C4, position C4 | (C♭, Octave 4) | record C♭5, position B4 |
+| `Natural` | (B♯, Octave 4), record B♯3, position C4 | (B, Octave 4) | record B4, position B4 |
+
+In the first two examples, the written register changes opposite to the intuitive expectation from raising or lowering. `Natural` does not turn B♯ into C: it produces B with record B4.
+
+To preserve the written register instead, explicitly choose a [musical system](system.md#octave-and-written-octave) and call `System.RaiseWritten`, `System.LowerWritten`, `System.RaiseWrittenBy`, `System.LowerWrittenBy`, `System.RaiseWrittenByAlteration`, `System.LowerWrittenByAlteration`, `System.RespellWritten`, or `System.NaturalWritten`, or the corresponding `Must*` method such as `System.MustRaiseWritten`. These operations preserve the written register (the written octave in `system` terminology), while the positional octave of the result can change. The `pitch` package neither calls `system` nor selects a musical system for the user.
+
 ## Register movement, order, and debug form
 
 Shifting a pitch by octaves, stepping to the next octave up or down, and iterating across a range of octaves preserve the spelling while moving along the octave axis. Octave difference and octave distance compare only the octaves of two pitches—any two pitches in the same octave are zero octaves apart—whereas musical intervals between pitches belong to the interval package. For deterministic sorting, pitches are ordered first by octave and then by spelling (C through B, then alteration value); this conventional order of written records does not represent sounding pitch height or system position.
