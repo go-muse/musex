@@ -334,15 +334,7 @@ func (s Sequence) ContentClass(kind setclass.Kind) (setclass.SetClass, error) {
 	if kind == setclass.TTO && s.modulus > MaxTTOClassModulus {
 		return setclass.SetClass{}, checkModulusLimit(s.modulus, MaxTTOClassModulus)
 	}
-	content, err := s.Content()
-	if err != nil {
-		return setclass.SetClass{}, err
-	}
-	class, err := setclass.New(content, kind)
-	if err != nil {
-		return setclass.SetClass{}, err
-	}
-	return class, nil
+	return setclass.MustNew(s.MustContent(), kind), nil
 }
 
 // SegmentInvariance lists transposition and inversion indices relating content.
@@ -362,14 +354,8 @@ func (s Sequence) InvariancesTo(other Sequence) (SegmentInvariance, error) {
 	if s.Len() != other.Len() {
 		return SegmentInvariance{}, invalidSegment()
 	}
-	source, err := s.Content()
-	if err != nil {
-		return SegmentInvariance{}, err
-	}
-	target, err := other.Content()
-	if err != nil {
-		return SegmentInvariance{}, err
-	}
+	source := s.MustContent()
+	target := other.MustContent()
 	result := SegmentInvariance{
 		Transpositions: make([]int, 0),
 		Inversions:     make([]int, 0),
