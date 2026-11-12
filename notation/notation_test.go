@@ -144,15 +144,15 @@ func TestNotationFullGrammarAmbiguity(t *testing.T) {
 	}{
 		{
 			"number canonical prefix",
-			[]notation.NameForm{{Name: spelling.C(), Text: "C+1"}, {Name: spelling.D(), Text: "C"}},
+			[]notation.NameForm{{Name: spelling.C(), Text: "C1"}, {Name: spelling.D(), Text: "C"}},
 			notation.OctaveStyleNumber,
-			"+",
+			"",
 		},
 		{
 			"number alias prefix",
-			[]notation.NameForm{{Name: spelling.C(), Text: "A", Aliases: []string{"C+1"}}, {Name: spelling.D(), Text: "C"}},
+			[]notation.NameForm{{Name: spelling.C(), Text: "A", Aliases: []string{"C1"}}, {Name: spelling.D(), Text: "C"}},
 			notation.OctaveStyleNumber,
-			"+",
+			"",
 		},
 		{
 			"name canonical prefix",
