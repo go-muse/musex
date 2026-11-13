@@ -273,6 +273,10 @@ func structureViolation(prev, next *system.System) Violation {
 		return Violation{}
 	}
 	v := Violation{Rule: RuleStructure}
+	// structureWitness always finds a value here: when NamesSubsetOf is
+	// false, some value of the previous rule is outside the next rule, and
+	// the exact search visits every point that can differ. The case ok ==
+	// false is therefore unreachable.
 	if a, ok := structureWitness(prev.Alterations(), next.Alterations()); ok {
 		v.Name = spelling.C().WithAlteration(a)
 	}
