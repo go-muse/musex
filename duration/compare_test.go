@@ -90,11 +90,11 @@ func checkOrder[T comparable](t *testing.T, values []T, compare func(a, b T) int
 func TestComparable(t *testing.T) {
 	t.Parallel()
 
-	assert.True(t, reflect.TypeFor[duration.Base]().Comparable())
-	assert.True(t, reflect.TypeFor[duration.Duration]().Comparable())
-	assert.True(t, reflect.TypeFor[duration.Written]().Comparable())
-	assert.True(t, reflect.TypeFor[duration.Tied]().Comparable())
-	assert.True(t, reflect.TypeFor[duration.Position]().Comparable())
+	assert.True(t, reflect.TypeOf(duration.Base(0)).Comparable())
+	assert.True(t, reflect.TypeOf(duration.Duration{}).Comparable())
+	assert.True(t, reflect.TypeOf(duration.Written{}).Comparable())
+	assert.True(t, reflect.TypeOf(duration.Tied{}).Comparable())
+	assert.True(t, reflect.TypeOf(duration.Position{}).Comparable())
 
 	written := map[duration.Written]int{}
 	for i, w := range sampleWrittens() {
@@ -129,7 +129,7 @@ func TestComparable(t *testing.T) {
 		B duration.Base
 	}
 
-	assert.True(t, reflect.TypeFor[unit]().Comparable())
+	assert.True(t, reflect.TypeOf(unit{}).Comparable())
 }
 
 // TestWrittenEqualCompare covers business-spec 2.1, KP-5, KP-6, KR-D6, and
