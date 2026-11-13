@@ -4,6 +4,7 @@ import (
 	"errors"
 	"math/big"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -177,9 +178,19 @@ func FuzzParseTied(f *testing.F) {
 	})
 }
 
-// FuzzParseBase covers O-15 and architecture 4.12 for ParseBase.
+// baseSeeds are additional seeds of FuzzParseBase: the names and spellings
+// of P-12 (task 28.2) and texts close to them that are E-10.
+var baseSeeds = []string{
+	"large", "Duplex Longa", "long", "longa", "QUADRUPLE WHOLE NOTE", "double-whole note", "demisemiquaver",
+	"hundred twenty-eighth note", "one-hundred-twenty-eighth note", "256th note", "32nd note", "ſemibreve",
+	"octuple", "8th note", "512th note", "1024th note", "hundred-twenty-eighth note", "two hundred fifty sixth note",
+	" long", "large ", "16th",
+}
+
+// FuzzParseBase covers O-15, P-12, and architecture 4.12 for ParseBase: the
+// result agrees with the model of the accepted strings.
 func FuzzParseBase(f *testing.F) {
-	for _, s := range textSeeds {
+	for _, s := range slices.Concat(textSeeds, baseSeeds) {
 		f.Add(s)
 	}
 
@@ -191,6 +202,14 @@ func FuzzParseBase(f *testing.F) {
 
 		_, panicked := capturePanic(func() { got, err = duration.ParseBase(text) })
 		require.False(t, panicked)
+
+		want, accepted := expectedParseBase(text)
+		if accepted {
+			require.NoError(t, err, "%q is a string of architecture 4.11, 4.12", text)
+			assert.Equal(t, want, got)
+		} else {
+			assert.Error(t, err, "%q is not a string of architecture 4.11, 4.12", text)
+		}
 
 		if err != nil {
 			assert.Equal(t, duration.Base(0), got)

@@ -250,8 +250,8 @@ func TestBaseOf(t *testing.T) {
 	assert.Equal(t, duration.Base(0), got)
 }
 
-// TestBaseNames covers O-15, P-6, KP-22, and architecture 4.11: names only
-// from the table; "no name" is ok == false without an error.
+// TestBaseNames covers O-15, P-6, P-12, KP-22, KP-53, and architecture 4.11:
+// names only from the table; "no name" is ok == false without an error.
 func TestBaseNames(t *testing.T) {
 	t.Parallel()
 
@@ -280,23 +280,70 @@ func TestBaseNames(t *testing.T) {
 			}
 		})
 	}
+}
 
-	// KP-22.
-	name, ok := duration.HundredTwentyEighth.MustRussianName()
-	assert.Equal(t, "стодвадцатьвосьмая", name)
-	assert.True(t, ok)
+// TestBaseNamesScenarios covers KP-22 and KP-53 of business-spec as changed
+// by task 28.2, written out independently of baseTable: the US, UK, and
+// Russian names, "" for "no name".
+func TestBaseNamesScenarios(t *testing.T) {
+	t.Parallel()
 
-	_, ok = duration.HundredTwentyEighth.MustName()
-	assert.False(t, ok, "the Go identifier is not a name")
-
-	for _, f := range []func() (string, bool){
-		duration.TwoHundredFiftySixth.MustName,
-		duration.TwoHundredFiftySixth.MustBritishName,
-		duration.TwoHundredFiftySixth.MustRussianName,
+	for _, c := range []struct {
+		name       string
+		base       duration.Base
+		us, uk, ru string
+	}{
+		{"KP-22 quarter", duration.Quarter, "quarter note", "crotchet", "четвертная"},
+		{"KP-22 breve", duration.Breve, "double whole note", "breve", "бревис"},
+		{"KP-22 128th", duration.HundredTwentyEighth, "hundred twenty-eighth note", "semihemidemisemiquaver", "стодвадцатьвосьмая"},
+		{"KP-22 256th", duration.TwoHundredFiftySixth, "two hundred fifty-sixth note", "demisemihemidemisemiquaver", ""},
+		{"KP-22 512th", duration.FiveHundredTwelfth, "", "", ""},
+		{"KP-53 maxima", duration.Maxima, "maxima", "maxima", ""},
+		{"KP-53 longa", duration.Longa, "long", "longa", ""},
+		{"KP-53 32nd", duration.ThirtySecond, "thirty-second note", "demisemiquaver", "тридцатьвторая"},
+		{"KP-53 64th", duration.SixtyFourth, "sixty-fourth note", "hemidemisemiquaver", "шестьдесятчетвёртая"},
+		{"KP-53 1024th", duration.ThousandTwentyFourth, "", "", ""},
 	} {
-		name, ok := f()
-		assert.Empty(t, name)
-		assert.False(t, ok)
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+
+			for _, k := range []struct {
+				kind string
+				want string
+				get  func() (string, bool, error)
+				must func() (string, bool)
+			}{
+				{"Name", c.us, c.base.Name, c.base.MustName},
+				{"BritishName", c.uk, c.base.BritishName, c.base.MustBritishName},
+				{"RussianName", c.ru, c.base.RussianName, c.base.MustRussianName},
+			} {
+				name, ok, err := k.get()
+				require.NoError(t, err, k.kind)
+				assert.Equal(t, k.want, name, k.kind)
+				assert.Equal(t, k.want != "", ok, k.kind)
+
+				mustName, mustOK := k.must()
+				assert.Equal(t, k.want, mustName, k.kind)
+				assert.Equal(t, k.want != "", mustOK, k.kind)
+			}
+		})
+	}
+}
+
+// TestBaseNamesNotParseOnly covers P-12 and architecture 4.11: the other
+// English names and spellings of its second table are only parsed; Name and
+// BritishName never return them.
+func TestBaseNamesNotParseOnly(t *testing.T) {
+	t.Parallel()
+
+	for _, row := range parseOnlyNames {
+		us, _ := row.base.MustName()
+		uk, _ := row.base.MustBritishName()
+
+		for _, name := range row.names {
+			assert.NotEqual(t, name, us, "%s: a parse-only spelling is not the US name", row.base)
+			assert.NotEqual(t, name, uk, "%s: a parse-only spelling is not the UK name", row.base)
+		}
 	}
 }
 

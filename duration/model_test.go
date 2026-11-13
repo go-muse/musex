@@ -3,6 +3,7 @@ package duration_test
 import (
 	"math/big"
 	"slices"
+	"strings"
 
 	"github.com/go-muse/musex/duration"
 	"github.com/go-muse/musex/tuplet"
@@ -25,22 +26,83 @@ type baseRow struct {
 	lilyPad string // LilyPond word form, "" when the text is the LilyPond number
 }
 
-// baseTable is the series of 14 bases from the longest (P-1).
+// baseTable is the series of 14 bases from the longest (P-1). The names
+// are the first table of architecture 4.11 as changed by task 28.2 (P-12):
+// maxima is "maxima" in both variants by the product convention of P-12.
 var baseTable = []baseRow{
-	{duration.Maxima, 8, 1, "maxima", "", "", "", `\maxima`},
-	{duration.Longa, 4, 1, "longa", "", "", "", `\longa`},
+	{duration.Maxima, 8, 1, "maxima", "maxima", "maxima", "", `\maxima`},
+	{duration.Longa, 4, 1, "longa", "long", "longa", "", `\longa`},
 	{duration.Breve, 2, 1, "breve", "double whole note", "breve", "бревис", `\breve`},
 	{duration.Whole, 1, 1, "1", "whole note", "semibreve", "целая", ""},
 	{duration.Half, 1, 2, "2", "half note", "minim", "половинная", ""},
 	{duration.Quarter, 1, 4, "4", "quarter note", "crotchet", "четвертная", ""},
 	{duration.Eighth, 1, 8, "8", "eighth note", "quaver", "восьмая", ""},
 	{duration.Sixteenth, 1, 16, "16", "sixteenth note", "semiquaver", "шестнадцатая", ""},
-	{duration.ThirtySecond, 1, 32, "32", "thirty-second note", "", "тридцатьвторая", ""},
-	{duration.SixtyFourth, 1, 64, "64", "sixty-fourth note", "", "шестьдесятчетвёртая", ""},
-	{duration.HundredTwentyEighth, 1, 128, "128", "", "", "стодвадцатьвосьмая", ""},
-	{duration.TwoHundredFiftySixth, 1, 256, "256", "", "", "", ""},
+	{duration.ThirtySecond, 1, 32, "32", "thirty-second note", "demisemiquaver", "тридцатьвторая", ""},
+	{duration.SixtyFourth, 1, 64, "64", "sixty-fourth note", "hemidemisemiquaver", "шестьдесятчетвёртая", ""},
+	{duration.HundredTwentyEighth, 1, 128, "128", "hundred twenty-eighth note", "semihemidemisemiquaver", "стодвадцатьвосьмая", ""},
+	{duration.TwoHundredFiftySixth, 1, 256, "256", "two hundred fifty-sixth note", "demisemihemidemisemiquaver", "", ""},
 	{duration.FiveHundredTwelfth, 1, 512, "512", "", "", "", ""},
 	{duration.ThousandTwentyFourth, 1, 1024, "1024", "", "", "", ""},
+}
+
+// parseOnlyNames is the second table of architecture 4.11 (P-12, KP-54):
+// other English names and spellings that ParseBase accepts, but that Name
+// and BritishName never return.
+var parseOnlyNames = []struct {
+	base  duration.Base
+	names []string
+}{
+	{duration.Maxima, []string{"large", "duplex longa", "octuple note", "octuple whole note", "octuple entire musical note"}},
+	{duration.Longa, []string{"quadruple note", "quadruple whole note"}},
+	{duration.Breve, []string{"double-whole note"}},
+	{duration.Sixteenth, []string{"16th note"}},
+	{duration.ThirtySecond, []string{"32nd note"}},
+	{duration.SixtyFourth, []string{"64th note"}},
+	{duration.HundredTwentyEighth, []string{"one-hundred-twenty-eighth note", "128th note"}},
+	{duration.TwoHundredFiftySixth, []string{"two-hundred-fifty-sixth note", "256th note"}},
+}
+
+// baseForm is one string that ParseBase accepts and the base it denotes.
+type baseForm struct {
+	text string
+	base duration.Base
+}
+
+// acceptedBaseForms lists every string of architecture 4.12 that ParseBase
+// accepts, in the case of the tables: the text of a base, the LilyPond word,
+// the US, UK, and Russian names of the first table of 4.11, and the strings
+// of its second table. Equal strings of one base may repeat.
+func acceptedBaseForms() []baseForm {
+	var forms []baseForm
+
+	for _, row := range baseTable {
+		for _, text := range []string{row.text, row.lilyPad, row.us, row.uk, row.ru} {
+			if text != "" {
+				forms = append(forms, baseForm{text: text, base: row.base})
+			}
+		}
+	}
+
+	for _, row := range parseOnlyNames {
+		for _, text := range row.names {
+			forms = append(forms, baseForm{text: text, base: row.base})
+		}
+	}
+
+	return forms
+}
+
+// expectedParseBase is the model of ParseBase by architecture 4.12: the base
+// of the accepted string equal to text under strings.EqualFold, if any.
+func expectedParseBase(text string) (duration.Base, bool) {
+	for _, form := range acceptedBaseForms() {
+		if strings.EqualFold(form.text, text) {
+			return form.base, true
+		}
+	}
+
+	return 0, false
 }
 
 // seriesIndex returns the 0-based place of a valid base in the series.

@@ -40,6 +40,15 @@ func Example() {
 	name, ok := duration.Quarter.MustName()
 	fmt.Println(name, ok)
 
+	us, _ := duration.HundredTwentyEighth.MustName()
+	uk, _ := duration.HundredTwentyEighth.MustBritishName()
+	fmt.Println(us, "/", uk)
+
+	_, ok = duration.FiveHundredTwelfth.MustName()
+	fmt.Println(ok)
+
+	fmt.Println(duration.MustParseBase("Duplex Longa"), duration.MustParseBase("256th note"))
+
 	// Output:
 	// 4. 3/8
 	// 8[3:2] 1/12
@@ -51,6 +60,9 @@ func Example() {
 	// 3/8
 	// 1/4
 	// quarter note true
+	// hundred twenty-eighth note / semihemidemisemiquaver
+	// false
+	// maxima 256
 }
 
 // Example_errors shows errors and bounds (architecture 4.13).
@@ -60,6 +72,9 @@ func Example_errors() {
 
 	_, err = duration.New(0, 1)
 	fmt.Println(errors.Is(err, duration.ErrNotPositive))
+
+	_, err = duration.ParseBase("8th note")
+	fmt.Println(errors.Is(err, duration.ErrInvalidText))
 
 	_, err = duration.MustNew(1, 32).Quantize(fraction.MustNew(1, 8), rounding.HalfEven)
 	fmt.Println(errors.Is(err, duration.ErrQuantizedToZero))
@@ -78,6 +93,7 @@ func Example_errors() {
 	fmt.Println(errors.Is(err, duration.ErrOutsideSeries))
 
 	// Output:
+	// true
 	// true
 	// true
 	// true
@@ -269,9 +285,13 @@ func ExampleQuantizeSpan() {
 	// 1/8 1/8 1/4
 }
 
-// ExampleBase_Name shows the names of bases and "no name".
+// ExampleBase_Name shows the US, UK, and Russian names of bases and "no
+// name".
 func ExampleBase_Name() {
-	for _, b := range []duration.Base{duration.Quarter, duration.Breve, duration.HundredTwentyEighth, duration.TwoHundredFiftySixth} {
+	for _, b := range []duration.Base{
+		duration.Maxima, duration.Longa, duration.Breve, duration.Quarter, duration.ThirtySecond,
+		duration.HundredTwentyEighth, duration.TwoHundredFiftySixth, duration.FiveHundredTwelfth,
+	} {
 		us, okUS := b.MustName()
 		uk, okUK := b.MustBritishName()
 		ru, okRU := b.MustRussianName()
@@ -279,20 +299,29 @@ func ExampleBase_Name() {
 	}
 
 	// Output:
-	// 4: "quarter note" true, "crotchet" true, "четвертная" true
+	// maxima: "maxima" true, "maxima" true, "" false
+	// longa: "long" true, "longa" true, "" false
 	// breve: "double whole note" true, "breve" true, "бревис" true
-	// 128: "" false, "" false, "стодвадцатьвосьмая" true
-	// 256: "" false, "" false, "" false
+	// 4: "quarter note" true, "crotchet" true, "четвертная" true
+	// 32: "thirty-second note" true, "demisemiquaver" true, "тридцатьвторая" true
+	// 128: "hundred twenty-eighth note" true, "semihemidemisemiquaver" true, "стодвадцатьвосьмая" true
+	// 256: "two hundred fifty-sixth note" true, "demisemihemidemisemiquaver" true, "" false
+	// 512: "" false, "" false, "" false
 }
 
-// ExampleParseBase shows parsing texts, LilyPond words, and names.
+// ExampleParseBase shows parsing texts, LilyPond words, names, and other
+// English names and spellings that are only parsed.
 func ExampleParseBase() {
-	for _, text := range []string{"crotchet", "Quarter Note", `\breve`, "ЧЕТВЕРТНАЯ", "16"} {
+	for _, text := range []string{
+		"crotchet", "Quarter Note", `\breve`, "ЧЕТВЕРТНАЯ", "16", "long", "Duplex Longa", "QUADRUPLE WHOLE NOTE", "256th note",
+	} {
 		fmt.Println(duration.MustParseBase(text))
 	}
 
-	_, err := duration.ParseBase("quarter")
-	fmt.Println(errors.Is(err, duration.ErrInvalidText))
+	for _, text := range []string{"quarter", "8th note"} {
+		_, err := duration.ParseBase(text)
+		fmt.Println(errors.Is(err, duration.ErrInvalidText))
+	}
 
 	// Output:
 	// 4
@@ -300,6 +329,11 @@ func ExampleParseBase() {
 	// breve
 	// 4
 	// 16
+	// longa
+	// maxima
+	// longa
+	// 256
+	// true
 	// true
 }
 
