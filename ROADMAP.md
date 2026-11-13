@@ -21,7 +21,7 @@
 - [x] **9. [`system`](guide/packages/system.md)** — musical positions, steps, equivalence, and written-octave rules.
 - [x] **10. [`cents`](guide/packages/cents.md)** — cent values, note offsets, and distances.
 - [x] **11. [`tuning/temperament`](guide/packages/tuning/temperament.md)** — temperament tables expressed in cents.
-- [ ] **12. `tuning`** — a temperament, reference pitch, and frequency calculations.
+- [x] **12. [`tuning`](guide/packages/tuning.md)** — a temperament, reference pitch, and frequency calculations.
 - [x] **13. [`notation`](guide/packages/notation.md)** — parsing and formatting note names and pitches.
 - [ ] **14. `settings`** — a compatible set of system, tuning, and notation settings.
 - [ ] **15. `instrument`** — instrument settings, presets, and pitch range.
