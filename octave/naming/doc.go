@@ -1,5 +1,6 @@
 // Package naming provides catalogs of verbal octave names: the name of an
-// octave by its ASPN number, and the ASPN number of an octave by its name.
+// octave by its ASPN number, the ASPN number of an octave by its name, and
+// the named octaves of a catalog in ascending order of their numbers.
 //
 // A [Catalog] is an immutable set of pairs of an ASPN octave number and a
 // non-empty name. Each octave has at most one name in a catalog, and
@@ -15,6 +16,8 @@
 //   - [Catalog.ASPN] and [Catalog.MustASPN] return the ASPN number of an
 //     octave by its name.
 //   - [Catalog.Equal] reports whether two catalogs are the same.
+//   - [Catalog.All] returns the named octaves of a catalog in ascending
+//     order of their ASPN numbers.
 //
 // # Octave numbers
 //
@@ -58,7 +61,8 @@
 //
 // The empty name "" means that an octave has no name. It is not an error:
 // [Catalog.Name] returns "" for every octave without a name, and a pair with
-// an empty name passed to [New] is left out of the catalog.
+// an empty name passed to [New] is left out of the catalog. [Catalog.All]
+// leaves out octaves without a name.
 //
 // Names are stored and compared exactly, byte for byte. They are not
 // trimmed, normalized or changed in case, so "One-line" or " one-line" is
@@ -87,5 +91,6 @@
 // on the same catalog or on different ones, under the usual Go rules for
 // writes: do not modify the map passed to [New] or [MustNew] during the
 // call, and do not assign to *c while other goroutines call methods on c or
-// copy *c.
+// copy *c. A sequence returned by [Catalog.All] may be traversed by
+// multiple goroutines at once.
 package naming
