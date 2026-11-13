@@ -271,6 +271,24 @@ func TestNear_CompositeOrderIndependence(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, wantAll, gotAll)
 			assert.Equal(t, wantAny, gotAny)
+
+			compareAll, err := all.Compare(pair.f1, pair.f2)
+			require.NoError(t, err)
+			assert.Equal(t, modelCompare(all, pair.f1, pair.f2), compareAll)
+			assert.Equal(t, modelCompare(all, pair.f1, pair.f2), all.MustCompare(pair.f1, pair.f2))
+			compareAny, err := any.Compare(pair.f1, pair.f2)
+			require.NoError(t, err)
+			assert.Equal(t, modelCompare(any, pair.f1, pair.f2), compareAny)
+			assert.Equal(t, modelCompare(any, pair.f1, pair.f2), any.MustCompare(pair.f1, pair.f2))
+
+			wantCompareAll, err := baseAll.Compare(pair.f1, pair.f2)
+			require.NoError(t, err)
+			wantCompareAny, err := baseAny.Compare(pair.f1, pair.f2)
+			require.NoError(t, err)
+			assert.Equal(t, wantCompareAll, compareAll)
+			assert.Equal(t, wantCompareAll, all.MustCompare(pair.f1, pair.f2))
+			assert.Equal(t, wantCompareAny, compareAny)
+			assert.Equal(t, wantCompareAny, any.MustCompare(pair.f1, pair.f2))
 		}
 	}
 }
