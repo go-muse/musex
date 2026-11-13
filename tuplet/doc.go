@@ -4,7 +4,7 @@
 //
 // The package describes a tuplet by its two counts and computes its action on
 // exact durations of package common/fraction without rounding. It is the
-// basis of note durations, and through them of chords and tracks, and serves
+// basis of note durations, and through them of voices and tracks, and serves
 // score editors, notation format exchange, rhythm generators, and
 // quantization.
 //
