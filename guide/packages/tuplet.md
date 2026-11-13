@@ -1,6 +1,6 @@
 # Tuplets
 
-A tuplet plays a number of equal notes in the time normally taken by a different number of notes of the same written value: a triplet plays three eighths in the time of two, a duplet plays two notes in the time of three. The same concept is called *дуоль*, *триоль*, *квинтоль* in Russian usage and duplet, triplet, quintuplet in English usage. The package describes tuplets exactly and computes their action on durations without rounding, so that later durations, chords, and tracks can accumulate positions such as thirds and fifths of a beat without drift. It also serves score editors, notation format exchange, rhythm generators, and quantization.
+A tuplet plays a number of equal notes in the time normally taken by a different number of notes of the same written value: a triplet plays three eighths in the time of two, a duplet plays two notes in the time of three. The same concept is called *дуоль*, *триоль*, *квинтоль* in Russian usage and duplet, triplet, quintuplet in English usage. The package describes tuplets exactly and computes their action on durations without rounding, so that later durations, voices, and tracks can accumulate positions such as thirds and fifths of a beat without drift. It also serves score editors, notation format exchange, rhythm generators, and quantization.
 
 ## Actual and normal counts
 
