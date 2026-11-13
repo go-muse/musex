@@ -38,4 +38,6 @@ Canonical criterion text is lowercase ASCII and can be stored as a configuration
 
 Errors distinguish an invalid frequency, an invalid tolerance, an unset criterion, an empty composite, invalid text, an invalid numeric parameter, and an out-of-range result. Frequency inputs are checked from left to right, then parameters, then results. Convenience variants panic with the original error only when their names explicitly request that behavior.
 
+First released in v0.19.0.
+
 [Package reference](https://pkg.go.dev/github.com/go-muse/musex/frequency) · [Go examples](../../frequency/example_test.go)
