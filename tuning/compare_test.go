@@ -94,10 +94,6 @@ func TestSoundsSameUnrepresentableInOtherTuning(t *testing.T) {
 			name:  "height in other tuning exceeds cents range",
 			other: newTestTuningAt(t, system.Traditional(), temperament.Equal12(), root, aspn(spelling.A(), 8304), 440),
 		},
-		{
-			name:  "frequency in other tuning is not normal",
-			other: newTestTuningAt(t, system.Traditional(), temperament.Equal12(), root, aspn(spelling.A(), 5), cents.MaxFrequency),
-		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -108,27 +104,46 @@ func TestSoundsSameUnrepresentableInOtherTuning(t *testing.T) {
 	}
 }
 
+func TestSoundsSameNonNormalFrequencyInOtherTuning(t *testing.T) {
+	t.Parallel()
+	root := tuning.RootFromClass(pitchclass.MustNew(0, 12))
+	other := newTestTuningAt(t, system.Traditional(), temperament.Equal12(), root, aspn(spelling.A(), 3000), cents.MaxFrequency)
+	const step system.Step = -35952
+
+	height, err := other.CentsFromReferenceOfStep(step)
+	require.NoError(t, err)
+	requireCentsEqual(t, cents.MustFromInt(-3_595_200), height)
+	_, err = other.FrequencyOfStep(step)
+	requireTuningError(t, err, tuning.ErrOutOfRange)
+	assert.ErrorIs(t, err, cents.ErrOutOfRange)
+
+	got, err := tuning.Standard().SoundsSame(other)
+	require.NoError(t, err)
+	assert.False(t, got, "G-10: non-normal frequency in B means false, not an error")
+}
+
 func TestSoundsSameWindowDirection(t *testing.T) {
 	t.Parallel()
-	rootC := tuning.RootFromClass(pitchclass.MustNew(0, 12))
-	rootA := tuning.RootFromClass(pitchclass.MustNew(9, 12))
 	for _, tc := range []struct {
 		name string
 		freq float64
 	}{
-		{name: "downward window at 440 Hz", freq: 440},
-		{name: "upward window below 1 Hz", freq: 0.5},
+		{name: "downward finds an ordinary mismatch before later complexity", freq: 440},
+		{name: "upward reaches complexity on the first step", freq: 0.5},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			a := newTestTuningAt(t, system.Traditional(), temperament.PythagoreanEFlatGSharp(), rootC, aspn(spelling.A(), 4), tc.freq)
-			b := newTestTuningAt(t, system.Traditional(), temperament.PythagoreanEFlatGSharp(), rootA, aspn(spelling.A(), 4), tc.freq)
-			got, err := a.SoundsSame(b)
+			complexTune := complexTuning(t).MustWithReferenceFrequency(tc.freq)
+			simple := newTestTuningAt(t, traditionalSystemWithClasses(3), temperament.MustEDO(3), tuning.RootFromClass(pitchclass.MustNew(0, 3)), aspn(spelling.CSharp(), 4), tc.freq)
+
+			got, err := complexTune.SoundsSame(simple)
+			if tc.freq < 1 {
+				requireTuningError(t, err, tuning.ErrTooComplex)
+				assert.ErrorIs(t, err, cents.ErrTooComplex)
+				return
+			}
 			require.NoError(t, err)
 			assert.False(t, got)
-			reverse, err := b.SoundsSame(a)
-			require.NoError(t, err)
-			assert.False(t, reverse)
 		})
 	}
 }

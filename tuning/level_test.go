@@ -190,7 +190,9 @@ func TestLevelDifferenceWithoutIntermediateHeightRangeCheck(t *testing.T) {
 	got, err := a.LevelDifference(b)
 	require.NoError(t, err)
 	requireCentsEqual(t, want, got)
-	assert.Equal(t, want.MustMultiplier(), a.MustLevelRatio(b))
+	_, err = a.LevelRatio(b)
+	requireTuningError(t, err, tuning.ErrOutOfRange)
+	assert.ErrorIs(t, err, cents.ErrOutOfRange)
 }
 
 func TestLevelDifferenceStepOverflowUsesCentsCause(t *testing.T) {

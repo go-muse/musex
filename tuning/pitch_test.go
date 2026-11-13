@@ -263,10 +263,11 @@ func TestComplexityPrecedesRange(t *testing.T) {
 func TestFrequencyRangeErrors(t *testing.T) {
 	t.Parallel()
 	std := tuning.Standard()
-	for _, k := range []system.Step{1024, -1024} {
+	for _, k := range []system.Step{13000, -13000} {
 		_, err := std.FrequencyOfStep(k)
 		requireTuningError(t, err, tuning.ErrOutOfRange)
 		assert.ErrorIs(t, err, cents.ErrOutOfRange)
+		assert.NotErrorIs(t, err, system.ErrOutOfRange)
 	}
 }
 
