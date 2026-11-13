@@ -222,8 +222,11 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/alteration$
+            - github.com/go-muse/musex/spelling$
             - github.com/go-muse/musex/octave/number$
             - github.com/go-muse/musex/octave/naming$
+            - github.com/go-muse/musex/pitch$
             - github.com/go-muse/musex/system$
             - github.com/go-muse/musex/tuning$
             - github.com/go-muse/musex/notation$
