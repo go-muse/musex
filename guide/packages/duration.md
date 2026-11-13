@@ -58,8 +58,8 @@ A **written duration** therefore consists of a value, a number of dots, and a ch
 
 A written duration is a notation, so two equalities are needed:
 
-- **equality of notation**, the main one, compares the value, the dots, and the tuplets in order: a quarter in a triplet `3:2` and a quarter in a sextuplet `6:4` differ, and so do the chains `[3:2, 5:4]` and `[5:4, 3:2]`;
-- **equality of length** compares only how long they last: all four of these are equal, as are a dotted half and a half tied to a quarter.
+- **equality of notation**, the main one, compares the value, the dots, and the tuplets in order: a quarter in a triplet `3:2` and a quarter in a sextuplet `6:4` differ, and so do quarters under the chains `[3:2, 5:4]` and `[5:4, 3:2]`;
+- **equality of length** compares only how long they last: within each of these two pairs the notes are equal — the first two quarters last `1/6`, the other two `2/15` — as are a dotted half and a half tied to a quarter.
 
 For sorting, written durations are ordered by length first; equal lengths are ordered by the number of tuplets (none first), then by value (longer first), then by the number of dots, then by the tuplets themselves. Durations and positions, which carry no notation, have only equality of value: `6/16` and `3/8` are the same duration value.
 
