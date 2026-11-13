@@ -57,10 +57,29 @@
 //
 // Base.Name, Base.BritishName, and Base.RussianName return names only from the
 // reference table of the package: "quarter note", "crotchet", "четвертная".
-// Where the table has no name, as for the 128th in English or the 256th in any
-// language, they return ok == false without an error: "no name" is a result,
-// not a failure. The identifiers of the constants, such as
-// HundredTwentyEighth, are Go names, not names of the values.
+// Where the table has no name, they return ok == false without an error: "no
+// name" is a result, not a failure. The 512th and the 1024th have no name in
+// any language, and the maxima, the longa, and the 256th have no Russian name
+// either.
+//
+// Not all names rest on equally strong sources. The British names of the 32nd
+// and the 64th ("demisemiquaver", "hemidemisemiquaver"), the American names
+// of the 128th and the 256th ("hundred twenty-eighth note", "two hundred
+// fifty-sixth note"), and which name of the longa is American ("long") and
+// which is British ("longa") come from reference works that cite no
+// literature; the names "long" and "longa" themselves and the British names
+// of the 128th and the 256th are supported by the literature. "maxima" as both
+// the American and the British name of the maxima is a convention of the
+// product, not a fact of the sources, which give the name without assigning it
+// to either usage.
+//
+// Each base has at most one American and one British name returned by the
+// name methods. [ParseBase] also accepts other English names and spellings
+// that they never return, such as "duplex longa", "double-whole note", and
+// "256th note". The identifiers of the constants are Go names, not names of
+// the values: the name of HundredTwentyEighth, "hundred twenty-eighth note",
+// comes from the table, not from the identifier, and FiveHundredTwelfth and
+// ThousandTwentyFourth have no name.
 //
 // # Dots and tuplets
 //
@@ -159,7 +178,8 @@
 // other case, and names are rejected, and so are the strings of unset values.
 // For every set value x, parsing x.String() returns x. [ParseBase] separately
 // accepts the text of a base, the LilyPond notations \maxima, \longa, and
-// \breve, and the English and Russian names, ignoring case.
+// \breve, the English and Russian names, and the other English names and
+// spellings of the bases, ignoring case.
 //
 // Every error of a parse function, of its Must variant, and of UnmarshalText
 // with a non-nil receiver quotes the rejected text: in full if it is at most

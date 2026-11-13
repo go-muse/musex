@@ -109,17 +109,35 @@ Note values have English names in American and British usage and Russian names, 
 
 | Value | American | British | Russian |
 | --- | --- | --- | --- |
+| maxima | maxima | maxima | — |
+| longa | long | longa | — |
 | breve | double whole note | breve | бревис |
 | whole | whole note | semibreve | целая |
 | half | half note | minim | половинная |
 | quarter | quarter note | crotchet | четвертная |
 | eighth | eighth note | quaver | восьмая |
 | sixteenth | sixteenth note | semiquaver | шестнадцатая |
-| thirty-second | thirty-second note | — | тридцатьвторая |
-| sixty-fourth | sixty-fourth note | — | шестьдесятчетвёртая |
-| 128th | — | — | стодвадцатьвосьмая |
+| thirty-second | thirty-second note | demisemiquaver | тридцатьвторая |
+| sixty-fourth | sixty-fourth note | hemidemisemiquaver | шестьдесятчетвёртая |
+| 128th | hundred twenty-eighth note | semihemidemisemiquaver | стодвадцатьвосьмая |
+| 256th | two hundred fifty-sixth note | demisemihemidemisemiquaver | — |
 
-The maxima, the longa, and the values from the 256th down have no names here, and neither do the cells marked with a dash. A missing name is reported as "no name", not as an error, and no name is invented: the labels in this chapter's first column are descriptions, not names returned by the library. Names can be added later if the references gain them. Reading a value accepts its text, the LilyPond words `\maxima`, `\longa`, and `\breve`, and all names above, ignoring the case of letters.
+The 512th and the 1024th have no names in any language, and the cells marked with a dash have none either. A missing name is reported as "no name", not as an error, and no name is invented: the labels in this chapter's first column are descriptions, not names returned by the library. Names can be added later if the references gain them.
+
+Not all names rest on equally strong sources. The British names of the thirty-second and the sixty-fourth, the American names of the 128th and the 256th, and which name of the longa is American (long) and which is British (longa) come from reference works that cite no literature. The names long and longa themselves and the British names of the 128th and the 256th are supported by the literature. The sources give the maxima several names but do not say which are American and which British; the library returns maxima in both columns as its own convention, because this name is the one all the sources share and it matches the LilyPond word and the text of the value.
+
+Each value has at most one American and one British name that the library returns. Reading a value also accepts other English names and spellings, which are never returned:
+
+- maxima: large, duplex longa, octuple note, octuple whole note, octuple entire musical note;
+- longa: quadruple note, quadruple whole note;
+- breve: double-whole note;
+- sixteenth: 16th note;
+- thirty-second: 32nd note;
+- sixty-fourth: 64th note;
+- 128th: one-hundred-twenty-eighth note, 128th note;
+- 256th: two-hundred-fifty-sixth note, 256th note.
+
+Reading a value accepts its text, the LilyPond words `\maxima`, `\longa`, and `\breve`, all names in the table, and the names and spellings in this list, ignoring the case of letters. Spaces and hyphens must be exactly as shown, and other forms, such as 8th note, 512th note, or octuple alone, are not accepted.
 
 ## Text
 
