@@ -177,6 +177,14 @@ linters:
           allow:
             - $gostd
             - github.com/go-muse/musex/cents$
+        frequency:
+          list-mode: strict
+          files:
+            - "**/frequency/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/cents$
         tuning:
           list-mode: strict
           files:
