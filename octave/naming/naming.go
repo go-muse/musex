@@ -1,8 +1,10 @@
 package naming
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
+	"iter"
 	"maps"
 	"slices"
 	"strconv"
@@ -60,6 +62,16 @@ type Catalog struct {
 	names map[int]string
 	// numbers maps each name in names back to its ASPN octave number.
 	numbers map[string]int
+	// ordered holds the pairs of names in ascending order of the number. It
+	// is built once by New and only read afterward, so a sequence returned by
+	// All may keep it without copying.
+	ordered []namedOctave
+}
+
+// namedOctave is a pair of an ASPN octave number and its non-empty name.
+type namedOctave struct {
+	number int
+	name   string
 }
 
 // New returns a catalog with the octave names given by names, a map from an
@@ -86,8 +98,9 @@ type Catalog struct {
 // catalog without names. The caller must not modify names concurrently with
 // the call.
 func New(names map[int]string) (*Catalog, error) {
-	// Size both indexes by the number of non-empty names, not by len(names):
-	// a map never shrinks, and pairs with an empty name are left out.
+	// Size both indexes and the ordered list by the number of non-empty
+	// names, not by len(names): a map never shrinks, and pairs with an empty
+	// name are left out.
 	count := 0
 
 	for _, name := range names {
@@ -98,6 +111,7 @@ func New(names map[int]string) (*Catalog, error) {
 
 	byNumber := make(map[int]string, count)
 	byName := make(map[string]int, count)
+	ordered := make([]namedOctave, 0, count)
 
 	var duplicates []string
 
@@ -114,13 +128,20 @@ func New(names map[int]string) (*Catalog, error) {
 
 		byNumber[number] = name
 		byName[name] = number
+		ordered = append(ordered, namedOctave{number: number, name: name})
 	}
 
 	if len(duplicates) > 0 {
 		return nil, duplicateError(names, slices.Min(duplicates))
 	}
 
-	return &Catalog{names: byNumber, numbers: byName}, nil
+	// Numbers are unique map keys, so the order is strict. cmp.Compare does
+	// not overflow on math.MinInt and math.MaxInt, unlike a subtraction.
+	slices.SortFunc(ordered, func(a, b namedOctave) int {
+		return cmp.Compare(a.number, b.number)
+	})
+
+	return &Catalog{names: byNumber, numbers: byName, ordered: ordered}, nil
 }
 
 // duplicateError returns an error that wraps ErrDuplicateName for name, which
@@ -235,6 +256,39 @@ func (c *Catalog) MustASPN(name string) int {
 // another. Equal does not modify either catalog.
 func (c *Catalog) Equal(other *Catalog) bool {
 	return maps.Equal(c.pairs(), other.pairs())
+}
+
+// All returns the named octaves of the catalog as a sequence of pairs of an
+// ASPN octave number and its name, in ascending order of the number. Each
+// named octave appears once; octaves with the empty name are not included,
+// so a nil or zero catalog, or a catalog without names, gives an empty
+// sequence. The result is never nil.
+//
+// The sequence may be stopped early, as with break in a range loop, and
+// may be traversed any number of times, each time giving the same pairs.
+// It is bound to the pairs that c holds when All is called: assigning to
+// *c afterward does not change it. All and the traversal do not change the
+// catalog, and the loop body may call any method of the catalog, including
+// All. A sequence may be traversed by multiple goroutines at once.
+//
+// All does not copy the pairs: a full traversal takes time proportional to
+// the number of named octaves, whatever their numbers are. All cannot fail,
+// so it has no Must variant.
+func (c *Catalog) All() iter.Seq2[int, string] {
+	// Read *c once, here: the sequence captures the immutable ordered list,
+	// not c, so a later assignment to *c neither changes nor races with it.
+	var ordered []namedOctave
+	if c != nil {
+		ordered = c.ordered
+	}
+
+	return func(yield func(int, string) bool) {
+		for _, o := range ordered {
+			if !yield(o.number, o.name) {
+				return
+			}
+		}
+	}
 }
 
 // pairs returns the read-only map of named octaves of c; it is nil for a nil
