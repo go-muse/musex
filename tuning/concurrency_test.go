@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/go-muse/musex/cents"
-	"github.com/go-muse/musex/common/rounding"
 	"github.com/go-muse/musex/pitchclass"
 	"github.com/go-muse/musex/spelling"
 	"github.com/go-muse/musex/system"
@@ -21,6 +20,7 @@ func TestConcurrentSharedValues(t *testing.T) {
 	pyth := newPythagoreanTuning(t, tuning.RootFromClass(pitchclass.MustNew(0, 12)))
 	sharedReference := tuning.A4At440()
 	sharedRoot := tuning.RootFromClass(pitchclass.MustNew(0, 12))
+	wantNearestDeviation := cents.MustBetween(440, 445)
 
 	const (
 		workers    = 12
@@ -39,8 +39,8 @@ func TestConcurrentSharedValues(t *testing.T) {
 					errs <- fmt.Errorf("worker %d: step 12 = %v", worker, got)
 					return
 				}
-				step, deviation, err := std.NearestBy(445, rounding.HalfUp)
-				if err != nil || step != 1 || !cents.MustFromFloat(-80.437825).Equal(deviation) {
+				step, deviation, err := std.Nearest(445)
+				if err != nil || step != 0 || !wantNearestDeviation.Equal(deviation) || !cents.MustFromFloat(19.562175).Equal(deviation) {
 					errs <- fmt.Errorf("worker %d: nearest = %v, %v, %v", worker, step, deviation, err)
 					return
 				}

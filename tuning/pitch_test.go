@@ -291,7 +291,13 @@ func TestPitchOperationErrors(t *testing.T) {
 	assert.ErrorIs(t, err, system.ErrOutOfRange)
 	assert.NotErrorIs(t, err, cents.ErrOutOfRange)
 
-	_, err = std.PitchOfStep(system.Step(math.MaxInt), system.Sharps())
+	representable, err := std.PitchOfStep(system.Step(math.MaxInt), system.Sharps())
+	require.NoError(t, err)
+	wantRepresentable := system.Traditional().MustMove(aspn(spelling.A(), 4), system.Step(math.MaxInt), system.Sharps())
+	assert.True(t, wantRepresentable.Equal(representable))
+
+	highReference := newTestTuningAt(t, system.Traditional(), temperament.Equal12(), tuning.RootFromClass(pitchclass.MustNew(0, 12)), aspn(spelling.A(), math.MaxInt), 440)
+	_, err = highReference.PitchOfStep(1, system.Sharps())
 	requireTuningError(t, err, tuning.ErrOutOfRange)
 	assert.ErrorIs(t, err, system.ErrOutOfRange)
 
