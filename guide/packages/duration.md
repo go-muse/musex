@@ -77,7 +77,7 @@ The library writes a length as notes only when asked, and the caller always choo
 
 The rule has two limits:
 
-- **No notation by this rule.** A length the rule cannot finish — a third of a whole note without a tuplet, or anything finer than a 1024th — is refused. The refusal means that this rule gives no notation, not that none exists: `1/512` with values down to the 1024th and one dot allowed is refused, although two tied 1024ths would do. Other notations of the same length are not searched for.
+- **No notation by this rule.** A length the rule cannot finish — a third of a whole note without a tuplet, or, with plain values, anything finer than a 1024th — is refused. The refusal means that this rule gives no notation, not that none exists: `1/512` with values down to the 1024th and one dot allowed is refused, although two tied 1024ths would do. Other notations of the same length are not searched for.
 - **At most 1024 parts.** A length of `2048` whole notes is 1024 breves; `2049` would need 1025 parts and is refused without building them. Long lengths are split across measures rather than tied into one endless note.
 
 Splitting notes at bar lines and beats is the job of the measure packages, not of this rule.

@@ -355,7 +355,7 @@ func (w Written) Compare(other Written) int {
 	a, b := unpackChain(w.chain), unpackChain(other.chain)
 	for i := range a {
 		if c := a[i].Compare(b[i]); c != 0 {
-			return c
+			return cmp.Compare(c, 0)
 		}
 	}
 	return 0
