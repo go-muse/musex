@@ -75,14 +75,18 @@ func (b Base) entry(t nameTable) string {
 		return [...]string{Maxima: `\maxima`, Longa: `\longa`, Breve: `\breve`, ThousandTwentyFourth: ""}[b]
 	case usTable:
 		return [...]string{
-			Breve: "double whole note", Whole: "whole note", Half: "half note", Quarter: "quarter note",
-			Eighth: "eighth note", Sixteenth: "sixteenth note", ThirtySecond: "thirty-second note",
-			SixtyFourth: "sixty-fourth note", ThousandTwentyFourth: "",
+			Maxima: "maxima", Longa: "long", Breve: "double whole note", Whole: "whole note",
+			Half: "half note", Quarter: "quarter note", Eighth: "eighth note", Sixteenth: "sixteenth note",
+			ThirtySecond: "thirty-second note", SixtyFourth: "sixty-fourth note",
+			HundredTwentyEighth: "hundred twenty-eighth note", TwoHundredFiftySixth: "two hundred fifty-sixth note",
+			ThousandTwentyFourth: "",
 		}[b]
 	case ukTable:
 		return [...]string{
-			Breve: "breve", Whole: "semibreve", Half: "minim", Quarter: "crotchet", Eighth: "quaver",
-			Sixteenth: "semiquaver", ThousandTwentyFourth: "",
+			Maxima: "maxima", Longa: "longa", Breve: "breve", Whole: "semibreve", Half: "minim",
+			Quarter: "crotchet", Eighth: "quaver", Sixteenth: "semiquaver", ThirtySecond: "demisemiquaver",
+			SixtyFourth: "hemidemisemiquaver", HundredTwentyEighth: "semihemidemisemiquaver",
+			TwoHundredFiftySixth: "demisemihemidemisemiquaver", ThousandTwentyFourth: "",
 		}[b]
 	default:
 		return [...]string{
@@ -90,6 +94,40 @@ func (b Base) entry(t nameTable) string {
 			Sixteenth: "шестнадцатая", ThirtySecond: "тридцатьвторая", SixtyFourth: "шестьдесятчетвёртая",
 			HundredTwentyEighth: "стодвадцатьвосьмая", ThousandTwentyFourth: "",
 		}[b]
+	}
+}
+
+// otherName is an English name or spelling of a base that only ParseBase
+// accepts; Name and BritishName do not return it.
+type otherName struct {
+	text string
+	base Base
+}
+
+// otherNameCount is the number of other English names and spellings.
+const otherNameCount = 15
+
+// otherNames returns the other English names and spellings accepted by
+// ParseBase, each with its base. The list is an array value, not a mutable
+// package variable; every text differs, ignoring case, from the texts of all
+// other bases.
+func otherNames() [otherNameCount]otherName {
+	return [otherNameCount]otherName{
+		{"large", Maxima},
+		{"duplex longa", Maxima},
+		{"octuple note", Maxima},
+		{"octuple whole note", Maxima},
+		{"octuple entire musical note", Maxima},
+		{"quadruple note", Longa},
+		{"quadruple whole note", Longa},
+		{"double-whole note", Breve},
+		{"16th note", Sixteenth},
+		{"32nd note", ThirtySecond},
+		{"64th note", SixtyFourth},
+		{"one-hundred-twenty-eighth note", HundredTwentyEighth},
+		{"128th note", HundredTwentyEighth},
+		{"two-hundred-fifty-sixth note", TwoHundredFiftySixth},
+		{"256th note", TwoHundredFiftySixth},
 	}
 }
 
@@ -261,11 +299,12 @@ func (b Base) name(op string, t nameTable) (string, bool, error) {
 	return n, n != "", nil
 }
 
-// Name returns the American English name of b, such as "quarter note", and
-// true. If the base has no such name (maxima, longa, and bases shorter than
-// the sixty-fourth note), it returns "", false, and no error: the package
-// does not invent names, and the identifiers of the constants are not names.
-// It returns an error wrapping ErrInvalidArgument if b is not a base.
+// Name returns the American English name of b, such as "quarter note" or
+// "hundred twenty-eighth note", and true. If the base has no such name (the
+// 512th and the 1024th), it returns "", false, and no error: the package does
+// not invent names, and the identifiers of the constants are not names. The
+// name "maxima" of Maxima is a convention of the product. It returns an error
+// wrapping ErrInvalidArgument if b is not a base.
 func (b Base) Name() (name string, ok bool, err error) {
 	return b.name("Base.Name", usTable)
 }
@@ -275,10 +314,11 @@ func (b Base) MustName() (name string, ok bool) {
 	return must2(b.Name())
 }
 
-// BritishName returns the British English name of b, such as "crotchet", and
-// true. If the base has no such name (maxima, longa, and bases shorter than
-// the semiquaver), it returns "", false, and no error. It returns an error
-// wrapping ErrInvalidArgument if b is not a base.
+// BritishName returns the British English name of b, such as "crotchet" or
+// "demisemiquaver", and true. If the base has no such name (the 512th and the
+// 1024th), it returns "", false, and no error. The name "maxima" of Maxima is
+// a convention of the product. It returns an error wrapping
+// ErrInvalidArgument if b is not a base.
 func (b Base) BritishName() (name string, ok bool, err error) {
 	return b.name("Base.BritishName", ukTable)
 }
@@ -348,17 +388,36 @@ func (b *Base) UnmarshalText(text []byte) error {
 }
 
 // ParseBase returns the base named by text, ignoring the case of letters
-// (strings.EqualFold). It accepts the canonical text of String, the LilyPond
-// notations \maxima, \longa, and \breve, and the American English, British
-// English, and Russian names returned by Name, BritishName, and RussianName.
-// Surrounding spaces are not accepted. Any other text returns an error
-// wrapping ErrInvalidText.
+// (strings.EqualFold). It accepts:
+//
+//   - the canonical text of String, such as "breve" or "4";
+//   - the LilyPond notations \maxima, \longa, and \breve;
+//   - the American English, British English, and Russian names returned by
+//     Name, BritishName, and RussianName;
+//   - the other English names and spellings that Name and BritishName do not
+//     return: "large", "duplex longa", "octuple note", "octuple whole note",
+//     and "octuple entire musical note" for Maxima; "quadruple note" and
+//     "quadruple whole note" for Longa; "double-whole note" for Breve;
+//     "16th note" for Sixteenth; "32nd note" for ThirtySecond; "64th note"
+//     for SixtyFourth; "one-hundred-twenty-eighth note" and "128th note" for
+//     HundredTwentyEighth; and "two-hundred-fifty-sixth note" and
+//     "256th note" for TwoHundredFiftySixth.
+//
+// Each accepted text names exactly one base. Apart from case, text must equal
+// an accepted form: surrounding spaces, other spaces or hyphens inside, and
+// other forms such as "8th note", "512th note", or "octuple" are not
+// accepted. Any other text returns an error wrapping ErrInvalidText.
 func ParseBase(text string) (Base, error) {
 	for b := Maxima; b <= ThousandTwentyFourth; b++ {
 		for t := range nameTable(nameTables) {
 			if n := b.entry(t); n != "" && strings.EqualFold(text, n) {
 				return b, nil
 			}
+		}
+	}
+	for _, o := range otherNames() {
+		if strings.EqualFold(text, o.text) {
+			return o.base, nil
 		}
 	}
 	return 0, parseError(classInvalidText, text)
