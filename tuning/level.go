@@ -44,16 +44,17 @@ func (t *Tuning) LevelDifference(other *Tuning) (cents.Cents, error) {
 	if !t.sys.Equal(other.sys) || !t.temp.Equal(other.temp) || t.root != other.root {
 		return cents.Cents{}, incomparable()
 	}
+	base := t.referenceOffset()
+	otherBase := positiveMod(other.referenceClass().Number()-t.root.Number(), t.sys.Classes())
+	difference, err := t.offsetDifference(otherBase, base)
+	if err != nil {
+		return cents.Cents{}, err
+	}
 	distance, err := t.sys.Distance(t.ref.note, other.ref.note)
 	if err != nil {
 		return cents.Cents{}, centsOutOfRange()
 	}
-	base := t.referenceOffset()
-	q, m := decompose(base, int(distance), t.sys.Classes())
-	difference, err := t.offsetDifference(m, base)
-	if err != nil {
-		return cents.Cents{}, err
-	}
+	q, _ := decompose(base, int(distance), t.sys.Classes())
 	between, err := cents.Between(t.ref.freq, other.ref.freq)
 	if err != nil {
 		return cents.Cents{}, centsError(err)
