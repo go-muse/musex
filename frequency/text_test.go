@@ -206,6 +206,25 @@ func TestCriterionAppendText(t *testing.T) {
 		assert.False(t, &got[0] == &b[0])
 	})
 
+	t.Run("partial spare capacity", func(t *testing.T) {
+		backing := make([]byte, 3, 8)
+		full := backing[:cap(backing)]
+		for i := range full {
+			full[i] = 'X'
+		}
+		copy(full, "pre")
+		snapshot := append([]byte(nil), full...)
+		b := full[:3:cap(full)]
+		require.Positive(t, cap(b)-len(b))
+		require.Less(t, cap(b)-len(b), len(text))
+
+		got, err := criterion.AppendText(b)
+		require.NoError(t, err)
+		assert.Equal(t, "pre"+text, string(got))
+		assert.Equal(t, snapshot, full)
+		assert.False(t, &got[0] == &b[0])
+	})
+
 	t.Run("nil", func(t *testing.T) {
 		got, err := criterion.AppendText(nil)
 		require.NoError(t, err)
@@ -224,6 +243,11 @@ func TestCriterionUnmarshalText(t *testing.T) {
 			require.NoError(t, err)
 			requireCriterionEqual(t, tt.c, criterion)
 			assert.Equal(t, originalInput, input)
+			for i := range input {
+				input[i] = 'X'
+			}
+			assert.Equal(t, tt.text, criterion.String())
+			requireCriterionEqual(t, tt.c, criterion)
 		})
 	}
 

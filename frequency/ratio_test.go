@@ -40,7 +40,9 @@ func TestRatio_ControlExamples(t *testing.T) {
 
 func TestRatio_DecimalInputDiffersFromBinaryValue(t *testing.T) {
 	sum := binarySum()
-	assert.Equal(t, "0.30000000000000004", decimalRat(sum).RatString())
+	expectedDecimal, ok := new(big.Rat).SetString("0.30000000000000004")
+	require.True(t, ok)
+	assert.Zero(t, decimalRat(sum).Cmp(expectedDecimal))
 	assert.NotEqual(t, decimalRat(sum).RatString(), rational(sum).RatString())
 
 	got, err := frequency.Ratio(sum, 0.1)
