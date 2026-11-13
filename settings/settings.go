@@ -366,8 +366,12 @@ func checkConsistent(op string, n notation.Notation, sys *system.System) error {
 	return nil
 }
 
-// copyTuning returns a new tuning equal to the valid tuning t. A Tuning holds
-// only immutable parts, so a copy of the value is a full, independent copy.
+// copyTuning returns a new tuning equal to the valid tuning t. A copy of the
+// value is a full, independent copy because tuning.Tuning is immutable and
+// has no derived fields, caches or synchronization state, and the data it
+// shares (the system and the temperament table) are immutable too. If
+// package tuning ever gains state that must not be copied, build the copy
+// with tuning.New from the parts of t instead.
 func copyTuning(t *tuning.Tuning) *tuning.Tuning {
 	cp := *t
 	return &cp
