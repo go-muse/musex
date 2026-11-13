@@ -214,6 +214,30 @@ func TestParseWritten(t *testing.T) {
 	}
 }
 
+// TestParseWrittenRejectsNames covers architecture 4.12 (a regression for
+// task 28.2): the grammars of written and tied durations take no names, so
+// the names that ParseBase accepts are E-10 there, alone and as a part.
+func TestParseWrittenRejectsNames(t *testing.T) {
+	t.Parallel()
+
+	for _, text := range []string{
+		"long", "large", "16th note", "Longa", "MAXIMA", "crotchet", "demisemiquaver", "duplex longa", "256th note",
+		`\longa`, "long.", "large[3:2]",
+	} {
+		got, err := duration.ParseWritten(text)
+		assertErr(t, err, duration.ErrInvalidText)
+		assert.Equal(t, duration.Written{}, got, "%q", text)
+	}
+
+	for _, text := range []string{
+		"long~4", "4~large", "16th note~16", "longa~long", "maxima~large", "4~256th note", "long", "large",
+	} {
+		got, err := duration.ParseTied(text)
+		assertErr(t, err, duration.ErrInvalidText)
+		assert.Equal(t, duration.Tied{}, got, "%q", text)
+	}
+}
+
 // TestParseWrittenRange covers architecture 4.12: numbers of a tuplet above
 // math.MaxInt, chain coefficients and values out of range, and sums of ties.
 func TestParseWrittenRange(t *testing.T) {
@@ -266,25 +290,21 @@ func TestParseWrittenRange(t *testing.T) {
 	assert.Equal(t, text, got.String())
 }
 
-// TestParseBase covers O-15, P-6, KP-36, KR-D13, and architecture 4.12:
-// texts, LilyPond words, and names in any letter case; nothing else.
+// TestParseBase covers O-15, P-6, P-12, KP-36, KP-54, KR-D13, and
+// architecture 4.12: texts, LilyPond words, the names of both tables of 4.11
+// in any letter case; nothing else.
 func TestParseBase(t *testing.T) {
 	t.Parallel()
 
-	for _, row := range baseTable {
-		forms := []string{row.text, strings.ToUpper(row.text)}
-		for _, name := range []string{row.us, row.uk, row.ru, row.lilyPad} {
-			if name != "" {
-				forms = append(forms, name, strings.ToUpper(name), capitalize(name))
-			}
-		}
-
-		for _, text := range forms {
+	for _, form := range acceptedBaseForms() {
+		for _, text := range caseVariants(form.text) {
 			got, err := duration.ParseBase(text)
-			require.NoError(t, err, text)
-			assert.Equal(t, row.base, got, text)
+			require.NoError(t, err, "%q", text)
+			assert.Equal(t, form.base, got, "%q", text)
 		}
+	}
 
+	for _, row := range baseTable {
 		got, err := duration.ParseBase(row.base.String())
 		require.NoError(t, err)
 		assert.Equal(t, row.base, got, "ParseBase(String) is the base")
@@ -299,12 +319,201 @@ func TestParseBase(t *testing.T) {
 	for _, text := range []string{
 		"", " 4", "4 ", " breve", "breve ", "quarter", "quarter  note", "quarter-note", "четвёртая", "шестьдесятчетвертая",
 		`\4`, `\maxima `, "0", "3", "01", "2048", "4.", "8[3:2]", "Base(invalid)", "maxima.", "whole", "double whole",
-		"hundred twenty-eighth note", "128th", "quaver.", "\tbreve",
+		"128th", "quaver.", "\tbreve",
 	} {
 		got, err := duration.ParseBase(text)
 		assertErr(t, err, duration.ErrInvalidText)
 		assert.Equal(t, duration.Base(0), got, "%q", text)
 	}
+}
+
+// TestParseBaseOtherNames covers KP-54, P-12, and the second table of
+// architecture 4.11: each other English name or spelling, in the case of
+// the table and in other cases, gives its base through ParseBase,
+// MustParseBase, and Base.UnmarshalText.
+func TestParseBaseOtherNames(t *testing.T) {
+	t.Parallel()
+
+	for _, row := range parseOnlyNames {
+		for _, name := range row.names {
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+
+				for _, text := range caseVariants(name) {
+					got, err := duration.ParseBase(text)
+					require.NoError(t, err, "%q", text)
+					assert.Equal(t, row.base, got, "%q", text)
+
+					assert.Equal(t, row.base, duration.MustParseBase(text), "%q", text)
+
+					b := duration.Half
+					require.NoError(t, b.UnmarshalText([]byte(text)), "%q", text)
+					assert.Equal(t, row.base, b, "%q", text)
+				}
+			})
+		}
+	}
+}
+
+// TestParseBaseScenarios covers KP-54 and KP-36 of business-spec as changed
+// by task 28.2, written out independently of the tables of the tests.
+func TestParseBaseScenarios(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct {
+		text string
+		want duration.Base
+	}{
+		{"large", duration.Maxima},
+		{"Duplex Longa", duration.Maxima},
+		{"long", duration.Longa},
+		{"QUADRUPLE WHOLE NOTE", duration.Longa},
+		{"double-whole note", duration.Breve},
+		{"one-hundred-twenty-eighth note", duration.HundredTwentyEighth},
+		{"256th note", duration.TwoHundredFiftySixth},
+		{"demisemiquaver", duration.ThirtySecond},
+		{"32nd note", duration.ThirtySecond},
+	} {
+		got, err := duration.ParseBase(c.text)
+		require.NoError(t, err, "KP-54 %q", c.text)
+		assert.Equal(t, c.want, got, "KP-54 %q", c.text)
+	}
+
+	for _, text := range []string{"octuple", "8th note", "512th note", "1024th note"} {
+		got, err := duration.ParseBase(text)
+		assertErr(t, err, duration.ErrInvalidText)
+		assert.Equal(t, duration.Base(0), got, "KP-36 %q", text)
+		checkErrorText(t, err, text, "KP-36")
+	}
+}
+
+// TestParseBaseRejects covers KP-36 and architecture 4.12: strings that are
+// not in the tables of 4.11 exactly as written there are E-10, with the
+// excerpt of the input in the error text, through ParseBase, MustParseBase,
+// and Base.UnmarshalText, which keeps its receiver.
+func TestParseBaseRejects(t *testing.T) {
+	t.Parallel()
+
+	for _, text := range []string{
+		// KP-36.
+		"octuple", "8th note", "512th note", "1024th note",
+		// Other spellings than in the tables.
+		"hundred-twenty-eighth note", "two hundred fifty sixth note", "one hundred twenty-eighth note",
+		"two hundred fifty-sixth", "two-hundred-fifty-sixth-note", "double whole-note", "double-whole-note",
+		"duplex  longa", "duplexlonga", "octuple whole", "octuple entire note", "quadruple", "quadruple whole",
+		"long note", "longa note", "maxima note", "large note", "semi-breve", "demi-semiquaver",
+		// Abbreviations that the tables do not give.
+		"16th", "32nd", "64th", "128th", "256th", "512th", "1024th", "8th", "4th note", "2nd note", "1st note",
+		"16 th note", "16th  note", "16th-note", "32th note", "64nd note",
+		// Surrounding spaces and control characters.
+		" long", "large ", " demisemiquaver", "256th note ", "\tlong", "long\n", "large\x00",
+		// Names of other kinds and texts of other grammars.
+		"quarter", "longa.", "long.", "large[3:2]", "long~4", "maxima maxima", "Base(invalid)",
+		"Base(long)", "лонга", "максима", "двухсотпятидесятишестая",
+	} {
+		t.Run(text, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := duration.ParseBase(text)
+			assertErr(t, err, duration.ErrInvalidText)
+			assert.Equal(t, duration.Base(0), got)
+			checkErrorText(t, err, text, "ParseBase")
+
+			assert.ErrorIs(t, panicError(t, func() { duration.MustParseBase(text) }), duration.ErrInvalidText)
+
+			b := duration.Quarter
+			assertErr(t, b.UnmarshalText([]byte(text)), duration.ErrInvalidText)
+			assert.Equal(t, duration.Quarter, b, "unchanged on failure")
+		})
+	}
+}
+
+// TestParseBaseEqualFold covers architecture 4.12: the comparison is
+// strings.EqualFold, so a string equal to a string of the tables under
+// simple Unicode case folding is accepted, for example with the long s
+// U+017F, which folds to s.
+func TestParseBaseEqualFold(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct {
+		text string
+		want duration.Base
+	}{
+		{"ſemibreve", duration.Whole},
+		{"demiſemiquaver", duration.ThirtySecond},
+		{"ſemihemidemiſemiquaver", duration.HundredTwentyEighth},
+		{"256TH NOTE", duration.TwoHundredFiftySixth},
+		{"Octuple Entire Musical Note", duration.Maxima},
+		{"LONG", duration.Longa},
+	} {
+		got, err := duration.ParseBase(c.text)
+		require.NoError(t, err, "%q", c.text)
+		assert.Equal(t, c.want, got, "%q", c.text)
+	}
+}
+
+// TestParseBaseForms covers KR-D13 and architecture 4.12 for the tables of
+// the tests: every accepted string belongs to exactly one base, that is,
+// strings of different bases differ under strings.EqualFold.
+func TestParseBaseForms(t *testing.T) {
+	t.Parallel()
+
+	forms := acceptedBaseForms()
+	byFold := map[string]duration.Base{}
+
+	for i, a := range forms {
+		for _, b := range forms[i+1:] {
+			if strings.EqualFold(a.text, b.text) {
+				assert.Equal(t, a.base, b.base, "%q and %q", a.text, b.text)
+			}
+		}
+
+		byFold[strings.ToLower(a.text)] = a.base
+	}
+
+	assert.Len(t, byFold, 61, "architecture 4.12: 61 distinct strings without regard to case")
+}
+
+// TestParseBaseNames covers the reversibility of architecture 4.12: for
+// every valid base, ParseBase of each name that Name, BritishName, or
+// RussianName returns with ok == true gives the base back.
+func TestParseBaseNames(t *testing.T) {
+	t.Parallel()
+
+	for _, b := range duration.Bases() {
+		for _, f := range []func() (string, bool){b.MustName, b.MustBritishName, b.MustRussianName} {
+			name, ok := f()
+			if !ok {
+				continue
+			}
+
+			got, err := duration.ParseBase(name)
+			require.NoError(t, err, "%q", name)
+			assert.Equal(t, b, got, "%q", name)
+		}
+
+		assert.Equal(t, b, duration.MustParseBase(b.String()))
+	}
+}
+
+// caseVariants returns s as written, in upper and in lower case, with the
+// first letter in upper case, and with the first letter of every word in
+// upper case.
+func caseVariants(s string) []string {
+	return []string{s, strings.ToUpper(s), strings.ToLower(s), capitalize(s), titleWords(s)}
+}
+
+// titleWords returns s with the first letter of every space-separated word
+// in upper case.
+func titleWords(s string) string {
+	words := strings.Split(s, " ")
+	for i, w := range words {
+		if w != "" {
+			words[i] = capitalize(w)
+		}
+	}
+
+	return strings.Join(words, " ")
 }
 
 // capitalize returns s with its first letter in upper case.
@@ -356,6 +565,19 @@ func TestUnmarshalText(t *testing.T) {
 		assert.Equal(t, duration.Quarter, b)
 
 		assertErr(t, b.UnmarshalText([]byte("3")), duration.ErrInvalidText)
+		assert.Equal(t, duration.Quarter, b, "unchanged on failure")
+
+		// P-12: names added by task 28.2 and a parse-only spelling.
+		for text, want := range map[string]duration.Base{
+			"long": duration.Longa, "Demisemiquaver": duration.ThirtySecond, "hundred twenty-eighth note": duration.HundredTwentyEighth,
+			"Duplex Longa": duration.Maxima, "256th note": duration.TwoHundredFiftySixth,
+		} {
+			got := duration.Quarter
+			require.NoError(t, got.UnmarshalText([]byte(text)), "%q", text)
+			assert.Equal(t, want, got, "%q", text)
+		}
+
+		assertErr(t, b.UnmarshalText([]byte("8th note")), duration.ErrInvalidText)
 		assert.Equal(t, duration.Quarter, b, "unchanged on failure")
 
 		var nilBase *duration.Base
