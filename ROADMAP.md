@@ -43,8 +43,16 @@
 
 - [x] **26. [`common/fraction`](guide/packages/common/fraction.md)** — exact signed fractions for musical quantities. Preserve the supplied numerator and denominator, compare by numeric value or by the supplied pair, and support arithmetic with explicitly chosen result forms. Review consumers individually, starting with fractional alterations and covering position cycles, systems, cents, tuplets, durations, and track timing.
 - [x] **27. [`tuplet`](guide/packages/tuplet.md)** — tuplets such as duplets, triplets, and quintuplets. Keep the written pair of actual and normal counts, compare by notation or by coefficient, apply exact coefficients to durations, nest tuplets, and derive default pairs for binary or ternary division.
-- [ ] **28. `duration`** — musical durations.
-- [ ] **29. `chord`** — chords built from notes and durations.
-- [ ] **30. `track`** — tracks and their events.
+- [ ] **28. `duration`** — exact durations in fractions of a whole note written with note values, dots, tuplets, and ties, positions as offsets, and quantization.
+- [ ] **28a. `meter`** — time signatures with their beats, beat units, groupings, and strong beats.
+- [ ] **28b. `measure`** — measure grids with pickups and meter changes, and positions given as a measure and an offset.
+- [ ] **28c. `tempo`** — tempo markings as a beat unit and BPM, and durations in seconds.
+- [ ] **28d. `tempomap`** — tempo changes and fermata holds over time, and conversion between seconds, positions, and measures.
+- [ ] **28e. `ticks`** — MusicXML divisions, MIDI ticks, and MIDI tempo for durations, positions, and tempo maps.
+- [ ] **29. `chord`** — chords as groups of notes that sound together, without durations.
+- [ ] **29a. `event`** — voice elements: a note, chord, or rest with its duration, ties, fermatas, arpeggios, and grace notes.
+- [ ] **29b. `voice`** — sequences of events with positions, ties, grace notes, and sounding notes in time.
+- [ ] **30. `track`** — parts as sequences of measures holding the events of each voice.
+- [ ] **31. `score`** — tracks with a common start and one shared tempo map.
 
 Package order and scope are derived from the local research in `docs/package-roadmap.md`. That detailed source is excluded from Git; this file is the project-facing overview.
