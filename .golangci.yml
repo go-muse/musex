@@ -376,6 +376,56 @@ linters:
             - $gostd
             - github.com/go-muse/musex/common/fraction$
             - github.com/go-muse/musex/tuplet$
+        meter:
+          list-mode: strict
+          files:
+            - "**/meter/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/common/fraction$
+            - github.com/go-muse/musex/duration$
+        measure:
+          list-mode: strict
+          files:
+            - "**/measure/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/common/fraction$
+            - github.com/go-muse/musex/duration$
+            - github.com/go-muse/musex/meter$
+        tempo:
+          list-mode: strict
+          files:
+            - "**/tempo/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/common/fraction$
+            - github.com/go-muse/musex/duration$
+        tempomap:
+          list-mode: strict
+          files:
+            - "**/tempomap/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/common/fraction$
+            - github.com/go-muse/musex/duration$
+            - github.com/go-muse/musex/measure$
+            - github.com/go-muse/musex/tempo$
+        ticks:
+          list-mode: strict
+          files:
+            - "**/ticks/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/common/fraction$
+            - github.com/go-muse/musex/duration$
+            - github.com/go-muse/musex/tempo$
+            - github.com/go-muse/musex/tempomap$
         chord:
           list-mode: strict
           files:
@@ -384,7 +434,29 @@ linters:
           allow:
             - $gostd
             - github.com/go-muse/musex/note$
+        event:
+          list-mode: strict
+          files:
+            - "**/event/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/note$
+            - github.com/go-muse/musex/common/fraction$
             - github.com/go-muse/musex/duration$
+            - github.com/go-muse/musex/chord$
+        voice:
+          list-mode: strict
+          files:
+            - "**/voice/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/note$
+            - github.com/go-muse/musex/common/fraction$
+            - github.com/go-muse/musex/duration$
+            - github.com/go-muse/musex/tempomap$
+            - github.com/go-muse/musex/event$
         track:
           list-mode: strict
           files:
@@ -394,7 +466,29 @@ linters:
             - $gostd
             - github.com/go-muse/musex/note$
             - github.com/go-muse/musex/common/fraction$
-            - github.com/go-muse/musex/chord$
+            - github.com/go-muse/musex/duration$
+            - github.com/go-muse/musex/meter$
+            - github.com/go-muse/musex/measure$
+            - github.com/go-muse/musex/tempo$
+            - github.com/go-muse/musex/tempomap$
+            - github.com/go-muse/musex/event$
+            - github.com/go-muse/musex/voice$
+        score:
+          list-mode: strict
+          files:
+            - "**/score/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/common/fraction$
+            - github.com/go-muse/musex/duration$
+            - github.com/go-muse/musex/meter$
+            - github.com/go-muse/musex/measure$
+            - github.com/go-muse/musex/tempo$
+            - github.com/go-muse/musex/tempomap$
+            - github.com/go-muse/musex/event$
+            - github.com/go-muse/musex/voice$
+            - github.com/go-muse/musex/track$
 
 # Format: golangci-lint fmt ./...
 # Check:  golangci-lint run ./...
