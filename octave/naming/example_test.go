@@ -155,6 +155,38 @@ func ExampleCatalog_Equal() {
 	// false
 }
 
+// All yields the named octaves of a catalog in ascending order of their ASPN
+// numbers; octaves with the empty name are not listed.
+func ExampleCatalog_All() {
+	mine := naming.MustNew(map[int]string{4: "middle", -3: "deep", 12: "high", 0: ""})
+
+	for aspn, name := range mine.All() {
+		fmt.Println(aspn, name)
+	}
+
+	// Output:
+	// -3 deep
+	// 4 middle
+	// 12 high
+}
+
+// The traversal of All may stop early, for example after the first three
+// named octaves of the Russian catalog.
+func ExampleCatalog_All_break() {
+	for aspn, name := range naming.Russian().All() {
+		fmt.Println(aspn, name)
+
+		if aspn == 1 {
+			break
+		}
+	}
+
+	// Output:
+	// -1 субсубконтроктава
+	// 0 субконтроктава
+	// 1 контроктава
+}
+
 // MustNew is for literals and data known to be valid; it panics with the
 // error of New.
 func ExampleMustNew() {
