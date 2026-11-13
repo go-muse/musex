@@ -195,6 +195,18 @@ func TestLevelDifferenceWithoutIntermediateHeightRangeCheck(t *testing.T) {
 	assert.ErrorIs(t, err, cents.ErrOutOfRange)
 }
 
+func TestLevelDifferenceComplexityPrecedesStepOverflow(t *testing.T) {
+	t.Parallel()
+	a := complexTuning(t)
+	b := a.MustWithReferenceAt(aspn(spelling.CDoubleSharp(), math.MaxInt), 440)
+
+	_, err := a.LevelDifference(b)
+	requireTuningError(t, err, tuning.ErrTooComplex)
+	assert.ErrorIs(t, err, cents.ErrTooComplex)
+	assert.NotErrorIs(t, err, cents.ErrOutOfRange)
+	assert.NotErrorIs(t, err, system.ErrOutOfRange)
+}
+
 func TestLevelDifferenceStepOverflowUsesCentsCause(t *testing.T) {
 	t.Parallel()
 	other := newTestTuningAt(t, system.Traditional(), temperament.Equal12(), tuning.RootFromClass(pitchclass.MustNew(0, 12)), aspn(spelling.A(), math.MaxInt), 440)
