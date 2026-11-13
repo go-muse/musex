@@ -209,7 +209,10 @@ func checkErrorText(t *testing.T, err error, x, label string) {
 
 	if len(x) > excerptLimit {
 		assert.False(t, strings.Contains(text, strconv.Quote(x)), "%s: an input of %d bytes is quoted in full", label, len(x))
-		assert.False(t, strings.Contains(text, strconv.Itoa(len(x))), "%s: the length of the input is not in the text", label)
+		// The excerpt itself may contain the digits of the length, so the
+		// length is looked for only outside the quoted excerpt.
+		rest := strings.Replace(text, strconv.Quote(x[:k]), "", 1)
+		assert.False(t, strings.Contains(rest, strconv.Itoa(len(x))), "%s: the length of the input is not in the text", label)
 	}
 }
 

@@ -132,17 +132,33 @@ const fastLimit = 5 * time.Second
 
 // fast runs f in a goroutine and returns its result. If f does not return
 // within fastLimit, the test fails at once without waiting for the goroutine;
-// the overall bound of a run is the -timeout of go test.
+// the overall bound of a run is the -timeout of go test. A panic of f is
+// recovered in the goroutine and fails the test instead of the test binary.
 func fast[T any](t *testing.T, f func() T) T {
 	t.Helper()
 
-	results := make(chan T, 1)
+	type outcome struct {
+		v        T
+		panicked bool
+		value    any
+	}
 
-	go func() { results <- f() }()
+	results := make(chan outcome, 1)
+
+	go func() {
+		var o outcome
+
+		o.value, o.panicked = capturePanic(func() { o.v = f() })
+		results <- o
+	}()
 
 	select {
-	case v := <-results:
-		return v
+	case o := <-results:
+		if o.panicked {
+			t.Fatalf("the call panicked: %v", o.value)
+		}
+
+		return o.v
 	case <-time.After(fastLimit):
 		t.Fatalf("the call did not return within %s", fastLimit)
 
@@ -158,9 +174,9 @@ type result[T any] struct {
 	err error
 }
 
-// ok returns the value of a successful call and panics with the error of a
-// failed one; callers recover the panic as a test failure.
-func ok[T any](v T, err error) T {
+// noErr returns the value of a successful call and panics with the error of
+// a failed one; callers recover the panic as a test failure.
+func noErr[T any](v T, err error) T {
 	if err != nil {
 		panic(err)
 	}
