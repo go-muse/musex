@@ -31,6 +31,6 @@ Eight ready-made references are available:
 - **C5 = 523 Hz** — an ordinary tuning fork in the second octave, used less often than A4 at 440 Hz; not a standard. Its source does not establish a temperament. In twelve-tone equal temperament with A4 at 440 Hz, C5 is approximately 523.2511 Hz, so this reference is not at the same level.
 - **C0 = 16 Hz** — the scientific pitch standard.
 
-First released in v0.20.0.
+First released in v0.21.0.
 
 [Package reference](https://pkg.go.dev/github.com/go-muse/musex/tuning) · [Go examples](../../../tuning/example_test.go) · [Roadmap](../../../ROADMAP.md)
