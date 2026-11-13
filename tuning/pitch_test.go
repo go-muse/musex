@@ -297,7 +297,7 @@ func TestPitchOperationErrors(t *testing.T) {
 	assert.True(t, wantRepresentable.Equal(representable))
 
 	highReference := newTestTuningAt(t, system.Traditional(), temperament.Equal12(), tuning.RootFromClass(pitchclass.MustNew(0, 12)), aspn(spelling.A(), math.MaxInt), 440)
-	_, err = highReference.PitchOfStep(1, system.Sharps())
+	_, err = highReference.PitchOfStep(3, system.Sharps())
 	requireTuningError(t, err, tuning.ErrOutOfRange)
 	assert.ErrorIs(t, err, system.ErrOutOfRange)
 
