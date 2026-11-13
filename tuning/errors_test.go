@@ -108,7 +108,7 @@ func TestOutOfRangeDependencyChains(t *testing.T) {
 	assert.ErrorIs(t, err, system.ErrOutOfRange)
 	assert.NotErrorIs(t, err, cents.ErrOutOfRange)
 
-	_, err = std.FrequencyOfStep(1024)
+	_, err = std.FrequencyOfStep(13000)
 	requireTuningError(t, err, tuning.ErrOutOfRange)
 	assert.ErrorIs(t, err, cents.ErrOutOfRange)
 	assert.NotErrorIs(t, err, system.ErrOutOfRange)
