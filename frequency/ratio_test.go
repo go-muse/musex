@@ -21,7 +21,7 @@ func TestRatio_ControlExamples(t *testing.T) {
 		{"K-38 measured deviation", 440, 442, "221/220"},
 		{"K-38 decimals", 0.3, 0.1, "1/3"},
 		{"reverse", 660, 440, "2/3"},
-		{"unison", 440, 440, "1/1"},
+		{"unison", 440, 440, "1"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()

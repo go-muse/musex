@@ -1,6 +1,8 @@
 package frequency_test
 
 import (
+	"errors"
+	"slices"
 	"strings"
 	"testing"
 
@@ -94,7 +96,7 @@ func TestParse_ErrorsAndChains(t *testing.T) {
 			requireErrorChain(t, err, tt.wantFrequency, tt.wantCents)
 
 			input := []byte(tt.input)
-			originalInput := append([]byte(nil), input...)
+			originalInput := slices.Clone(input)
 			receiver := centsCriterion(5)
 			err = receiver.UnmarshalText(input)
 			requireErrorChain(t, err, tt.wantFrequency, tt.wantCents)
@@ -116,7 +118,7 @@ func TestFrequencySentinels_AreDistinct(t *testing.T) {
 	}
 	for _, outer := range sentinels {
 		for _, inner := range sentinels {
-			assert.Equal(t, outer == inner, assert.ErrorIs(t, outer, inner))
+			assert.Equal(t, outer == inner, errors.Is(outer, inner))
 		}
 	}
 }

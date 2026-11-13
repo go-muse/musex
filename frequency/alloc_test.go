@@ -85,8 +85,9 @@ func TestZeroAllocations(t *testing.T) {
 	check("CentsTolerance", func() { centsSink, boolSink = criterion.CentsTolerance() })
 	check("Components noncomposite", func() { componentsSink = criterion.Components() })
 	check("Criterion.Equal noncomposite", func() { boolSink = criterion.Equal(frequency.Strict()) })
+	composite := frequency.MustAllOf(frequency.Strict())
 	check("Criterion.Equal one noncomposite", func() {
-		boolSink = criterion.Equal(frequency.MustAllOf(frequency.Strict()))
+		boolSink = criterion.Equal(composite)
 	})
 
 	for kind := frequency.Kind(0); kind <= frequency.KindAnyOf; kind++ {
