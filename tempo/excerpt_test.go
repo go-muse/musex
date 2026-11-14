@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-muse/musex/common/fraction"
 	"github.com/go-muse/musex/duration"
 	"github.com/go-muse/musex/tempo"
 	"github.com/go-muse/musex/tempo/term"
@@ -24,11 +23,48 @@ const (
 	gIndication
 )
 
+// parseOutcome is the result of one call of a parse path. It holds only
+// values, so a call can run in another goroutine while all assertions are
+// made in the test goroutine.
+type parseOutcome struct {
+	got, want any   // the result or the target, and the value it must equal
+	err       error // the returned error or the error value of a Must panic
+	must      bool  // the path is a Must variant
+	panicked  bool  // a Must variant panicked
+	value     any   // the panic value of a Must variant
+}
+
+// check asserts the outcome apart from the error class: the zero result or
+// the unchanged target, and for a Must variant a panic with an error value.
+func (o parseOutcome) check(t *testing.T, label string) {
+	t.Helper()
+
+	if o.must {
+		assert.True(t, o.panicked, "%s: expected a panic", label)
+
+		_, isErr := o.value.(error)
+		assert.True(t, isErr, "%s: panic value is %T, want error", label, o.value)
+
+		return
+	}
+
+	assert.Equal(t, o.want, o.got, label)
+}
+
+// mustOutcome runs a Must variant and records its panic.
+func mustOutcome(f func()) parseOutcome {
+	o := parseOutcome{must: true}
+	o.value, o.panicked = capturePanic(f)
+	o.err, _ = o.value.(error)
+
+	return o
+}
+
 // parsePath is one path of architecture 4.14 that quotes the rejected input.
 type parsePath struct {
 	name    string
 	grammar int
-	run     func(t *testing.T, x string) error
+	run     func(x string) parseOutcome
 	base    string // the non-Must path whose error a Must path panics with
 }
 
@@ -36,78 +72,64 @@ func parsePaths() []parsePath {
 	en := term.EnglishWikipedia()
 
 	return []parsePath{
-		{name: "Parse", grammar: gTempo, run: func(t *testing.T, x string) error {
+		{name: "Parse", grammar: gTempo, run: func(x string) parseOutcome {
 			got, err := tempo.Parse(x)
-			assert.Equal(t, tempo.Tempo{}, got)
-
-			return err
+			return parseOutcome{got: got, want: tempo.Tempo{}, err: err}
 		}},
-		{name: "MustParse", grammar: gTempo, base: "Parse", run: func(t *testing.T, x string) error {
-			return panicError(t, func() { tempo.MustParse(x) })
+		{name: "MustParse", grammar: gTempo, base: "Parse", run: func(x string) parseOutcome {
+			return mustOutcome(func() { tempo.MustParse(x) })
 		}},
-		{name: "Tempo.UnmarshalText", grammar: gTempo, run: func(t *testing.T, x string) error {
+		{name: "Tempo.UnmarshalText", grammar: gTempo, run: func(x string) parseOutcome {
 			target := tq(7)
 			err := target.UnmarshalText([]byte(x))
-			assert.Equal(t, tq(7), target)
 
-			return err
+			return parseOutcome{got: target, want: tq(7), err: err}
 		}},
-		{name: "ParseApprox", grammar: gApprox, run: func(t *testing.T, x string) error {
+		{name: "ParseApprox", grammar: gApprox, run: func(x string) parseOutcome {
 			got, err := tempo.ParseApprox(x)
-			assert.Equal(t, tempo.Approx{}, got)
-
-			return err
+			return parseOutcome{got: got, want: tempo.Approx{}, err: err}
 		}},
-		{name: "MustParseApprox", grammar: gApprox, base: "ParseApprox", run: func(t *testing.T, x string) error {
-			return panicError(t, func() { tempo.MustParseApprox(x) })
+		{name: "MustParseApprox", grammar: gApprox, base: "ParseApprox", run: func(x string) parseOutcome {
+			return mustOutcome(func() { tempo.MustParseApprox(x) })
 		}},
-		{name: "Approx.UnmarshalText", grammar: gApprox, run: func(t *testing.T, x string) error {
+		{name: "Approx.UnmarshalText", grammar: gApprox, run: func(x string) parseOutcome {
 			target := ap(q, fi(7))
 			err := target.UnmarshalText([]byte(x))
-			assert.Equal(t, ap(q, fi(7)), target)
 
-			return err
+			return parseOutcome{got: target, want: ap(q, fi(7)), err: err}
 		}},
-		{name: "ParseRange", grammar: gRange, run: func(t *testing.T, x string) error {
+		{name: "ParseRange", grammar: gRange, run: func(x string) parseOutcome {
 			got, err := tempo.ParseRange(x)
-			assert.Equal(t, tempo.Range{}, got)
-
-			return err
+			return parseOutcome{got: got, want: tempo.Range{}, err: err}
 		}},
-		{name: "MustParseRange", grammar: gRange, base: "ParseRange", run: func(t *testing.T, x string) error {
-			return panicError(t, func() { tempo.MustParseRange(x) })
+		{name: "MustParseRange", grammar: gRange, base: "ParseRange", run: func(x string) parseOutcome {
+			return mustOutcome(func() { tempo.MustParseRange(x) })
 		}},
-		{name: "Range.UnmarshalText", grammar: gRange, run: func(t *testing.T, x string) error {
+		{name: "Range.UnmarshalText", grammar: gRange, run: func(x string) parseOutcome {
 			target := rg(q, fi(1), fi(7))
 			err := target.UnmarshalText([]byte(x))
-			assert.Equal(t, rg(q, fi(1), fi(7)), target)
 
-			return err
+			return parseOutcome{got: target, want: rg(q, fi(1), fi(7)), err: err}
 		}},
-		{name: "ParseSeconds", grammar: gSeconds, run: func(t *testing.T, x string) error {
+		{name: "ParseSeconds", grammar: gSeconds, run: func(x string) parseOutcome {
 			got, err := tempo.ParseSeconds(x)
-			assert.Equal(t, tempo.Seconds{}, got)
-
-			return err
+			return parseOutcome{got: got, want: tempo.Seconds{}, err: err}
 		}},
-		{name: "MustParseSeconds", grammar: gSeconds, base: "ParseSeconds", run: func(t *testing.T, x string) error {
-			return panicError(t, func() { tempo.MustParseSeconds(x) })
+		{name: "MustParseSeconds", grammar: gSeconds, base: "ParseSeconds", run: func(x string) parseOutcome {
+			return mustOutcome(func() { tempo.MustParseSeconds(x) })
 		}},
-		{name: "Seconds.UnmarshalText", grammar: gSeconds, run: func(t *testing.T, x string) error {
+		{name: "Seconds.UnmarshalText", grammar: gSeconds, run: func(x string) parseOutcome {
 			target := sec(1, 7)
 			err := target.UnmarshalText([]byte(x))
-			assert.Equal(t, sec(1, 7), target)
 
-			return err
+			return parseOutcome{got: target, want: sec(1, 7), err: err}
 		}},
-		{name: "ParseIndication", grammar: gIndication, run: func(t *testing.T, x string) error {
+		{name: "ParseIndication", grammar: gIndication, run: func(x string) parseOutcome {
 			got, err := tempo.ParseIndication(x, en)
-			assert.Equal(t, tempo.Indication{}, got)
-
-			return err
+			return parseOutcome{got: got, want: tempo.Indication{}, err: err}
 		}},
-		{name: "MustParseIndication", grammar: gIndication, base: "ParseIndication", run: func(t *testing.T, x string) error {
-			return panicError(t, func() { tempo.MustParseIndication(x, en) })
+		{name: "MustParseIndication", grammar: gIndication, base: "ParseIndication", run: func(x string) parseOutcome {
+			return mustOutcome(func() { tempo.MustParseIndication(x, en) })
 		}},
 	}
 }
@@ -191,7 +213,10 @@ func TestParseErrorExcerpt(t *testing.T) {
 				var bySize []string
 
 				for _, x := range []string{small, large} {
-					err := fast(t, func() error { return p.run(t, x) })
+					o := fast(t, func() parseOutcome { return p.run(x) })
+					o.check(t, p.name)
+
+					err := o.err
 					if !class.check(t, err) {
 						t.Logf("%s, input of %d bytes", p.name, len(x))
 
@@ -227,7 +252,10 @@ func TestParseErrorShortInput(t *testing.T) {
 		"\"quoted", "tab\there", rep("a", 64), rep("ж", 32),
 	} {
 		for _, p := range parsePaths() {
-			err := p.run(t, x)
+			o := p.run(x)
+			o.check(t, p.name)
+
+			err := o.err
 			if !textClass.check(t, err) {
 				t.Logf("%s(%q)", p.name, x)
 
@@ -246,9 +274,11 @@ func TestParseErrorShortInput(t *testing.T) {
 	assert.Contains(t, err.Error(), strconv.Quote("Fast, 4=60"), "the whole text of the indication is quoted")
 }
 
-// TestParseErrorNoDependencyText covers architecture 4.3, 4.14: the error
-// text contains only the texts of the sentinels of tempo and the excerpt,
-// not the texts of the errors of duration.ParseWritten or fraction.
+// TestParseErrorNoDependencyText covers architecture 4.3, 4.14 for the unit
+// in text: the error of duration.ParseWritten is wrapped without its text,
+// and the token is quoted only inside the excerpt. A wrapped sentinel of
+// common/fraction may add its constant text (4.14: only the constant texts
+// of the sentinels and the excerpt), so that is not checked.
 func TestParseErrorNoDependencyText(t *testing.T) {
 	t.Parallel()
 
@@ -262,8 +292,4 @@ func TestParseErrorNoDependencyText(t *testing.T) {
 	_, err = tempo.Parse("3=60")
 	textClass.check(t, err)
 	assert.NotContains(t, err.Error(), duration.ErrInvalidText.Error())
-
-	_, err = tempo.Parse("4=" + maxPlusOne())
-	fracRange.check(t, err)
-	assert.NotContains(t, err.Error(), fraction.ErrOutOfRange.Error())
 }

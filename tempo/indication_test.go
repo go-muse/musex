@@ -181,6 +181,22 @@ func TestIndication(t *testing.T) {
 		assert.Equal(t, tempo.MustIndicationOf(moderato), noMark)
 	})
 
+	t.Run("remove what is absent", func(t *testing.T) {
+		t.Parallel()
+
+		// 4.13: Е-2 only if neither a term nor a marking would remain, so
+		// removing the absent part returns the same value without an error.
+		onlyMark := tempo.MustIndicationOfTempo(tq(60))
+		got, err := onlyMark.WithoutTerm()
+		require.NoError(t, err)
+		assert.Equal(t, onlyMark, got)
+
+		onlyTerm := tempo.MustIndicationOf(allegro)
+		got, err = onlyTerm.WithoutMarking()
+		require.NoError(t, err)
+		assert.Equal(t, onlyTerm, got)
+	})
+
 	t.Run("equality", func(t *testing.T) {
 		t.Parallel()
 
