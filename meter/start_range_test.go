@@ -14,10 +14,10 @@ import (
 
 // This file holds the inputs of the E-10 case in which the size of a sum is
 // within the range of common/fraction while the start of some unit of the sum
-// is not (architecture 4.2, row ErrOutOfRange and order of checks; 4.4,
-// NewSum; 4.12, Shorter and Longer; 4.15, order of parse failures; section 7,
-// "Exact computation"). The existing КП-39 inputs exceed the range by the size
-// itself, so they do not reach this case.
+// is not (architecture 3.1, invariant "the size and the starts of all units in
+// range"; 4.2, row ErrOutOfRange and order of checks; 4.4, NewSum; 4.12,
+// Shorter and Longer; 4.15, order of parse failures). The existing КП-39
+// inputs exceed the range by the size itself, so they do not reach this case.
 //
 // TestUnitStartOutOfRangeInputs confirms the properties of the inputs by an
 // exact computation with math/big that does not depend on the package. The
@@ -61,69 +61,61 @@ func shifted(shift int, cs ...int) []int {
 	return out
 }
 
-// pairedParts returns the parts 1/(k·p) for each p in order, then the parts
-// 1/(k·p·(p−1)) for each p in order. Since 1/p + 1/(p·(p−1)) = 1/(p−1), the
-// whole sum is Σ 1/(k·(p−1)): the second half brings the denominator of the
-// size back from the product of the p to a short one, while the starts of the
-// units between the halves keep long denominators. It panics if a
-// denominator exceeds math.MaxInt, which is a test error.
-func pairedParts(k int, ps []int) []sumPart {
-	out := make([]sumPart, 0, 2*len(ps))
-	for _, p := range ps {
-		out = append(out, sumPart{1, intOf(new(big.Int).Mul(big.NewInt(int64(k)), big.NewInt(int64(p))))})
+// reciprocalParts returns the parts 1/d for each d, followed by the tail.
+func reciprocalParts(dens []int, tail ...sumPart) []sumPart {
+	out := make([]sumPart, 0, len(dens)+len(tail))
+	for _, d := range dens {
+		out = append(out, sumPart{1, d})
 	}
 
-	for _, p := range ps {
-		d := new(big.Int).Mul(big.NewInt(int64(k)), big.NewInt(int64(p)))
-		d.Mul(d, big.NewInt(int64(p-1)))
-		out = append(out, sumPart{1, intOf(d)})
-	}
-
-	return out
+	return append(out, tail...)
 }
 
-// intOf returns x as an int; it panics if x exceeds math.MaxInt.
-func intOf(x *big.Int) int {
-	if !x.IsInt64() || x.Int64() > math.MaxInt {
-		panic("intOf: " + x.String() + " exceeds math.MaxInt")
-	}
+// In each input below the start that leaves the range is the start of a unit
+// inside a part of several units, not the first unit of a part: the starts at
+// the boundaries of the parts and the size are in range. So the inputs also
+// fail an implementation that checks only the size and the starts of the
+// parts.
 
-	return int(x.Int64())
-}
-
-// unitStartInput is the input of NewSum and Parse: nine parts 1/p and nine
-// parts 1/(p·(p−1)) for the primes p = c·2^24 + 1 near 2^31. The start of the
-// tenth unit, Σ 1/p, has the product of the nine p (about 2^279) as its
-// denominator; the size Σ 1/(p−1) is in range. 18 units.
+// unitStartInput is the input of NewSum and Parse: nine parts 1/p for the
+// primes p = c·2^20 + 1 near 2^28, whose product P lies between 2^254 and
+// 2^255, then the part 2/2. 11 units. The start of the tenth unit, Σ 1/p, and
+// the size, Σ 1/p + 1, have the denominator P and are in range; the start of
+// the eleventh unit, the second unit of 2/2, is Σ 1/p + 1/2 with the
+// denominator 2P, outside the range.
 func unitStartInput() []sumPart {
-	return pairedParts(1, shifted(24, 126, 127, 136, 148, 151, 157, 162, 171, 172))
+	return reciprocalParts(shifted(20, 202, 211, 220, 235, 238, 391, 438, 447, 471), sumPart{2, 2})
 }
 
-// shorterStartInput is the input of Shorter: nine parts 1/p and nine parts
-// 1/(p·(p−1)) for the primes p = c·2^20 + 1 near 2^28, whose product lies
-// between 2^254 and 2^255. The size and the starts of all units are in
-// range. Shorter doubles every denominator: the start of the tenth unit of
-// the result, Σ 1/(2p), has a denominator of twice that product, outside the
-// range, while the size of the result is in range.
+// shorterStartInput is the input of Shorter: parts 1/d for nine pairwise
+// coprime odd d, whose product P lies between 2^253 and 2^254, then the part
+// 2/2. The size and the starts of all units are in range: the start of the
+// eleventh unit, Σ 1/d + 1/2, has the denominator 2P. Shorter doubles every
+// denominator: that start becomes Σ 1/(2d) + 1/4 with the denominator 4P,
+// outside the range, while the start of the tenth unit, Σ 1/(2d), and the
+// size, Σ 1/(2d) + 1/2, are in range.
 func shorterStartInput() []sumPart {
-	return pairedParts(1, shifted(20, 202, 211, 220, 235, 238, 391, 438, 447, 471))
+	return reciprocalParts([]int{
+		211812353, 221249537, 230686721, 246415361, 249561089,
+		409993217, 459276289, 468713473, 246677689,
+	}, sumPart{2, 2})
 }
 
 // longerStartInput is the input of Longer, with even denominators only:
-// 1000/2 + 1/254 + 1/(2q₁) + … + 1/(2q₄) + 1/(2p) + 1/(2p·(p−1)) for the primes
-// q near 2^52 and p = 127·2^24 + 1. The size and the starts of all units are
-// in range. Longer halves every denominator, which doubles every start: the
-// start of the last unit of the result, 1000 + 1/127 + Σ 1/q + 1/p, has a
-// numerator above 2^255 − 1. In the size of the result, 1/p + 1/(p·(p−1))
-// gives 1/(p−1), and p − 1 = 127·2^24 shares 127 with 254, so the size is in
-// range. 1007 units.
+// 601/2 + 1/(2q₁) + … + 1/(2q₄) + 1/(2r) + 3/6 for the primes q near 2^52 and
+// the odd r = 106007143975, coprime with them. 609 units. The size and the
+// starts of all units are in range. Longer halves every denominator, which
+// doubles every start: the start of the third unit of the last part, now
+// 3/3, is 601 + Σ 1/q + 1/r + 2/3 with an odd denominator and a numerator
+// above 2^255 − 1, while the starts at the boundaries of the parts and the
+// size, whose denominators lack the factor 3, are in range.
 func longerStartInput() []sumPart {
-	parts := []sumPart{{1000, 2}, {1, 2 * 127}}
-	for _, q := range []int{4170701791206407, 4170701791206493, 4170701791206521, 4170701791206611} {
+	parts := []sumPart{{601, 2}}
+	for _, q := range []int{4170701791206407, 4170701791206493, 4170701791206521, 4170701791206611, 106007143975} {
 		parts = append(parts, sumPart{1, 2 * q})
 	}
 
-	return append(parts, pairedParts(2, shifted(24, 127))...)
+	return append(parts, sumPart{3, 6})
 }
 
 // doubled returns the parts with every denominator doubled, as Shorter does
@@ -186,6 +178,20 @@ func ratInRange(r *big.Rat) bool {
 	return r.Num().CmpAbs(maxComponent()) <= 0 && r.Denom().Cmp(maxComponent()) <= 0
 }
 
+// firstUnits returns the numbers, from 1, of the first units of the parts,
+// whose starts are the boundaries between the parts.
+func firstUnits(parts []sumPart) []int {
+	out := make([]int, len(parts))
+	next := 1
+
+	for i, p := range parts {
+		out[i] = next
+		next += p.n
+	}
+
+	return out
+}
+
 // startsOutOfRange returns the numbers, from 1, of the units whose starts
 // are outside the range of common/fraction.
 func startsOutOfRange(starts []*big.Rat) []int {
@@ -203,8 +209,9 @@ func startsOutOfRange(starts []*big.Rat) []int {
 // TestUnitStartOutOfRangeInputs confirms by exact computation the properties
 // of the inputs of the E-10 case "start of a unit out of range, size in
 // range" (task 28a.2), so that each operation reaches that check and no
-// earlier one: the sum to be built has at most MaxUnits units, its size is in
-// range and the start of some unit is not; the input of Shorter and Longer is
+// earlier one: the sum to be built has at most MaxUnits units, its size and
+// the starts of the first units of its parts are in range, and the start of
+// some unit inside a part is not; the input of Shorter and Longer is
 // a valid sum whose size and starts are all in range, with denominators that
 // stay at most math.MaxInt when doubled (Shorter) or are all even (Longer).
 func TestUnitStartOutOfRangeInputs(t *testing.T) {
@@ -241,7 +248,12 @@ func TestUnitStartOutOfRangeInputs(t *testing.T) {
 			size, starts := exactSum(out)
 			assert.LessOrEqual(t, len(starts), meter.MaxUnits, "units of the result")
 			assert.True(t, ratInRange(size), "size of the result in range: %s", size.RatString())
-			assert.NotEmpty(t, startsOutOfRange(starts), "a unit of the result whose start is out of range")
+			outside := startsOutOfRange(starts)
+			assert.NotEmpty(t, outside, "a unit of the result whose start is out of range")
+
+			for _, n := range firstUnits(out) {
+				assert.NotContains(t, outside, n, "the start of unit %d, the first unit of a part, is out of range", n)
+			}
 		})
 	}
 }
