@@ -13,6 +13,7 @@ import (
 // TestRecord covers О-3, Т-1, КП-24, КП-45 and the table of architecture 4.5.
 func TestRecord(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	const e4, e5 = -4, -5 // markers of E-4 and E-5 in the table
 
@@ -46,6 +47,7 @@ func TestRecord(t *testing.T) {
 	} {
 		t.Run(c.text, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			m := mt(c.text)
 
@@ -94,6 +96,7 @@ func TestRecord(t *testing.T) {
 // and the exponent of a power of two.
 func TestRecordLargeDenominators(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	m := meter.MustNew(1, 1<<62)
 	assert.Equal(t, 62, m.MustDenominatorExponent())
@@ -111,6 +114,7 @@ func TestRecordLargeDenominators(t *testing.T) {
 // equals m for every sum, and the parts have no explicit grouping.
 func TestPartsRestoreSum(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, m := range corpus() {
 		parts := m.MustParts()

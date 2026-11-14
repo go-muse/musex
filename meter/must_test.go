@@ -276,6 +276,7 @@ func mustCases() []mustCase {
 // as the base operation, and return the same results on success.
 func TestMust(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	cases := mustCases()
 	require.Len(t, cases, 69)
@@ -289,6 +290,7 @@ func TestMust(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			baseErr := c.failBase()
 			require.Error(t, baseErr, "the input fails")

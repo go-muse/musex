@@ -100,6 +100,7 @@ func structureSignature(m meter.Meter) []string {
 // the same kinds of failure of the operations of structure.
 func TestPropertiesOfStructure(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	var ms []meter.Meter
 
@@ -141,6 +142,7 @@ func TestPropertiesOfStructure(t *testing.T) {
 // 2.3: C and 4/4; (2+3)/8, 5/8[2+3], and 2/8+3/8.
 func TestEqualStructureKnownPairs(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, group := range [][]string{
 		{"C", "4/4", "(2+2)/4", "2/4+2/4"},

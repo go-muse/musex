@@ -576,3 +576,14 @@ func lastWord(s string) string {
 
 // itoa is strconv.Itoa for case names.
 func itoa(n int) string { return strconv.Itoa(n) }
+
+// guard turns a panic of a test body into a failure of that test, so that a
+// panicking helper such as noErr or a Must variant does not stop the whole
+// test binary. It is deferred directly after t.Parallel.
+func guard(t *testing.T) {
+	t.Helper()
+
+	if r := recover(); r != nil {
+		t.Errorf("unexpected panic: %v", r)
+	}
+}

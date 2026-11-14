@@ -15,6 +15,7 @@ import (
 // sentinel of a dependency.
 func TestErrorSentinels(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	assert.Len(t, meterSentinels, 10)
 
@@ -107,6 +108,7 @@ func meterCalls() []unsetCall {
 // receiver gives E-1, also with an invalid argument (E-1 is checked first).
 func TestUnsetReceiver(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	var u meter.Meter
 
@@ -132,6 +134,7 @@ func TestUnsetReceiver(t *testing.T) {
 	for _, c := range append(calls, invalid...) {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			assertErr(t, c.call(u), meter.ErrUnset)
 		})
@@ -142,6 +145,7 @@ func TestUnsetReceiver(t *testing.T) {
 // EqualStructure, EqualDuration, CompareDuration gives E-1.
 func TestUnsetArgument(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	var u meter.Meter
 
@@ -154,6 +158,7 @@ func TestUnsetArgument(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			assertErr(t, c.call(m), meter.ErrUnset)
 		})
@@ -164,6 +169,7 @@ func TestUnsetArgument(t *testing.T) {
 // Equal, Compare, and String work without an error.
 func TestUnsetWithoutError(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	var u meter.Meter
 
@@ -184,6 +190,7 @@ func TestUnsetWithoutError(t *testing.T) {
 // is the zero value of its type.
 func TestZeroResultsOnError(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	var u meter.Meter
 

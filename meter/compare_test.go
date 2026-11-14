@@ -15,6 +15,7 @@ import (
 // record, by structure, and by size.
 func TestEqualities(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range []struct {
 		name                      string
@@ -47,6 +48,7 @@ func TestEqualities(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			a, b := mt(c.a), mt(c.b)
 
@@ -64,6 +66,7 @@ func TestEqualities(t *testing.T) {
 // TestCompareDuration covers О-18 and architecture 4.13.
 func TestCompareDuration(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range []struct {
 		a, b string
@@ -79,6 +82,7 @@ func TestCompareDuration(t *testing.T) {
 	} {
 		t.Run(c.a+" vs "+c.b, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			a, b := mt(c.a), mt(c.b)
 			assert.Equal(t, c.want, noErr(a.CompareDuration(b)))
@@ -91,6 +95,7 @@ func TestCompareDuration(t *testing.T) {
 // total order by size and then by the canonical text, consistent with ==.
 func TestCompare(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	var unset meter.Meter
 
@@ -112,6 +117,7 @@ func TestCompare(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			assert.Equal(t, c.want, c.a.Compare(c.b))
 		})
@@ -125,6 +131,7 @@ func TestCompare(t *testing.T) {
 // EqualDuration.
 func TestOrderProperties(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	ms := append(corpus(), meter.Meter{})
 
@@ -180,6 +187,7 @@ func TestOrderProperties(t *testing.T) {
 // TestSort covers КП-49 and the use with slices.SortFunc of architecture 4.13.
 func TestSort(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	ms := mts("6/8", "C", "3/4", "2/4", "4/4", "2/4+3/8", "(2+3)/8")
 	ms = append(ms, meter.Meter{})

@@ -32,6 +32,7 @@ type enumValue struct {
 // a value outside the list.
 func TestEnumerations(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	var values []enumValue
 
@@ -108,6 +109,7 @@ func TestEnumerations(t *testing.T) {
 	for i, v := range values {
 		t.Run(v.name+" "+itoa(i), func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			assert.Equal(t, v.isValid, v.validFn(), "IsValid")
 			assert.Equal(t, v.str, v.stringer(), "String")
@@ -147,6 +149,7 @@ func TestEnumerations(t *testing.T) {
 // numbered from 1 in the listed order, and 0 is not valid.
 func TestEnumerationOrder(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	assert.Equal(t, []int{1, 2, 3, 4}, []int{int(meter.FormSimple), int(meter.FormSymbol), int(meter.FormAdditive), int(meter.FormSum)})
 	assert.Equal(t, []int{1, 2}, []int{int(meter.SymbolCommon), int(meter.SymbolCut)})
@@ -165,9 +168,11 @@ func TestEnumerationOrder(t *testing.T) {
 // start plus the duration, and String joins the texts of duration.
 func TestSpan(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	t.Run("Equal and String", func(t *testing.T) {
 		t.Parallel()
+		defer guard(t)
 
 		a, b, c := sp("3/8@1/4"), sp("3/8@1/4"), sp("3/8@3/8")
 		assert.True(t, a.Equal(b))
@@ -184,6 +189,7 @@ func TestSpan(t *testing.T) {
 
 	t.Run("End", func(t *testing.T) {
 		t.Parallel()
+		defer guard(t)
 
 		end, err := sp("3/8@1/4").End()
 		require.NoError(t, err)
@@ -202,10 +208,12 @@ func TestSpan(t *testing.T) {
 		{"unset", meter.Span{}, meter.ErrInvalidArgument, []error{duration.ErrUnset}},
 		{"unset start", meter.Span{Duration: durT("1/4")}, meter.ErrInvalidArgument, []error{duration.ErrUnset}},
 		{"unset duration", meter.Span{Start: posT("1/4")}, meter.ErrInvalidArgument, []error{duration.ErrUnset}},
-		{"end out of range", meter.Span{Start: edge, Duration: durT("1")}, meter.ErrOutOfRange, []error{fraction.ErrOutOfRange}},
+		{"end out of range", meter.Span{Start: edge, Duration: durT("1")}, meter.ErrOutOfRange,
+			[]error{fraction.ErrOutOfRange, duration.ErrOutOfRange}},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			end, err := c.s.End()
 			assertErr(t, err, c.want, c.causes...)
@@ -218,6 +226,7 @@ func TestSpan(t *testing.T) {
 // kinds in both traditions, weights at positions of 4/4, and the symbols.
 func TestNamesKP26a(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	type names struct {
 		en, ru string // "" means no name
@@ -241,6 +250,7 @@ func TestNamesKP26a(t *testing.T) {
 	} {
 		t.Run("RussianKind of "+c.text, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			k := mt(c.text).MustRussianKind()
 			check(t, k.Name, c.want.en)
@@ -257,6 +267,7 @@ func TestNamesKP26a(t *testing.T) {
 	} {
 		t.Run("Weight of 4/4 at "+c.at, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			w := meter.FourFour().MustWeightAt(posT(c.at))
 			check(t, w.Name, c.want.en)
@@ -273,6 +284,7 @@ func TestNamesKP26a(t *testing.T) {
 	} {
 		t.Run("Symbol of "+c.m.String(), func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			s, ok := c.m.MustSymbol()
 			require.True(t, ok)
