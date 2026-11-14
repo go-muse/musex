@@ -43,13 +43,13 @@ func TestRecord(t *testing.T) {
 		{"6/6", meter.FormSimple, 0, []string{"6/6"}, []int{6}, 6, 6, true, false, e5},
 		{"КП-45 2/8+3/8", meter.FormSum, 0, []string{"2/8", "3/8"}, []int{2, 3}, 5, 8, true, true, 3},
 		{"(2+3)/8+2/4", meter.FormSum, 0, []string{"(2+3)/8", "2/4"}, []int{2, 3, 2}, 7, e4, false, true, e4},
-		{"three parts", meter.FormSum, 0, []string{"2/8", "(1+1)/8", "3/8"}, []int{2, 1, 1, 3}, 7, 8, true, true, 3},
+		{"three parts 2/8+(1+1)/8+3/8", meter.FormSum, 0, []string{"2/8", "(1+1)/8", "3/8"}, []int{2, 1, 1, 3}, 7, 8, true, true, 3},
 	} {
 		t.Run(c.text, func(t *testing.T) {
 			t.Parallel()
 			defer guard(t)
 
-			m := mt(c.text)
+			m := mt(lastWord(c.text))
 
 			assert.Equal(t, c.form, noErr(m.Form()))
 
