@@ -128,8 +128,9 @@
 // # Errors
 //
 // Errors are tested with errors.Is against the sentinels of the package and
-// of its dependencies; see the documentation of ErrUnset for the order in
-// which the causes are reported. Must variants panic with the same error.
+// of its dependencies; the documentation of the errors of the package
+// describes the order in which the causes are reported. Must variants panic
+// with the same error.
 // Format can panic inside package notation for octaves extremely far from the
 // middle; use IsExpressible to test such notes.
 package note
