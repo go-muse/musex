@@ -26,7 +26,7 @@ The word "beat" is used in two senses in theory books, and the library keeps bot
 - a **unit** is what the numerator counts — the note value one over the denominator. `6/8` has six units, each an eighth;
 - a **beat** is the beat of the English-language tradition — the pulse a conductor or a metronome follows. `6/8` has two beats, each a dotted quarter.
 
-For the plain signatures `2/4`, `3/4`, `4/4`, `2/2`, `3/8`, `C`, and cut time the two coincide: each unit is a beat. In every other case the beats are the groups described below: `5/8` grouped `2+3` has two beats, a quarter and a dotted quarter, and five units. Units always exist; beats need a grouping, so `5/8` written without one has five units and no beats. A unit, a beat, or a group can also be read as a written note value when its length is one note without a tuplet: the beats of `6/8` are dotted quarters, but the unit of `4/3`, a third of a whole note, has no such note.
+The two coincide when a measure has two, three, or four units of the same length in their standard grouping — one group for two or three units, `2+2` for four: then each unit is a beat. This holds for `2/4`, `3/4`, `4/4`, `2/2`, `3/8`, `C`, and cut time, and equally for `4/8`, `3/2`, `(2+2)/4`, `2/4+2/4`, and `4/3`. In every other case the beats are the groups described below: `5/8` grouped `2+3` has two beats, a quarter and a dotted quarter, and five units. Units always exist; beats need a grouping, so `5/8` written without one has five units and no beats. A unit, a beat, or a group can also be read as a written note value when its length is one note without a tuplet: the beats of `6/8` are dotted quarters, but the unit of `4/3`, a third of a whole note, has no such note.
 
 ## Grouping
 

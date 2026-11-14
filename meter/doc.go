@@ -122,7 +122,9 @@
 // dependency, the error also wraps its sentinel: duration.ErrNotNotatable
 // with ErrNotNotatable, duration.ErrUnset with ErrInvalidArgument for an
 // unset duration or position, fraction.ErrOutOfRange or
-// fraction.ErrNotRepresentable with ErrOutOfRange. Each operation documents
+// fraction.ErrNotRepresentable with ErrOutOfRange, and also
+// duration.ErrOutOfRange with ErrOutOfRange when the failure comes from
+// package duration, as in Meter.QuoRem and Span.End. Each operation documents
 // its errors in the order of its checks. Every operation that returns an
 // error, except MarshalText, AppendText, and UnmarshalText, has a Must
 // variant that panics with the same error.
