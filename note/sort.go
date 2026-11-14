@@ -15,7 +15,7 @@ import (
 // and without reading any source; the In and InTuning forms then check only
 // that the explicit context is set.
 
-func sortedByPosition(op string, c context, notes []Note) ([]Note, error) {
+func sortedByPosition(op string, c opContext, notes []Note) ([]Note, error) {
 	if len(notes) == 0 {
 		if err := c.check(op); err != nil {
 			return nil, err
@@ -85,7 +85,7 @@ type soundKey struct {
 	freq   float64
 }
 
-func sortedBySound(op string, c context, notes []Note) ([]Note, error) {
+func sortedBySound(op string, c opContext, notes []Note) ([]Note, error) {
 	if len(notes) == 0 {
 		if err := c.check(op); err != nil {
 			return nil, err
@@ -99,13 +99,18 @@ func sortedBySound(op string, c context, notes []Note) ([]Note, error) {
 		return nil, err
 	}
 
+	// Notes with one snapshot share a frame: each distinct tuning is copied
+	// and compared with the first one once.
 	ts := make([]*tuning.Tuning, len(fs))
 	exact := true
+	compared := map[*frame]bool{fs[0]: true}
 
-	for i := range fs {
-		ts[i] = fs[i].tuning()
-		if !ts[i].Equal(ts[0]) {
-			exact = false
+	for i, f := range fs {
+		ts[i] = f.tuning()
+
+		if !compared[f] {
+			compared[f] = true
+			exact = exact && ts[i].Equal(ts[0])
 		}
 	}
 

@@ -16,7 +16,7 @@ import (
 // lazy, can be stopped at any element, and yields the same notes when it is
 // iterated again or concurrently; every yielded note is a new value.
 
-func (n Note) enharmonics(op string, c context, limit alteration.Alteration) (iter.Seq[Note], error) {
+func (n Note) enharmonics(op string, c opContext, limit alteration.Alteration) (iter.Seq[Note], error) {
 	if err := checkNote(op, n); err != nil {
 		return nil, err
 	}
@@ -170,7 +170,7 @@ func (n Note) MustRange(from, to octave.Octave) iter.Seq[Note] {
 	return must(n.Range(from, to))
 }
 
-func (n Note) walk(op string, c context, to Note, rule system.SpellingRule) (iter.Seq[Note], error) {
+func (n Note) walk(op string, c opContext, to Note, rule system.SpellingRule) (iter.Seq[Note], error) {
 	notes := [2]Note{n, to}
 
 	if err := checkNotes(op, notes[:]); err != nil {

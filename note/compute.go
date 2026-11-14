@@ -15,9 +15,9 @@ import (
 // An unbound note needs an explicit context: without it they report
 // ErrNoSource.
 
-// context is the context of an operation: the own settings of the notes, an
+// opContext is the context of an operation: the own settings of the notes, an
 // explicit source or an explicit tuning.
-type context struct {
+type opContext struct {
 	src     settings.Source
 	t       *tuning.Tuning
 	in      bool // an explicit source
@@ -25,17 +25,17 @@ type context struct {
 }
 
 // ownContext is the context of the own settings of the notes.
-func ownContext() context { return context{} }
+func ownContext() opContext { return opContext{} }
 
 // sourceContext is the context of an explicit source.
-func sourceContext(src settings.Source) context { return context{src: src, in: true} }
+func sourceContext(src settings.Source) opContext { return opContext{src: src, in: true} }
 
 // tuningContext is the context of an explicit tuning.
-func tuningContext(t *tuning.Tuning) context { return context{t: t, inTuned: true} }
+func tuningContext(t *tuning.Tuning) opContext { return opContext{t: t, inTuned: true} }
 
 // check reports ErrUnset for a nil explicit source or an unset explicit
 // tuning.
-func (c context) check(op string) error {
+func (c opContext) check(op string) error {
 	switch {
 	case c.in:
 		return checkSource(op, c.src)
@@ -51,7 +51,7 @@ func (c context) check(op string) error {
 // frame returns the frame of the note n in the context: its own settings
 // (ErrNoSource, ErrUnsetSettings), the settings of the explicit source
 // (ErrUnsetSettings) or the explicit tuning.
-func (c context) frame(r *reader, n Note) (frame, error) {
+func (c opContext) frame(r *reader, n Note) (frame, error) {
 	switch {
 	case c.in:
 		return sourceFrame(r, c.src)
@@ -65,7 +65,7 @@ func (c context) frame(r *reader, n Note) (frame, error) {
 // prepare checks n and the context for a computation over one note and
 // returns its frame: ErrUnset, ErrNoOctave when withOctave, ErrNoSource,
 // ErrUnsetSettings, then ErrInadmissible when admissible.
-func (n Note) prepare(op string, c context, withOctave, admissible bool) (frame, error) {
+func (n Note) prepare(op string, c opContext, withOctave, admissible bool) (frame, error) {
 	if err := checkNote(op, n); err != nil {
 		return frame{}, err
 	}
@@ -113,7 +113,7 @@ func (n Note) MustSettings() *settings.Settings {
 	return must(n.Settings())
 }
 
-func (n Note) isAdmissible(op string, c context) (bool, error) {
+func (n Note) isAdmissible(op string, c opContext) (bool, error) {
 	f, err := n.prepare(op, c, false, false)
 	if err != nil {
 		return false, err
@@ -153,7 +153,7 @@ func (n Note) MustIsAdmissibleIn(src settings.Source) bool {
 	return must(n.IsAdmissibleIn(src))
 }
 
-func (n Note) class(op string, c context) (pitchclass.Class, error) {
+func (n Note) class(op string, c opContext) (pitchclass.Class, error) {
 	f, err := n.prepare(op, c, false, true)
 	if err != nil {
 		return pitchclass.Class{}, err
@@ -204,7 +204,7 @@ func (n Note) MustClassInTuning(t *tuning.Tuning) pitchclass.Class {
 }
 
 // writtenOctave returns the frame and the written octave of n.
-func (n Note) writtenOctave(op string, c context) (frame, octave.Octave, error) {
+func (n Note) writtenOctave(op string, c opContext) (frame, octave.Octave, error) {
 	f, err := n.prepare(op, c, true, true)
 	if err != nil {
 		return frame{}, octave.Octave{}, err
@@ -265,7 +265,7 @@ func (n Note) MustWrittenASPN() int {
 	return must(n.WrittenASPN())
 }
 
-func (n Note) writtenNumber(op string, c context) (int, error) {
+func (n Note) writtenNumber(op string, c opContext) (int, error) {
 	f, w, err := n.writtenOctave(op, c)
 	if err != nil {
 		return 0, err
@@ -303,7 +303,7 @@ func (n Note) MustWrittenNumberIn(src settings.Source) int {
 	return must(n.WrittenNumberIn(src))
 }
 
-func (n Note) writtenName(op string, c context) (string, error) {
+func (n Note) writtenName(op string, c opContext) (string, error) {
 	f, w, err := n.writtenOctave(op, c)
 	if err != nil {
 		return "", err
@@ -335,7 +335,7 @@ func (n Note) MustWrittenNameIn(src settings.Source) string {
 	return must(n.WrittenNameIn(src))
 }
 
-func (n Note) step(op string, c context) (system.Step, error) {
+func (n Note) step(op string, c opContext) (system.Step, error) {
 	f, err := n.prepare(op, c, true, true)
 	if err != nil {
 		return 0, err
@@ -401,7 +401,7 @@ func (n Note) height(op string, t *tuning.Tuning) (cents.Cents, error) {
 	return h, nil
 }
 
-func (n Note) centsFromReference(op string, c context) (cents.Cents, error) {
+func (n Note) centsFromReference(op string, c opContext) (cents.Cents, error) {
 	f, err := n.prepare(op, c, true, true)
 	if err != nil {
 		return cents.Cents{}, err
@@ -462,7 +462,7 @@ func (n Note) sound(op string, t *tuning.Tuning) (float64, error) {
 	return f, nil
 }
 
-func (n Note) frequency(op string, c context) (float64, error) {
+func (n Note) frequency(op string, c opContext) (float64, error) {
 	f, err := n.prepare(op, c, true, true)
 	if err != nil {
 		return 0, err
@@ -510,7 +510,7 @@ func (n Note) MustFrequencyInTuning(t *tuning.Tuning) float64 {
 	return must(n.FrequencyInTuning(t))
 }
 
-func (n Note) pitchFrequency(op string, c context) (float64, error) {
+func (n Note) pitchFrequency(op string, c opContext) (float64, error) {
 	f, err := n.prepare(op, c, true, true)
 	if err != nil {
 		return 0, err
@@ -558,7 +558,7 @@ func (n Note) MustPitchFrequencyInTuning(t *tuning.Tuning) float64 {
 	return must(n.PitchFrequencyInTuning(t))
 }
 
-func (n Note) isExpressible(op string, c context) (bool, error) {
+func (n Note) isExpressible(op string, c opContext) (bool, error) {
 	f, err := n.prepare(op, c, false, false)
 	if err != nil {
 		return false, err
@@ -595,7 +595,7 @@ func (n Note) MustIsExpressibleIn(src settings.Source) bool {
 	return must(n.IsExpressibleIn(src))
 }
 
-func (n Note) format(op string, c context, nameOnly bool) (string, error) {
+func (n Note) format(op string, c opContext, nameOnly bool) (string, error) {
 	f, err := n.prepare(op, c, false, false)
 	if err != nil {
 		return "", err
