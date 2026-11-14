@@ -15,6 +15,7 @@ import (
 // TestDuration covers О-4, ИР-1, Т-2, КП-1, КП-40, КП-41.
 func TestDuration(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range []struct{ text, size string }{
 		{"3/4", "3/4"},
@@ -35,6 +36,7 @@ func TestDuration(t *testing.T) {
 	} {
 		t.Run(c.text, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			got, err := mt(c.text).Duration()
 			require.NoError(t, err)
@@ -47,6 +49,7 @@ func TestDuration(t *testing.T) {
 // the result equals Duration.QuoRem of package duration.
 func TestQuoRem(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range []struct {
 		name, text, v string
@@ -63,6 +66,7 @@ func TestQuoRem(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			m := mt(c.text)
 
@@ -81,6 +85,7 @@ func TestQuoRem(t *testing.T) {
 
 	t.Run("КП-38 unset v", func(t *testing.T) {
 		t.Parallel()
+		defer guard(t)
 
 		quo, rem, err := meter.ThreeFour().QuoRem(duration.Duration{})
 		assertErr(t, err, meter.ErrInvalidArgument, duration.ErrUnset)
@@ -90,6 +95,7 @@ func TestQuoRem(t *testing.T) {
 
 	t.Run("КП-52 quotient 2^200", func(t *testing.T) {
 		t.Parallel()
+		defer guard(t)
 
 		v := durRat(new(big.Rat).SetFrac(big.NewInt(1), pow2(200)))
 
@@ -101,6 +107,7 @@ func TestQuoRem(t *testing.T) {
 
 	t.Run("quotient of 1024/1 by 1/(2^255-1)", func(t *testing.T) {
 		t.Parallel()
+		defer guard(t)
 
 		v := durRat(new(big.Rat).SetFrac(big.NewInt(1), maxComponent()))
 
@@ -108,8 +115,24 @@ func TestQuoRem(t *testing.T) {
 		assertErr(t, err, meter.ErrOutOfRange, fraction.ErrNotRepresentable, duration.ErrOutOfRange)
 	})
 
+	t.Run("order: quotient before remainder", func(t *testing.T) {
+		t.Parallel()
+		defer guard(t)
+
+		// v = 1/(2^127−1) gives a quotient of about 2^81, above math.MaxInt,
+		// and a remainder with a denominator of about 2^347, outside the
+		// range. The quotient is checked first (architecture 4.2).
+		m := meter.MustNewSum(unitParts(kp39Denominators()[:4])...)
+		v := durRat(new(big.Rat).SetFrac(big.NewInt(1), new(big.Int).Sub(pow2(127), big.NewInt(1))))
+
+		_, _, err := m.QuoRem(v)
+		assertErr(t, err, meter.ErrOutOfRange, fraction.ErrNotRepresentable, duration.ErrOutOfRange)
+		assert.NotErrorIs(t, err, fraction.ErrOutOfRange)
+	})
+
 	t.Run("remainder out of range", func(t *testing.T) {
 		t.Parallel()
+		defer guard(t)
 
 		// The size has a denominator of about 2^220 and v = 1/(2^103−1) is
 		// coprime with it, so the quotient fits in int while the remainder

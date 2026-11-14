@@ -24,6 +24,7 @@ func beatAt(m meter.Meter, t duration.Position) (int, duration.Position, error) 
 // in it.
 func TestLocate(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	type place struct {
 		n      int
@@ -52,6 +53,7 @@ func TestLocate(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			m := mt(c.text)
 			at := posT(c.t)
@@ -75,6 +77,7 @@ func TestLocate(t *testing.T) {
 
 	t.Run("КП-16 units without grouping", func(t *testing.T) {
 		t.Parallel()
+		defer guard(t)
 
 		n, offset, err := meter.MustNew(5, 8).UnitAt(pos(1, 4))
 		require.NoError(t, err)
@@ -93,6 +96,7 @@ func TestLocate(t *testing.T) {
 // UnitAt, GroupAt, BeatAt: E-1 → E-2 → E-3 → E-7 → E-10 (architecture 4.2).
 func TestLocateErrors(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	var unset duration.Position
 
@@ -123,6 +127,7 @@ func TestLocateErrors(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			n, offset, err := c.f(mt(c.text), c.t)
 			assertErr(t, err, c.want, c.causes...)
@@ -133,6 +138,7 @@ func TestLocateErrors(t *testing.T) {
 
 	t.Run("offset in range at the same position", func(t *testing.T) {
 		t.Parallel()
+		defer guard(t)
 
 		// The group of 3/4 starts at 0, so the offset is the position itself.
 		n, offset, err := meter.ThreeFour().GroupAt(rangeEdge())
@@ -160,6 +166,7 @@ func beatStart(m meter.Meter, n int) (duration.Position, error)  { return m.Beat
 // UnitStart, GroupStart, BeatStart.
 func TestStart(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range []struct {
 		name, text string
@@ -182,6 +189,7 @@ func TestStart(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			got, err := c.f(mt(c.text), c.n)
 			require.NoError(t, err)
@@ -207,6 +215,7 @@ func TestStart(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			got, err := c.f(mt(c.text), c.n)
 			assertErr(t, err, c.want)
@@ -220,10 +229,12 @@ func TestStart(t *testing.T) {
 // offset 0; locating the middle of the element gives n.
 func TestLocateAgreesWithLists(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, m := range corpus() {
 		t.Run(m.String(), func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			checkLocate(t, "unit", noErr(m.Units()), func(n int) (duration.Position, error) { return m.UnitStart(n) },
 				func(p duration.Position) (int, duration.Position, error) { return m.UnitAt(p) })

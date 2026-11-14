@@ -108,10 +108,12 @@ var kindCases = []kindCase{
 // КП-50, КП-51.
 func TestKind(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range kindCases {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			m := mt(c.text)
 
@@ -144,10 +146,12 @@ func TestKind(t *testing.T) {
 // TestBeatDivision covers О-9, ИР-11, Т-6, КП-13, КП-30, КП-32.
 func TestBeatDivision(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range kindCases {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			div, sub, err := mt(c.text).BeatDivision()
 
@@ -174,10 +178,12 @@ func TestBeatDivision(t *testing.T) {
 // name of the kind in the English-language tradition.
 func TestKindName(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range kindCases {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			m := mt(c.text)
 
@@ -210,10 +216,12 @@ func TestKindName(t *testing.T) {
 // with E-3, and a kind without beats occurs only without grouping.
 func TestKindConsistency(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, m := range corpus() {
 		t.Run(m.String(), func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			kind, err := m.Kind()
 			_, rerr := m.RussianKind()

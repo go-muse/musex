@@ -19,6 +19,7 @@ func maxIntText() string { return strconv.Itoa(math.MaxInt) }
 // of checks of New (architecture 4.2, 4.4).
 func TestNew(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	ok := []struct {
 		name string
@@ -41,6 +42,7 @@ func TestNew(t *testing.T) {
 	for _, c := range ok {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			m, err := meter.New(c.n, c.d)
 			require.NoError(t, err)
@@ -77,6 +79,7 @@ func TestNew(t *testing.T) {
 	for _, c := range fail {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			m, err := meter.New(c.n, c.d)
 			assertErr(t, err, c.want)
@@ -89,6 +92,7 @@ func TestNew(t *testing.T) {
 // checks of NewAdditive.
 func TestNewAdditive(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	ok := []struct {
 		name    string
@@ -108,6 +112,7 @@ func TestNewAdditive(t *testing.T) {
 	for _, c := range ok {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			m, err := meter.NewAdditive(c.addends, c.d)
 			require.NoError(t, err)
@@ -145,6 +150,7 @@ func TestNewAdditive(t *testing.T) {
 	for _, c := range fail {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			m, err := meter.NewAdditive(c.addends, c.d)
 			assertErr(t, err, c.want)
@@ -157,6 +163,7 @@ func TestNewAdditive(t *testing.T) {
 // order of checks of NewSum.
 func TestNewSum(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	ok := []struct {
 		name    string
@@ -175,6 +182,7 @@ func TestNewSum(t *testing.T) {
 	for _, c := range ok {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			parts := mts(c.parts...)
 
@@ -191,6 +199,7 @@ func TestNewSum(t *testing.T) {
 
 	t.Run("КП-39 four parts are in range", func(t *testing.T) {
 		t.Parallel()
+		defer guard(t)
 
 		_, err := meter.NewSum(unitParts(kp39Denominators()[:4])...)
 		assert.NoError(t, err)
@@ -217,13 +226,14 @@ func TestNewSum(t *testing.T) {
 		{"513+512 units", mts("513/8", "512/8"), meter.ErrTooMany, nil},
 		{"КП-39 five parts", unitParts(kp39Denominators()), meter.ErrOutOfRange, []error{fraction.ErrOutOfRange}},
 		{"order: E-2 part before E-8", []meter.Meter{mt("1024/8"), mt("1/4"), unset}, meter.ErrInvalidArgument, nil},
-		{"order: E-2 count before part", []meter.Meter{unset}, meter.ErrInvalidArgument, nil},
+		{"one unset part", []meter.Meter{unset}, meter.ErrInvalidArgument, nil},
 		{"order: E-8 before E-10", kp39TooMany(), meter.ErrTooMany, nil},
 	}
 
 	for _, c := range fail {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			m, err := meter.NewSum(c.parts...)
 			assertErr(t, err, c.want, c.causes...)
@@ -249,6 +259,7 @@ func kp39TooMany() []meter.Meter {
 // TestNewSymbol covers О-1, П-2, КП-1, КП-27.
 func TestNewSymbol(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range []struct {
 		name     string
@@ -261,6 +272,7 @@ func TestNewSymbol(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			m, err := meter.NewSymbol(c.s)
 			require.NoError(t, err)
@@ -281,6 +293,7 @@ func TestNewSymbol(t *testing.T) {
 	for _, s := range []meter.Symbol{0, 3, 255} {
 		t.Run("КП-27 invalid "+strconv.Itoa(int(s)), func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			m, err := meter.NewSymbol(s)
 			assertErr(t, err, meter.ErrInvalidArgument)
@@ -293,6 +306,7 @@ func TestNewSymbol(t *testing.T) {
 // created by О-1 and are the same on every call.
 func TestReadyMade(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range []struct {
 		name string
@@ -314,6 +328,7 @@ func TestReadyMade(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			got := c.f()
 			assert.True(t, got.IsSet())

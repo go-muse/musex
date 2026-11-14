@@ -15,6 +15,7 @@ import (
 // order of checks of WithGrouping.
 func TestWithGrouping(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range []struct {
 		name, text string
@@ -40,6 +41,7 @@ func TestWithGrouping(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			m := mt(c.text)
 
@@ -83,6 +85,7 @@ func TestWithGrouping(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			got, err := c.m.WithGrouping(c.groups...)
 			assertErr(t, err, c.want)
@@ -103,6 +106,7 @@ func baseOf(text string) string {
 // TestResetGrouping covers О-7, КП-42.
 func TestResetGrouping(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range []struct{ text, want string }{
 		{"5/8[2+3]", "5/8"},
@@ -118,6 +122,7 @@ func TestResetGrouping(t *testing.T) {
 	} {
 		t.Run(c.text, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			got, err := mt(c.text).ResetGrouping()
 			require.NoError(t, err)
@@ -128,6 +133,7 @@ func TestResetGrouping(t *testing.T) {
 
 	t.Run("unset", func(t *testing.T) {
 		t.Parallel()
+		defer guard(t)
 
 		got, err := meter.Meter{}.ResetGrouping()
 		assertErr(t, err, meter.ErrUnset)
@@ -139,6 +145,7 @@ func TestResetGrouping(t *testing.T) {
 // architecture 4.9 (lexicographic, 2 before 3).
 func TestGroupingVariants(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range []struct {
 		units int
@@ -155,6 +162,7 @@ func TestGroupingVariants(t *testing.T) {
 	} {
 		t.Run("КП-23 "+itoa(c.units), func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			got, err := meter.GroupingVariants(c.units)
 			require.NoError(t, err)
@@ -164,6 +172,7 @@ func TestGroupingVariants(t *testing.T) {
 
 	t.Run("against an independent enumeration", func(t *testing.T) {
 		t.Parallel()
+		defer guard(t)
 
 		for n := 2; n <= 27; n++ {
 			got, err := meter.GroupingVariants(n)
@@ -174,6 +183,7 @@ func TestGroupingVariants(t *testing.T) {
 
 	t.Run("КП-23 27 gives 816 variants", func(t *testing.T) {
 		t.Parallel()
+		defer guard(t)
 
 		got, err := meter.GroupingVariants(27)
 		require.NoError(t, err)
@@ -182,6 +192,7 @@ func TestGroupingVariants(t *testing.T) {
 
 	t.Run("max is MaxGroupingVariants", func(t *testing.T) {
 		t.Parallel()
+		defer guard(t)
 
 		assert.Equal(t, 1024, meter.MaxGroupingVariants)
 		assert.Equal(t, 1024, meter.MaxUnits)
@@ -202,6 +213,7 @@ func TestGroupingVariants(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			r := fast(t, func() result[[][]int] {
 				v, err := meter.GroupingVariants(c.units)
@@ -218,6 +230,7 @@ func TestGroupingVariants(t *testing.T) {
 // number of units, independent of its grouping.
 func TestMeterGroupingVariants(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range []struct {
 		text  string
@@ -234,6 +247,7 @@ func TestMeterGroupingVariants(t *testing.T) {
 	} {
 		t.Run(c.text, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			got, err := mt(c.text).GroupingVariants()
 			require.NoError(t, err)
@@ -252,6 +266,7 @@ func TestMeterGroupingVariants(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			got, err := c.m.GroupingVariants()
 			assertErr(t, err, c.want)

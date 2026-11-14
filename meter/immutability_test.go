@@ -15,9 +15,11 @@ import (
 // does not change the value.
 func TestArgumentsAreNotKept(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	t.Run("NewAdditive", func(t *testing.T) {
 		t.Parallel()
+		defer guard(t)
 
 		addends := []int{3, 2, 3}
 		m := meter.MustNewAdditive(addends, 8)
@@ -32,6 +34,7 @@ func TestArgumentsAreNotKept(t *testing.T) {
 
 	t.Run("WithGrouping", func(t *testing.T) {
 		t.Parallel()
+		defer guard(t)
 
 		groups := []int{3, 2, 2}
 		m := meter.MustNew(7, 8).MustWithGrouping(groups...)
@@ -43,6 +46,7 @@ func TestArgumentsAreNotKept(t *testing.T) {
 
 	t.Run("NewSum", func(t *testing.T) {
 		t.Parallel()
+		defer guard(t)
 
 		parts := mts("2/4", "3/8")
 		m := meter.MustNewSum(parts...)
@@ -54,6 +58,7 @@ func TestArgumentsAreNotKept(t *testing.T) {
 
 	t.Run("UnmarshalText", func(t *testing.T) {
 		t.Parallel()
+		defer guard(t)
 
 		text := []byte("5/8[2+3]")
 
@@ -70,6 +75,7 @@ func TestArgumentsAreNotKept(t *testing.T) {
 // change the value or the next results.
 func TestResultsAreOwned(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	m := mt("7/8[3+2+2]")
 	sum := mt("2/4+3/8")
@@ -136,6 +142,7 @@ func TestResultsAreOwned(t *testing.T) {
 // dst[:len(dst)] and appends after it, also when dst has spare capacity.
 func TestAppendText(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	dst := make([]byte, 3, 64)
 	copy(dst, "ab:")
@@ -158,6 +165,7 @@ func TestAppendText(t *testing.T) {
 // failing calls and after the panics of Must variants.
 func TestInputsUnchangedOnError(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	m := mt("5/8")
 	want := m

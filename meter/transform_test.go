@@ -3,6 +3,7 @@ package meter_test
 import (
 	"math"
 	"math/big"
+	"slices"
 	"testing"
 
 	"github.com/go-muse/musex/common/fraction"
@@ -32,6 +33,7 @@ var (
 // КП-20б, КП-20в and architecture 4.12: the result has the same structure.
 func TestChangeRecord(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range []struct {
 		name     string
@@ -102,6 +104,7 @@ func TestChangeRecord(t *testing.T) {
 	} {
 		t.Run(c.to.name+" "+c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			in := mt(c.in)
 
@@ -120,6 +123,7 @@ func TestChangeRecord(t *testing.T) {
 // table 2.4.1 and the order of checks of the To… methods (architecture 4.2).
 func TestChangeRecordErrors(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range []struct {
 		name string
@@ -141,7 +145,8 @@ func TestChangeRecordErrors(t *testing.T) {
 		{"КП-32 5/8+1/8", toSimple, "5/8+1/8", meter.ErrUndefined},
 		{"КП-32 7/8+2/8", toSimple, "7/8+2/8", meter.ErrUndefined},
 		{"5/8+7/8", toSimple, "5/8+7/8", meter.ErrUndefined},
-		{"order: E-4 before E-5", toSimple, "5/8+2/4", meter.ErrNoCommonDenominator},
+		{"order: E-4 before E-5", toSimple, "5/8+1/4", meter.ErrNoCommonDenominator},
+		{"different denominators without grouping", toSimple, "5/8+2/4", meter.ErrNoCommonDenominator},
 
 		// ToAdditive.
 		{"КП-31 2/4+3/8", toAdditive, "2/4+3/8", meter.ErrNoCommonDenominator},
@@ -164,10 +169,11 @@ func TestChangeRecordErrors(t *testing.T) {
 		{"КП-32 (4+4)/8 group of four", toSum, "(4+4)/8", meter.ErrUndefined},
 		{"КП-32 5/8[5]", toSum, "5/8[5]", meter.ErrUndefined},
 		{"5/8[1+4] group of four", toSum, "5/8[1+4]", meter.ErrUndefined},
-		{"order: E-3 before E-5", toSum, "13/8", meter.ErrGroupingRequired},
+		{"КП-30 13/8", toSum, "13/8", meter.ErrGroupingRequired},
 	} {
 		t.Run(c.to.name+" "+c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			got, err := c.to.f(mt(c.in))
 			assertErr(t, err, c.want)
@@ -178,6 +184,7 @@ func TestChangeRecordErrors(t *testing.T) {
 	for _, to := range toAll {
 		t.Run(to.name+" unset", func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			got, err := to.f(meter.Meter{})
 			assertErr(t, err, meter.ErrUnset)
@@ -192,6 +199,7 @@ func TestChangeRecordErrors(t *testing.T) {
 // requested form is returned as it is.
 func TestChangeRecordProperties(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	inForm := map[string]func(meter.Meter) bool{
 		"ToNumeric":  func(m meter.Meter) bool { return noErr(m.Form()) != meter.FormSymbol },
@@ -204,6 +212,7 @@ func TestChangeRecordProperties(t *testing.T) {
 	for _, m := range corpus() {
 		t.Run(m.String(), func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			for _, to := range toAll {
 				got, err := to.f(m)
@@ -230,6 +239,7 @@ func TestChangeRecordProperties(t *testing.T) {
 // Shorter.
 func TestShorter(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range []struct{ name, in, want string }{
 		{"КП-21 3/4", "3/4", "3/8"},
@@ -245,6 +255,7 @@ func TestShorter(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			got, err := mt(c.in).Shorter()
 			require.NoError(t, err)
@@ -260,13 +271,15 @@ func TestShorter(t *testing.T) {
 	}{
 		{"КП-52 denominator MaxInt", meter.MustNew(1, math.MaxInt), meter.ErrOutOfRange, nil},
 		{"denominator 2^62", meter.MustNew(3, 1<<62), meter.ErrOutOfRange, nil},
-		{"order: denominator before range in a sum", meter.MustNewSum(meter.MustNew(1, 1<<62), meter.MustNew(1, 3)),
+		{"denominator above MaxInt in a sum", meter.MustNewSum(meter.MustNew(1, 1<<62), meter.MustNew(1, 3)),
 			meter.ErrOutOfRange, nil},
+		{"order: denominator before range in a sum", shorterBothViolations(), meter.ErrOutOfRange, nil},
 		{"sum out of range", sumNearRange(), meter.ErrOutOfRange, []error{fraction.ErrOutOfRange}},
 		{"unset", meter.Meter{}, meter.ErrUnset, nil},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			got, err := c.m.Shorter()
 			assertErr(t, err, c.want, c.causes...)
@@ -280,35 +293,94 @@ func TestShorter(t *testing.T) {
 // starts of the units are in range, while the size of Shorter has the
 // denominator 2P, outside the range of common/fraction.
 func sumNearRange() meter.Meter {
-	dens := kp39Denominators()[:4]
+	return meter.MustNewSum(unitParts(nearRangeDenominators(kp39Denominators()[:4]))...)
+}
 
+// shorterBothViolations is a sum like sumNearRange with a part 1/MaxInt:
+// Shorter would double that denominator above math.MaxInt and also give a
+// size outside the range of common/fraction. The denominator is checked
+// first, so E-10 wraps nothing (architecture 4.2, 4.12).
+func shorterBothViolations() meter.Meter {
+	return meter.MustNewSum(unitParts(nearRangeDenominators([]int{math.MaxInt, mersenne(61), mersenne(59), mersenne(53)}))...)
+}
+
+// nearRangeDenominators appends to odd pairwise coprime denominators the
+// smallest odd denominator coprime with them that brings their product into
+// [2^254, 2^255).
+func nearRangeDenominators(dens []int) []int {
 	product := big.NewInt(1)
 	for _, d := range dens {
 		product.Mul(product, big.NewInt(int64(d)))
 	}
 
 	low := new(big.Int).Div(new(big.Int).Add(pow2(254), new(big.Int).Sub(product, big.NewInt(1))), product)
-	if low.Bit(0) == 0 {
-		low.Add(low, big.NewInt(1))
+	d := coprimeOdd(low, product)
+
+	if new(big.Int).Mul(product, d).Cmp(maxComponent()) > 0 {
+		panic("nearRangeDenominators: no denominator found")
 	}
 
-	for d := low; ; d.Add(d, big.NewInt(2)) {
-		if new(big.Int).GCD(nil, nil, d, product).Cmp(big.NewInt(1)) != 0 {
-			continue
-		}
+	return append(slices.Clone(dens), int(d.Int64()))
+}
 
-		p := new(big.Int).Mul(product, d)
-		if p.Cmp(maxComponent()) > 0 {
-			panic("sumNearRange: no denominator found")
-		}
-
-		return meter.MustNewSum(unitParts(append(dens, int(d.Int64())))...)
+// coprimeOdd returns the smallest odd number not less than from that is
+// coprime with product.
+func coprimeOdd(from, product *big.Int) *big.Int {
+	d := new(big.Int).Set(from)
+	if d.Bit(0) == 0 {
+		d.Add(d, big.NewInt(1))
 	}
+
+	for new(big.Int).GCD(nil, nil, d, product).Cmp(big.NewInt(1)) != 0 {
+		d.Add(d, big.NewInt(2))
+	}
+
+	return d
+}
+
+// longerOutOfRange returns 3/2 + 1/(2q₁) + … + 1/(2q₅) with odd pairwise
+// coprime q: q₁…q₄ are 2^61−1, 2^59−1, 2^53−1, 2^47−1, and q₅ is the
+// smallest odd number coprime with them for which the size of Longer,
+// 3 + 1/q₁ + … + 1/q₅, has a numerator above 2^255−1. The numerator of that
+// sum is even, so the size of the input, half of it, and the starts of its
+// units are in range (architecture 4.12: Longer, E-10).
+func longerOutOfRange() meter.Meter {
+	qs := []*big.Int{
+		big.NewInt(int64(mersenne(61))), big.NewInt(int64(mersenne(59))),
+		big.NewInt(int64(mersenne(53))), big.NewInt(int64(mersenne(47))),
+	}
+
+	q4 := big.NewInt(1)
+	for _, q := range qs {
+		q4.Mul(q4, q)
+	}
+
+	inRange := func(q5 *big.Int) bool {
+		longer := big.NewRat(3, 1)
+		for _, q := range append(slices.Clone(qs), q5) {
+			longer.Add(longer, new(big.Rat).SetFrac(big.NewInt(1), q))
+		}
+
+		return longer.Num().CmpAbs(maxComponent()) <= 0 && longer.Denom().Cmp(maxComponent()) <= 0
+	}
+
+	q5 := coprimeOdd(new(big.Int).Div(maxComponent(), new(big.Int).Mul(big.NewInt(3), q4)), q4)
+	for inRange(q5) {
+		q5 = coprimeOdd(new(big.Int).Add(q5, big.NewInt(2)), q4)
+	}
+
+	parts := []meter.Meter{meter.MustNew(3, 2)}
+	for _, q := range append(qs, q5) {
+		parts = append(parts, meter.MustNew(1, int(2*q.Int64())))
+	}
+
+	return meter.MustNewSum(parts...)
 }
 
 // TestLonger covers О-14, Т-10, КП-21, КП-32.
 func TestLonger(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range []struct{ name, in, want string }{
 		{"КП-21 3/4", "3/4", "3/2"},
@@ -324,6 +396,7 @@ func TestLonger(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			got, err := mt(c.in).Longer()
 			require.NoError(t, err)
@@ -332,20 +405,23 @@ func TestLonger(t *testing.T) {
 	}
 
 	for _, c := range []struct {
-		name string
-		m    meter.Meter
-		want error
+		name   string
+		m      meter.Meter
+		want   error
+		causes []error
 	}{
-		{"КП-32 3/1", mt("3/1"), meter.ErrUndefined},
-		{"КП-32 4/3", mt("4/3"), meter.ErrUndefined},
-		{"odd denominator in a part", mt("2/4+2/3"), meter.ErrUndefined},
-		{"unset", meter.Meter{}, meter.ErrUnset},
+		{"КП-32 3/1", mt("3/1"), meter.ErrUndefined, nil},
+		{"КП-32 4/3", mt("4/3"), meter.ErrUndefined, nil},
+		{"odd denominator in a part", mt("2/4+2/3"), meter.ErrUndefined, nil},
+		{"unset", meter.Meter{}, meter.ErrUnset, nil},
+		{"size out of range", longerOutOfRange(), meter.ErrOutOfRange, []error{fraction.ErrOutOfRange}},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			got, err := c.m.Longer()
-			assertErr(t, err, c.want)
+			assertErr(t, err, c.want, c.causes...)
 			assert.Equal(t, meter.Meter{}, got)
 		})
 	}
@@ -355,6 +431,7 @@ func TestLonger(t *testing.T) {
 // Longer gives ToNumeric of the input.
 func TestShorterLonger(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, m := range corpus() {
 		short, err := m.Shorter()
@@ -369,6 +446,7 @@ func TestShorterLonger(t *testing.T) {
 // of WithDenominator.
 func TestWithDenominator(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range []struct {
 		name, in string
@@ -387,6 +465,7 @@ func TestWithDenominator(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			got, err := mt(c.in).WithDenominator(c.d)
 			require.NoError(t, err)
@@ -409,6 +488,7 @@ func TestWithDenominator(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			got, err := c.m.WithDenominator(c.d)
 			assertErr(t, err, c.want)
@@ -421,6 +501,7 @@ func TestWithDenominator(t *testing.T) {
 // checks of FromDuration.
 func TestFromDuration(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range []struct {
 		size string
@@ -437,6 +518,7 @@ func TestFromDuration(t *testing.T) {
 	} {
 		t.Run("КП-22 "+c.size+" in "+itoa(c.d), func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			got, err := meter.FromDuration(durT(c.size), c.d)
 			require.NoError(t, err)
@@ -465,6 +547,7 @@ func TestFromDuration(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			got, err := meter.FromDuration(c.size, c.d)
 			assertErr(t, err, c.want, c.causes...)

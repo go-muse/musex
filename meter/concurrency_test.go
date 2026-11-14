@@ -15,6 +15,7 @@ import (
 // meaningful under go test -race.
 func TestConcurrentReads(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	shared := mts("7/8[3+2+2]", "2/4+3/8", "C", "5/8", "(3+2+3)/8")
 	want := make([]string, len(shared))

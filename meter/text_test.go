@@ -39,10 +39,12 @@ var textCases = []struct{ in, text string }{
 // 4.15: the canonical text without spaces, with C| for ¢.
 func TestString(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range textCases {
 		t.Run(c.text, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			m := mt(c.in)
 			assert.Equal(t, c.text, m.String())
@@ -59,6 +61,7 @@ func TestString(t *testing.T) {
 
 	t.Run("КП-47 unset", func(t *testing.T) {
 		t.Parallel()
+		defer guard(t)
 
 		var u meter.Meter
 		assert.Equal(t, "Meter(unset)", u.String())
@@ -75,6 +78,7 @@ func TestString(t *testing.T) {
 
 	t.Run("large denominator", func(t *testing.T) {
 		t.Parallel()
+		defer guard(t)
 
 		assert.Equal(t, "1/"+maxIntText(), meter.MustNew(1, math.MaxInt).String())
 	})
@@ -85,10 +89,12 @@ func TestString(t *testing.T) {
 // to the standard one.
 func TestParse(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range textCases {
 		t.Run(c.text, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			got, err := meter.Parse(c.text)
 			require.NoError(t, err)
@@ -112,6 +118,7 @@ func TestParse(t *testing.T) {
 	} {
 		t.Run("accepts "+c.text, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			got, err := meter.Parse(c.text)
 			require.NoError(t, err)
@@ -126,6 +133,7 @@ func TestParse(t *testing.T) {
 // dependency sentinels.
 func TestParseErrors(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	const huge = "99999999999999999999" // 20 digits, greater than math.MaxInt
 
@@ -184,7 +192,7 @@ func TestParseErrors(t *testing.T) {
 		{"КП-52 denominator of 20 digits", "3/" + huge, meter.ErrOutOfRange, nil},
 		{"denominator above MaxInt", "1/" + overMaxInt, meter.ErrOutOfRange, nil},
 		{"order: denominator before numerator", huge + "/" + huge, meter.ErrOutOfRange, nil},
-		{"order: denominator before grouping", "3/" + huge + "[1+2]", meter.ErrOutOfRange, nil},
+		{"order: denominator before grouping", "3/" + huge + "[1+1]", meter.ErrOutOfRange, nil},
 		{"order: first denominator from the left", "1025/8+3/" + huge, meter.ErrOutOfRange, nil},
 		{"КП-39 sum out of range", kp39Text(), meter.ErrOutOfRange, []error{fraction.ErrOutOfRange}},
 		{"order: E-8 before E-10 of the sum", kp39TooManyText(), meter.ErrTooMany, nil},
@@ -196,6 +204,7 @@ func TestParseErrors(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			m, err := meter.Parse(c.text)
 			assertErrExact(t, err, c.want, c.causes...)
@@ -229,10 +238,12 @@ func kp39TooManyText() string {
 // MarshalText, keeps the receiver on error, and a nil receiver gives E-2.
 func TestUnmarshalText(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range textCases {
 		t.Run(c.text, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			m := mt(c.in)
 			data := noErr(m.MarshalText())
@@ -245,6 +256,7 @@ func TestUnmarshalText(t *testing.T) {
 
 	t.Run("the receiver is kept on error", func(t *testing.T) {
 		t.Parallel()
+		defer guard(t)
 
 		got := meter.SixEight()
 		err := got.UnmarshalText([]byte("6/8 "))
@@ -254,15 +266,21 @@ func TestUnmarshalText(t *testing.T) {
 
 	t.Run("nil receiver", func(t *testing.T) {
 		t.Parallel()
+		defer guard(t)
 
 		var p *meter.Meter
 
 		err := p.UnmarshalText([]byte("3/4"))
 		assertErr(t, err, meter.ErrInvalidArgument)
+
+		err = p.UnmarshalText([]byte("x"))
+		assertErr(t, err, meter.ErrInvalidArgument)
+		assert.NotErrorIs(t, err, meter.ErrInvalidText, "order: E-2 before the grammar")
 	})
 
 	t.Run("replaces a set value", func(t *testing.T) {
 		t.Parallel()
+		defer guard(t)
 
 		got := meter.SixEight()
 		require.NoError(t, got.UnmarshalText([]byte("C|")))
@@ -274,6 +292,7 @@ func TestUnmarshalText(t *testing.T) {
 // unset field is omitted with omitzero.
 func TestJSON(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	type bar struct {
 		Meter    meter.Meter `json:"meter"`
@@ -321,6 +340,7 @@ func excerpt(x string) string {
 // for one class of error depends only on the first 67 bytes of the input.
 func TestParseErrorText(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range []struct {
 		name, text string
@@ -337,6 +357,7 @@ func TestParseErrorText(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			_, err := meter.Parse(c.text)
 			require.Error(t, err)
@@ -372,6 +393,7 @@ func TestParseErrorText(t *testing.T) {
 	} {
 		t.Run("class "+c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			small, large := c.build(1<<10), c.build(1<<20)
 			require.Len(t, small, 1<<10)
@@ -401,6 +423,7 @@ func TestParseErrorText(t *testing.T) {
 // record are different.
 func TestTextRoundTrip(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	seen := map[string]meter.Meter{}
 

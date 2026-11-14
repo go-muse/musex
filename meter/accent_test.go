@@ -20,6 +20,7 @@ const (
 // TestStrongBeats covers О-10, ИР-8, П-7, Т-7, КП-14, КП-43, КП-50.
 func TestStrongBeats(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range []struct {
 		name, text string
@@ -42,6 +43,7 @@ func TestStrongBeats(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			strong, relative, err := mt(c.text).StrongBeats()
 			require.NoError(t, err)
@@ -54,6 +56,7 @@ func TestStrongBeats(t *testing.T) {
 // TestUnitWeights covers О-10, ИР-8, П-7, Т-7, КП-15.
 func TestUnitWeights(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range []struct {
 		name, text string
@@ -71,6 +74,7 @@ func TestUnitWeights(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			got, err := mt(c.text).UnitWeights()
 			require.NoError(t, err)
@@ -83,6 +87,7 @@ func TestUnitWeights(t *testing.T) {
 // order of checks of WeightAt: E-1 → E-2 → E-3 → E-7, without E-10.
 func TestWeightAt(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range []struct {
 		name, text string
@@ -104,6 +109,7 @@ func TestWeightAt(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			got, err := mt(c.text).WeightAt(c.t)
 			require.NoError(t, err)
@@ -128,6 +134,7 @@ func TestWeightAt(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			got, err := mt(c.text).WeightAt(c.t)
 			assertErr(t, err, c.want, c.causes...)
@@ -142,6 +149,7 @@ func TestWeightAt(t *testing.T) {
 // and off-unit between starts.
 func TestAccentConsistency(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, m := range corpus() {
 		if !noErr(m.HasGrouping()) {
@@ -150,6 +158,7 @@ func TestAccentConsistency(t *testing.T) {
 
 		t.Run(m.String(), func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			groups := noErr(m.Groups())
 			strong, relative := noErr2(m.StrongBeats())

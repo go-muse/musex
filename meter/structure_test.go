@@ -16,6 +16,7 @@ import (
 // follow each other from the start of the measure, with or without grouping.
 func TestUnits(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range []struct {
 		text  string
@@ -36,6 +37,7 @@ func TestUnits(t *testing.T) {
 	} {
 		t.Run(c.text, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			m := mt(lastWord(c.text))
 
@@ -51,6 +53,7 @@ func TestUnits(t *testing.T) {
 // order of checks of Unit and UnitWritten.
 func TestUnit(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range []struct {
 		text    string
@@ -74,6 +77,7 @@ func TestUnit(t *testing.T) {
 	} {
 		t.Run(c.text, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			m := mt(lastWord(c.text))
 
@@ -98,6 +102,7 @@ func TestUnit(t *testing.T) {
 	for _, text := range []string{"2/4+3/8", "2/4+2/3", "(2+3)/8+2/4"} {
 		t.Run("КП-31 "+text, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			m := mt(text)
 
@@ -116,6 +121,7 @@ func TestUnit(t *testing.T) {
 // of the number of units, and its absence.
 func TestStandardGrouping(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	threes := func(n int) []int {
 		out := make([]int, n)
@@ -158,6 +164,7 @@ func TestStandardGrouping(t *testing.T) {
 	} {
 		t.Run(c.text, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			m := mt(c.text)
 			assert.Equal(t, c.grouping != nil, noErr(m.HasGrouping()))
@@ -180,6 +187,7 @@ func TestStandardGrouping(t *testing.T) {
 // TestGroups covers О-6, ИР-4, Т-4, КП-6, КП-43, КП-44, КП-50.
 func TestGroups(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range []struct {
 		name, text string
@@ -208,6 +216,7 @@ func TestGroups(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			m := mt(c.text)
 			assert.True(t, noErr(m.HasGrouping()))
@@ -222,6 +231,7 @@ func TestGroups(t *testing.T) {
 // TestGroupsWritten covers О-6, П-3, КП-8, КП-33.
 func TestGroupsWritten(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range []struct {
 		text    string
@@ -243,6 +253,7 @@ func TestGroupsWritten(t *testing.T) {
 	} {
 		t.Run(c.text, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			got, err := mt(lastWord(c.text)).GroupsWritten()
 			if c.written == nil {
@@ -261,6 +272,7 @@ func TestGroupsWritten(t *testing.T) {
 // TestBeats covers О-8, ИР-5, П-1, П-12, Т-5, КП-7, КП-10, КП-41, КП-50, КП-51.
 func TestBeats(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range []struct {
 		name, text string
@@ -303,6 +315,7 @@ func TestBeats(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			m := mt(c.text)
 
@@ -317,6 +330,7 @@ func TestBeats(t *testing.T) {
 // TestBeatsWritten covers О-8, П-3, КП-8, КП-33, КП-51.
 func TestBeatsWritten(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, c := range []struct {
 		text    string
@@ -340,6 +354,7 @@ func TestBeatsWritten(t *testing.T) {
 	} {
 		t.Run(c.text, func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			got, err := mt(c.text).BeatsWritten()
 			if c.written == nil {
@@ -360,6 +375,7 @@ func TestBeatsWritten(t *testing.T) {
 // grouping has units but no groups and no beats.
 func TestGroupingRequired(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	ops := []struct {
 		name string
@@ -391,6 +407,7 @@ func TestGroupingRequired(t *testing.T) {
 		for _, op := range ops {
 			t.Run(text+" "+op.name, func(t *testing.T) {
 				t.Parallel()
+				defer guard(t)
 
 				assertErr(t, op.call(mt(text)), meter.ErrGroupingRequired)
 			})
@@ -398,6 +415,7 @@ func TestGroupingRequired(t *testing.T) {
 
 		t.Run(text+" units are available", func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			m := mt(text)
 			assert.False(t, noErr(m.HasGrouping()))
@@ -408,6 +426,7 @@ func TestGroupingRequired(t *testing.T) {
 	for _, text := range []string{"5/8", "7/8", "8/8"} {
 		t.Run(text+" ToSum", func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			assertErr(t, e(mt(text).ToSum()), meter.ErrGroupingRequired)
 		})
@@ -415,6 +434,7 @@ func TestGroupingRequired(t *testing.T) {
 
 	t.Run("5/8+2/4 Groups", func(t *testing.T) {
 		t.Parallel()
+		defer guard(t)
 
 		assertErr(t, e(mt("5/8+2/4").Groups()), meter.ErrGroupingRequired)
 	})
@@ -431,10 +451,12 @@ func endOf(m meter.Meter) duration.Position {
 // counts are the lengths of the lists.
 func TestStructureSequence(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	for _, m := range corpus() {
 		t.Run(m.String(), func(t *testing.T) {
 			t.Parallel()
+			defer guard(t)
 
 			size := m.MustDuration()
 
@@ -496,6 +518,7 @@ func checkSequence(t *testing.T, name string, spans []meter.Span, size duration.
 // 1024/MaxInt follow each other within range.
 func TestUnitsOfLargeDenominator(t *testing.T) {
 	t.Parallel()
+	defer guard(t)
 
 	m := meter.MustNew(1024, math.MaxInt)
 	units := noErr(m.Units())
