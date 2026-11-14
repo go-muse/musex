@@ -245,6 +245,10 @@ func TestOtherPackagesUnset(t *testing.T) {
 		{"FromSeconds duration", func() error { _, err := tempo.FromSeconds(q, duration.Duration{}, sec(1, 1)); return err }},
 		{"FromBars", func() error { _, err := tempo.FromBars(q, duration.Duration{}, fi(1), sec(1, 1)); return err }},
 		{"FromBarsPerMinute", func() error { _, err := tempo.FromBarsPerMinute(q, dur(1, 1), fraction.Fraction{}); return err }},
+		{"FromBarsPerMinute bar length", func() error {
+			_, err := tempo.FromBarsPerMinute(q, duration.Duration{}, fi(60))
+			return err
+		}},
 		{"SolveBars", func() error { _, err := tempo.SolveBars(fraction.Fraction{}, fi(1), sec(1, 1)); return err }},
 		{"SolveBarUnits", func() error { _, err := tempo.SolveBarUnits(fi(1), fraction.Fraction{}, sec(1, 1)); return err }},
 		{"SolveBPM", func() error { _, err := tempo.SolveBPM(fi(1), fraction.Fraction{}, sec(1, 1)); return err }},
