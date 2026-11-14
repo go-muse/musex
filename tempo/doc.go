@@ -128,12 +128,15 @@
 // is from l.
 //
 // Every error of a parse function, of its Must variant, and of UnmarshalText
-// with a non-nil receiver quotes the rejected text: in full if it is at most
-// 64 bytes long, otherwise its longest prefix of whole UTF-8 characters of at
-// most 64 bytes followed by "...". The message consists only of the texts of
-// the wrapped sentinels and this excerpt, is at most 512 bytes long, and for a
-// given operation and error depends on the input only through its first 67
-// bytes. Parsing takes time linear in the length of the text.
+// with a non-nil receiver quotes the rejected text. The only exception is the
+// error of ParseIndication and MustParseIndication for an unset list, which
+// wraps [ErrInvalidArgument] without a quotation, like the error of
+// UnmarshalText for a nil receiver. The quotation gives the text in full if it
+// is at most 64 bytes long, otherwise its longest prefix of whole UTF-8
+// characters of at most 64 bytes followed by "...". The message consists only
+// of the texts of the wrapped sentinels and this excerpt, is at most 512 bytes
+// long, and for a given operation and error depends on the input only through
+// its first 67 bytes. Parsing takes time linear in the length of the text.
 //
 // # Unset values
 //
