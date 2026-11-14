@@ -46,7 +46,8 @@
 - [x] **28. [`duration`](guide/packages/duration.md)** — exact durations in fractions of a whole note written with note values from maxima to 1024th, dots, tuplets, and ties, positions as offsets from a chosen origin, notation of a duration as one note or tied notes, normal subdivision, and explicit quantization to a grid.
 - [x] **28a. [`meter`](guide/packages/meter.md)** — time signatures in four forms — simple, symbol, compound numerator, and sum — with their size, units and beats, standard and explicit groupings, kinds in two traditions, beat division, strong beats, places in a measure, and changes of the record and the unit.
 - [ ] **28b. `measure`** — measure grids with pickups and meter changes, and positions given as a measure and an offset.
-- [ ] **28c. `tempo`** — tempo markings as a beat unit and BPM, and durations in seconds.
+- [x] **28c. [`tempo/term`](guide/packages/tempo/term.md)** — tempo terms such as Largo and Allegro with their places, groups, reference ranges of beats per minute, and meanings, in eight built-in lists from the English and Russian Wikipedia and six metronome scales or in lists made by the user, and finding the terms that fit a number of beats.
+- [x] **28c. [`tempo`](guide/packages/tempo.md)** — tempo markings as a beat unit and BPM, compared by record or by speed, exact seconds of durations and explicit rounding to system time, unit conversion and metric modulation, the formula of bars, units, BPM, and time, approximate markings and tempo ranges, the Maelzel metronome scale, and tempo indications that join a term with a marking.
 - [ ] **28d. `tempomap`** — tempo changes and fermata holds over time, and conversion between seconds, positions, and measures.
 - [ ] **28e. `ticks`** — MusicXML divisions, MIDI ticks, and MIDI tempo for durations, positions, and tempo maps.
 - [ ] **29. `chord`** — chords as groups of notes that sound together, without durations.
