@@ -135,6 +135,30 @@ func TestLargeOutOfRange(t *testing.T) {
 		return build(t, mt("4/4"), steps...)
 	}
 
+	// tinyEnd is 3/1 with bar 2 of length 1/(2²⁵⁴+1) aligned to the end: the
+	// start 3 and the end of bar 2 are in range, the shift 3 − 1/(2²⁵⁴+1) is
+	// not.
+	tinyEnd := func(t *testing.T) measure.Grid {
+		l := durRat(ratFrac(big.NewInt(1), new(big.Int).Add(pow2(254), big.NewInt(1))))
+
+		return build(t, mt("3/1"), func(g measure.Grid) (measure.Grid, error) { return g.WithLength(2, l, measure.AlignEnd) })
+	}
+
+	// nearOne is 4/4 with bar 1 of length 2²⁵⁴/(2²⁵⁴+1): at the offset 1/3,
+	// Elapsed (2²⁵⁴+1)/(3·2²⁵⁴) and Remaining (2²⁵⁵−1)/(3·2²⁵⁴+3) are outside
+	// the range, while the position and the offset are in it.
+	nearOne := func(t *testing.T) measure.Grid {
+		l := durRat(ratFrac(pow2(254), new(big.Int).Add(pow2(254), big.NewInt(1))))
+
+		return build(t, mt("4/4"), func(g measure.Grid) (measure.Grid, error) { return g.WithLength(1, l, measure.AlignStart) })
+	}
+
+	// tinyPos is 1/(2²⁵⁵−1): the count 1 + 4·t is outside the range.
+	tinyPos := func() duration.Position { return posRat(ratFrac(big.NewInt(1), fraction.MaxComponentBig())) }
+
+	// countNearOne is 1 + 2⁻²⁵⁴: in 4/4 its offset 2⁻²⁵⁶ is outside the range.
+	countNearOne := func() fraction.Fraction { return fracRat(ratAdd(big.NewRat(1, 1), ratFrac(big.NewInt(1), pow2(254)))) }
+
 	tests := []struct {
 		name   string
 		call   func(t *testing.T) error
@@ -156,6 +180,15 @@ func TestLargeOutOfRange(t *testing.T) {
 		{"Part.End", func(t *testing.T) error {
 			return e(measure.Part{Address: ad(1, "0"), Start: posRat(ratInt(pow2(254))), Duration: huge}.End())
 		}, []error{fraction.ErrOutOfRange}},
+		{"shift of a bar aligned to the end: Bar", func(t *testing.T) error { return e(tinyEnd(t).Bar(2)) }, []error{fraction.ErrOutOfRange}},
+		{"shift of a bar aligned to the end: BarAt", func(t *testing.T) error { return e(tinyEnd(t).BarAt(pos("3"))) }, []error{fraction.ErrOutOfRange}},
+		{"shift of a bar aligned to the end: Bars", func(t *testing.T) error { return e(tinyEnd(t).Bars(1, 2)) }, []error{fraction.ErrOutOfRange}},
+		{"Elapsed by its value", func(t *testing.T) error { return e(nearOne(t).Elapsed(ad(1, "1/3"))) }, []error{fraction.ErrOutOfRange}},
+		{"Remaining by its value", func(t *testing.T) error { return e(nearOne(t).Remaining(pos("1/3"))) }, []error{fraction.ErrOutOfRange}},
+		{"TstampAt by its value", func(t *testing.T) error { return e(gridOf(t, "4/4").TstampAt(1, tinyPos())) }, []error{fraction.ErrOutOfRange}},
+		{"CountAt by its value", func(t *testing.T) error { return e(gridOf(t, "4/4").CountAt(1, tinyPos())) }, []error{fraction.ErrOutOfRange}},
+		{"MeterCountOffset by its value", func(t *testing.T) error { return e(measure.MeterCountOffset(mt("4/4"), countNearOne())) }, []error{fraction.ErrOutOfRange}},
+		{"CountOffset by its value", func(t *testing.T) error { return e(gridOf(t, "4/4").CountOffset(1, countNearOne())) }, []error{fraction.ErrOutOfRange}},
 		{"КП-48 insert math.MaxInt bars", func(t *testing.T) error { return e(gridOf(t, "4/4;2:3/4").InsertBars(1, math.MaxInt)) }, nil},
 		{"insert past math.MaxInt in a finite grid", func(t *testing.T) error { return e(gridOf(t, "4/4;bars:4").InsertBars(5, math.MaxInt-3)) }, nil},
 		{"КП-48 add to N = math.MaxInt", func(t *testing.T) error { return e(gridOf(t, "4/4;bars:9223372036854775807").AddBars(1)) }, nil},

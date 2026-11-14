@@ -300,9 +300,7 @@ func TestTextParseErrors(t *testing.T) {
 			assertErrExact(t, uerr, tt.err, tt.causes...)
 			assert.True(t, u.Equal(before), "UnmarshalText does not change the receiver on error")
 
-			if uerr != nil && err != nil {
-				assert.Equal(t, err.Error(), uerr.Error(), "the same text as Parse")
-			}
+			assertParseMessage(t, uerr, tt.text)
 		})
 	}
 
