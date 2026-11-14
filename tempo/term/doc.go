@@ -110,11 +110,13 @@
 // encoding.TextUnmarshaler, because a name identifies a term only within a
 // named list.
 //
-// Every error of List.Parse and of its Must variant quotes the rejected name:
-// in full if it is at most 64 bytes long, otherwise its longest prefix of
-// whole UTF-8 characters of at most 64 bytes followed by "...". The message
-// consists only of the text of the sentinel and this excerpt, is at most 512
-// bytes long, and depends on the input only through its first 67 bytes.
+// Every error of List.Parse and of its Must variant quotes the rejected name,
+// except the error for an unset list, which wraps [ErrUnset] without a
+// quotation. The quotation gives the name in full if it is at most 64 bytes
+// long, otherwise its longest prefix of whole UTF-8 characters of at most 64
+// bytes followed by "...". The message consists only of the text of the
+// sentinel and this excerpt, is at most 512 bytes long, and depends on the
+// input only through its first 67 bytes.
 //
 // # Unset values
 //
