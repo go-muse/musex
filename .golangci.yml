@@ -247,14 +247,18 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/letter$
+            - github.com/go-muse/musex/alteration$
             - github.com/go-muse/musex/spelling$
             - github.com/go-muse/musex/octave$
             - github.com/go-muse/musex/pitch$
+            - github.com/go-muse/musex/pitchclass$
             - github.com/go-muse/musex/system$
             - github.com/go-muse/musex/cents$
             - github.com/go-muse/musex/tuning$
-            - github.com/go-muse/musex/notation$
             - github.com/go-muse/musex/settings$
+            - github.com/go-muse/musex/common/rounding$
+            - github.com/go-muse/musex/frequency$
         midi:
           list-mode: strict
           files:
