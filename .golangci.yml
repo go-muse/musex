@@ -412,6 +412,14 @@ linters:
             - github.com/go-muse/musex/common/fraction$
             - github.com/go-muse/musex/duration$
             - github.com/go-muse/musex/meter$
+        tempo-term:
+          list-mode: strict
+          files:
+            - "**/tempo/term/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/common/fraction$
         tempo:
           list-mode: strict
           files:
@@ -419,8 +427,10 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/rounding$
             - github.com/go-muse/musex/common/fraction$
             - github.com/go-muse/musex/duration$
+            - github.com/go-muse/musex/tempo/term$
         tempomap:
           list-mode: strict
           files:
