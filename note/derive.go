@@ -191,20 +191,29 @@ func (n Note) walk(op string, c context, to Note, rule system.SpellingRule) (ite
 
 	r := newReader(op)
 
-	sys, err := positionSystem(op, r, c, notes[:])
-	if err != nil {
-		return nil, err
-	}
-
+	// In an In form, the unset settings of the explicit source, then of the
+	// own source of n, are reported before any name is checked; the reader
+	// then gives positionSystem the explicit settings without a second read.
 	var ownSys *system.System
 
-	if c.in && n.src != nil {
-		own, err := r.read(n.src)
-		if err != nil {
+	if c.in {
+		if _, err := c.frame(r, n); err != nil {
 			return nil, err
 		}
 
-		ownSys = own.System()
+		if n.src != nil {
+			own, err := r.read(n.src)
+			if err != nil {
+				return nil, err
+			}
+
+			ownSys = own.System()
+		}
+	}
+
+	sys, err := positionSystem(op, r, c, notes[:])
+	if err != nil {
+		return nil, err
 	}
 
 	from, last := n.pitch(), to.pitch()
