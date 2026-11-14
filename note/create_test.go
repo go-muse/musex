@@ -360,6 +360,11 @@ func TestParse(t *testing.T) {
 			extra: []error{notation.ErrParse},
 		},
 		{
+			name:  "out of range in parsing: no E-8, the reason of the dependency",
+			make:  func() (note.Note, error) { return note.ParsePitch(s, "C99999999999999999999") },
+			extra: []error{number.ErrOutOfRange},
+		},
+		{
 			name: "inadmissible name found by settings",
 			make: func() (note.Note, error) { return note.Parse(ly, "cqs") },
 			err:  note.ErrInadmissible, extra: []error{settings.ErrInadmissible, system.ErrInadmissible},

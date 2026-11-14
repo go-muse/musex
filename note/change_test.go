@@ -669,13 +669,7 @@ func TestChangeReadsTheSource(t *testing.T) {
 			n := mk(t, spelling.C(), 4, ct(0), own)
 			before := own.reads()
 			require.NoError(t, f.call(&n, explicit))
-			if f.name == "NaturalizeWrittenIn" {
-				// A natural name is always admissible (architecture 6.6.2);
-				// the contract does not say whether the own source is read.
-				assert.LessOrEqual(t, own.reads()-before, int64(1), "the own source is read at most once")
-			} else {
-				assert.EqualValues(t, 1, own.reads()-before, "the own source is read once")
-			}
+			assert.EqualValues(t, 1, own.reads()-before, "the own source is read once")
 			assert.EqualValues(t, 1, explicit.reads(), "the explicit source is read once")
 			assert.True(t, n.Source() == settings.Source(own), "the note stays bound to its own source")
 		})
@@ -761,34 +755,22 @@ func TestMustReturnsTheReceiver(t *testing.T) {
 	}
 }
 
-// TestChangeNilPointer checks the nil *Note: every changing method returns
-// E-1 and its Must variant panics with it (architecture 6.1).
+// TestChangeNilPointer checks the nil *Note for every changing method of
+// architecture 6.6.2 and 6.7: the plain form returns E-1 and the Must variant
+// panics with it (architecture 6.1).
 func TestChangeNilPointer(t *testing.T) {
 	t.Parallel()
 
-	s := std()
-	calls := map[string]struct {
-		op   func(n *note.Note) error
-		must func(n *note.Note)
-	}{
-		"Respell":    {func(n *note.Note) error { return n.Respell(spelling.D()) }, func(n *note.Note) { n.MustRespell(spelling.D()) }},
-		"SetOctave":  {func(n *note.Note) error { return n.SetOctave(oct(1)) }, func(n *note.Note) { n.MustSetOctave(oct(1)) }},
-		"SetCents":   {func(n *note.Note) error { return n.SetCents(ct(1)) }, func(n *note.Note) { n.MustSetCents(ct(1)) }},
-		"Raise":      {func(n *note.Note) error { return n.Raise() }, func(n *note.Note) { n.MustRaise() }},
-		"Shift":      {func(n *note.Note) error { return n.Shift(1) }, func(n *note.Note) { n.MustShift(1) }},
-		"Move":       {func(n *note.Note) error { return n.Move(1, system.Sharps()) }, func(n *note.Note) { n.MustMove(1, system.Sharps()) }},
-		"MoveIn":     {func(n *note.Note) error { return n.MoveIn(s, 1, system.Sharps()) }, func(n *note.Note) { n.MustMoveIn(s, 1, system.Sharps()) }},
-		"SetSource":  {func(n *note.Note) error { return n.SetSource(s) }, func(n *note.Note) { n.MustSetSource(s) }},
-		"Unbind":     {func(n *note.Note) error { return n.Unbind() }, func(n *note.Note) { n.MustUnbind() }},
-		"RemoveOct":  {func(n *note.Note) error { return n.RemoveOctave() }, func(n *note.Note) { n.MustRemoveOctave() }},
-		"Naturalize": {func(n *note.Note) error { return n.Naturalize() }, func(n *note.Note) { n.MustNaturalize() }},
-	}
-	for name, c := range calls {
-		t.Run(name, func(t *testing.T) {
+	for _, mu := range mutators() {
+		t.Run(mu.name, func(t *testing.T) {
 			t.Parallel()
 			var p *note.Note
-			assertErr(t, c.op(p), note.ErrUnset)
-			assertPanicErr(t, func() { c.must(p) }, note.ErrUnset)
+			var err error
+			if !assertNoPanic(t, func() { err = mu.op(p) }) {
+				return
+			}
+			assertErr(t, err, note.ErrUnset)
+			assertPanicErr(t, func() { mu.must(p) }, note.ErrUnset)
 		})
 	}
 }

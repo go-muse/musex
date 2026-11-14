@@ -98,9 +98,7 @@ func TestAtomicityByGroup(t *testing.T) {
 			t.Parallel()
 			checkAtomic(t, note.Note{}, mu.op, mu.must, note.ErrUnset)
 		})
-		// NaturalizeWrittenIn: the contract does not say whether the own
-		// source is read (a natural name is always admissible).
-		if mu.group != "N" && mu.name != "NaturalizeWrittenIn" {
+		if mu.group != "N" {
 			t.Run(mu.name+" E-3 own source returns unset settings", func(t *testing.T) {
 				t.Parallel()
 				checkAtomic(t, onStale(spelling.C(), 4)(t), mu.op, mu.must, note.ErrUnsetSettings, settings.ErrUnset)
@@ -189,6 +187,12 @@ func TestAtomicityByReason(t *testing.T) {
 		{"NaturalizeWrittenIn inadmissible input", onPitch(spelling.CDoubleSharp(), 4, ct(5), nil), func(n *note.Note) error { return n.NaturalizeWrittenIn(k25) }, func(n *note.Note) { n.MustNaturalizeWrittenIn(k25) }, note.ErrInadmissible, []error{system.ErrInadmissible}},
 		{"Move inadmissible input", onInadmissible(), func(n *note.Note) error { return n.Move(1, system.Sharps()) }, func(n *note.Note) { n.MustMove(1, system.Sharps()) }, note.ErrInadmissible, []error{system.ErrInadmissible}},
 		{"MoveIn inadmissible in own", onPitch(spelling.C(), 4, ct(5), s), func(n *note.Note) error { return n.MoveIn(s24, 1, system.Sharps()) }, func(n *note.Note) { n.MustMoveIn(s24, 1, system.Sharps()) }, note.ErrInadmissible, []error{system.ErrInadmissible}},
+		{"RespellWrittenIn input inadmissible in the explicit set", onPitch(spelling.CDoubleSharp(), 4, ct(5), nil), func(n *note.Note) error { return n.RespellWrittenIn(k25, spelling.D()) }, func(n *note.Note) { n.MustRespellWrittenIn(k25, spelling.D()) }, note.ErrInadmissible, []error{system.ErrInadmissible}},
+		{"RaiseWrittenByAlterationIn input inadmissible in the explicit set", onPitch(spelling.CDoubleSharp(), 4, ct(5), nil), func(n *note.Note) error { return n.RaiseWrittenByAlterationIn(k25, alt(-1, 1)) }, func(n *note.Note) { n.MustRaiseWrittenByAlterationIn(k25, alt(-1, 1)) }, note.ErrInadmissible, []error{system.ErrInadmissible}},
+		{"SetAlterationWrittenIn input inadmissible in the explicit set", onPitch(spelling.CDoubleSharp(), 4, ct(5), nil), func(n *note.Note) error { return n.SetAlterationWrittenIn(k25, alt(0, 1)) }, func(n *note.Note) { n.MustSetAlterationWrittenIn(k25, alt(0, 1)) }, note.ErrInadmissible, []error{system.ErrInadmissible}},
+		{"MoveIn input inadmissible in the explicit set", onPitch(spelling.CDoubleSharp(), 4, ct(5), nil), func(n *note.Note) error { return n.MoveIn(k25, 1, system.Sharps()) }, func(n *note.Note) { n.MustMoveIn(k25, 1, system.Sharps()) }, note.ErrInadmissible, []error{system.ErrInadmissible}},
+		{"SetWrittenOctaveIn name inadmissible in the own set", onInadmissible(), func(n *note.Note) error { return n.SetWrittenOctaveIn(s, oct(3)) }, func(n *note.Note) { n.MustSetWrittenOctaveIn(s, oct(3)) }, note.ErrInadmissible, []error{system.ErrInadmissible}},
+		{"SetWrittenNumberIn name inadmissible in the own set", onInadmissible(), func(n *note.Note) error { return n.SetWrittenNumberIn(s, 3) }, func(n *note.Note) { n.MustSetWrittenNumberIn(s, 3) }, note.ErrInadmissible, []error{system.ErrInadmissible}},
 		{"SetSource inadmissible in the new set", onPitch(cHalf(), 4, ct(5), s24), func(n *note.Note) error { return n.SetSource(s) }, func(n *note.Note) { n.MustSetSource(s) }, note.ErrInadmissible, []error{system.ErrInadmissible}},
 		{"SetSourceWritten inadmissible in the new set", onPitch(cHalf(), 4, ct(5), s24), func(n *note.Note) error { return n.SetSourceWritten(s) }, func(n *note.Note) { n.MustSetSourceWritten(s) }, note.ErrInadmissible, []error{system.ErrInadmissible}},
 

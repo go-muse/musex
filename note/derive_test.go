@@ -8,6 +8,7 @@ import (
 	"github.com/go-muse/musex/alteration"
 	"github.com/go-muse/musex/note"
 	"github.com/go-muse/musex/octave"
+	"github.com/go-muse/musex/pitchclass"
 	"github.com/go-muse/musex/settings"
 	"github.com/go-muse/musex/spelling"
 	"github.com/go-muse/musex/system"
@@ -129,6 +130,9 @@ func TestEnharmonics(t *testing.T) {
 			{"In unset settings", func() (iter.Seq[note.Note], error) {
 				return n.EnharmonicsIn(&unsetSource{}, alteration.Sharp())
 			}, note.ErrUnsetSettings, []error{settings.ErrUnset}},
+			{"In name inadmissible in the explicit set", func() (iter.Seq[note.Note], error) {
+				return mk(t, spelling.CDoubleSharp(), 4, ct(0), nil).EnharmonicsIn(setK25(), alteration.DoubleSharp())
+			}, note.ErrInadmissible, []error{system.ErrInadmissible}},
 		}
 		for _, c := range cases {
 			seq, err := c.call()
@@ -299,6 +303,32 @@ func TestWalk(t *testing.T) {
 		_, err = third.WalkIn(s, far, classRule())
 		assertErr(t, err, note.ErrInadmissible, system.ErrInadmissible)
 
+		// lastRule gives an inadmissible name only to the last class of the
+		// cycle (class 11 is A𝄪): the walk C4...B4 of N = 12 notes fails on
+		// its 12th note, so every one of the first N names must be checked.
+		lastRule := system.MustCustomSpelling(func(sys *system.System, c pitchclass.Class) spelling.Spelling {
+			if c.Number() == 11 {
+				return spelling.ADoubleSharp()
+			}
+			return sys.MustSpell(c, system.Sharps())
+		})
+		b4 := mk(t, spelling.B(), 4, ct(0), k25)
+		_, err = third.WalkIn(s, b4, lastRule)
+		assertErr(t, err, note.ErrInadmissible, system.ErrInadmissible)
+		assertPanicErr(t, func() { third.MustWalkIn(s, b4, lastRule) }, note.ErrInadmissible)
+
+		// Longer than N: the same class comes again and fails as well.
+		_, err = third.WalkIn(s, far, lastRule)
+		assertErr(t, err, note.ErrInadmissible, system.ErrInadmissible)
+
+		// Eleven notes C4...A♯4 never reach class 11: the walk works.
+		aSharp4 := mk(t, spelling.ASharp(), 4, ct(0), k25)
+		got11 := collect(third.MustWalkIn(s, aSharp4, lastRule))
+		assert.Len(t, got11, 11)
+		for _, x := range got11 {
+			assert.True(t, x.Source() == settings.Source(k25), "the own source is kept")
+		}
+
 		// The same walk of an unbound note works.
 		free := mk(t, spelling.C(), 4, ct(0), nil)
 		got := collect(free.MustWalkIn(s, mk(t, spelling.E(), 4, ct(0), nil), classRule()))
@@ -349,6 +379,9 @@ func TestWalk(t *testing.T) {
 			{"In unset settings", func() (iter.Seq[note.Note], error) {
 				return c4.WalkIn(&unsetSource{}, e4, system.Sharps())
 			}, note.ErrUnsetSettings, []error{settings.ErrUnset}},
+			{"In name inadmissible in the explicit set", func() (iter.Seq[note.Note], error) {
+				return mk(t, spelling.CDoubleSharp(), 4, ct(0), nil).WalkIn(setK25(), mk(t, spelling.E(), 4, ct(0), nil), system.Sharps())
+			}, note.ErrInadmissible, []error{system.ErrInadmissible}},
 		}
 		for _, c := range cases {
 			seq, err := c.call()
@@ -360,6 +393,53 @@ func TestWalk(t *testing.T) {
 		}
 		assertPanicErr(t, func() { c4.MustWalk(note.Note{}, system.Sharps()) }, note.ErrUnset)
 		assertPanicErr(t, func() { c4.MustWalkIn(nil, e4, system.Sharps()) }, note.ErrUnset)
+	})
+}
+
+// TestEnharmonicsReads covers KP-2 for OP-25: the own source once; the In
+// form reads the explicit source once and the own source of a bound note once
+// (6.3), or one read when they are one source.
+func TestEnharmonicsReads(t *testing.T) {
+	t.Parallel()
+
+	t.Run("own source", func(t *testing.T) {
+		t.Parallel()
+		own := newCounting(std())
+		n := mk(t, spelling.C(), 4, ct(0), own)
+		before := own.reads()
+		_, err := n.Enharmonics(alteration.DoubleSharp())
+		require.NoError(t, err)
+		assert.EqualValues(t, 1, own.reads()-before)
+	})
+
+	t.Run("In with two sources", func(t *testing.T) {
+		t.Parallel()
+		own, explicit := newCounting(std()), newCounting(std())
+		n := mk(t, spelling.C(), 4, ct(0), own)
+		before := own.reads()
+		_, err := n.EnharmonicsIn(explicit, alteration.DoubleSharp())
+		require.NoError(t, err)
+		assert.EqualValues(t, 1, explicit.reads())
+		assert.EqualValues(t, 1, own.reads()-before)
+	})
+
+	t.Run("In with one source", func(t *testing.T) {
+		t.Parallel()
+		own := newCounting(std())
+		n := mk(t, spelling.C(), 4, ct(0), own)
+		before := own.reads()
+		_, err := n.EnharmonicsIn(own, alteration.DoubleSharp())
+		require.NoError(t, err)
+		assert.EqualValues(t, 1, own.reads()-before)
+	})
+
+	t.Run("In of an unbound note", func(t *testing.T) {
+		t.Parallel()
+		explicit := newCounting(std())
+		n := mk(t, spelling.C(), 4, ct(0), nil)
+		_, err := n.EnharmonicsIn(explicit, alteration.DoubleSharp())
+		require.NoError(t, err)
+		assert.EqualValues(t, 1, explicit.reads())
 	})
 }
 

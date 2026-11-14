@@ -126,9 +126,12 @@ func FuzzCopy(f *testing.F) {
 		if n != before {
 			t.Fatalf("changing a copy changed the original")
 		}
+		// And the other way round: changing the original leaves the copy.
+		copied := m
+		_ = n.SetCents(cents.MustFromInt(-1))
 		_ = n.RemoveOctave()
-		if n.IsValid() && m.IsValid() && n.HasOctave() {
-			t.Fatalf("RemoveOctave failed on the original")
+		if m != copied {
+			t.Fatalf("changing the original changed a copy")
 		}
 	})
 }
