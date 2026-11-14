@@ -195,6 +195,8 @@ func TestParseErrors(t *testing.T) {
 		{"order: denominator before grouping", "3/" + huge + "[1+1]", meter.ErrOutOfRange, nil},
 		{"order: first denominator from the left", "1025/8+3/" + huge, meter.ErrOutOfRange, nil},
 		{"КП-39 sum out of range", kp39Text(), meter.ErrOutOfRange, []error{fraction.ErrOutOfRange}},
+		{"unit start out of range, size in range", sumText(unitStartInput()), meter.ErrOutOfRange,
+			[]error{fraction.ErrOutOfRange}},
 		{"order: E-8 before E-10 of the sum", kp39TooManyText(), meter.ErrTooMany, nil},
 		{"wrong grouping", "5/8[2+2]", meter.ErrInvalidArgument, nil},
 		{"grouping of the symbol", "C[3+2]", meter.ErrInvalidArgument, nil},
