@@ -309,7 +309,7 @@ func TestBuiltInScenarios(t *testing.T) {
 		assert.Equal(t, between(120, 156), g1)
 		assert.Equal(t, between(120, 144), g2)
 
-		// Same spelling in different case in two metronome lists.
+		// The same name in two metronome lists is two words.
 		assert.False(t, term.GermanMetronome().MustParse("Largo").Equal(term.FrenchMetronome().MustParse("Largo")))
 	})
 
