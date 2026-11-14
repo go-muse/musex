@@ -32,7 +32,9 @@ func assertCatalog(t *testing.T, want []*instrument.Preset, c *instrument.Catalo
 		wantNames[i] = w.Name()
 		assert.True(t, w.Equal(got[i]), "preset %d: want %v, got %v", i, w, got[i])
 	}
-	assert.Equal(t, wantNames, names(c))
+	// Collecting an empty sequence gives a nil slice; only the names and
+	// their order are compared.
+	assert.Equal(t, wantNames, append(make([]string, 0, len(want)), names(c)...))
 }
 
 // ОП-25, ОП-27, П-8, К-11, К-23, А 4.6.
