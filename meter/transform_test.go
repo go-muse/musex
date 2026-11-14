@@ -275,6 +275,8 @@ func TestShorter(t *testing.T) {
 			meter.ErrOutOfRange, nil},
 		{"order: denominator before range in a sum", shorterBothViolations(), meter.ErrOutOfRange, nil},
 		{"sum out of range", sumNearRange(), meter.ErrOutOfRange, []error{fraction.ErrOutOfRange}},
+		{"unit start out of range, size in range", sumOf(shorterStartInput()), meter.ErrOutOfRange,
+			[]error{fraction.ErrOutOfRange}},
 		{"unset", meter.Meter{}, meter.ErrUnset, nil},
 	} {
 		t.Run(c.name, func(t *testing.T) {
@@ -415,6 +417,8 @@ func TestLonger(t *testing.T) {
 		{"odd denominator in a part", mt("2/4+2/3"), meter.ErrUndefined, nil},
 		{"unset", meter.Meter{}, meter.ErrUnset, nil},
 		{"size out of range", longerOutOfRange(), meter.ErrOutOfRange, []error{fraction.ErrOutOfRange}},
+		{"unit start out of range, size in range", sumOf(longerStartInput()), meter.ErrOutOfRange,
+			[]error{fraction.ErrOutOfRange}},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()

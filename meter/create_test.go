@@ -225,6 +225,8 @@ func TestNewSum(t *testing.T) {
 		{"КП-28 1024/8+1/4", mts("1024/8", "1/4"), meter.ErrTooMany, nil},
 		{"513+512 units", mts("513/8", "512/8"), meter.ErrTooMany, nil},
 		{"КП-39 five parts", unitParts(kp39Denominators()), meter.ErrOutOfRange, []error{fraction.ErrOutOfRange}},
+		{"unit start out of range, size in range", partMeters(unitStartInput()), meter.ErrOutOfRange,
+			[]error{fraction.ErrOutOfRange}},
 		{"order: E-2 part before E-8", []meter.Meter{mt("1024/8"), mt("1/4"), unset}, meter.ErrInvalidArgument, nil},
 		{"one unset part", []meter.Meter{unset}, meter.ErrInvalidArgument, nil},
 		{"order: E-8 before E-10", kp39TooMany(), meter.ErrTooMany, nil},
