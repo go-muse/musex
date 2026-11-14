@@ -25,7 +25,7 @@
 - [x] **13. [`notation`](guide/packages/notation.md)** — parsing and formatting note names and pitches.
 - [x] **14. [`settings`](guide/packages/settings.md)** — a compatible set of system, tuning, and notation settings.
 - [ ] **15. `instrument`** — instrument settings, presets, and pitch range.
-- [ ] **16. `note`** — a note connected to its musical settings.
+- [x] **16. [`note`](guide/packages/note.md)** — a note connected to its musical settings.
 - [ ] **17. `midi`** — conversion between pitches and MIDI note numbers.
 
 ## 2. Important functionality

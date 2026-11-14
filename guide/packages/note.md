@@ -75,4 +75,6 @@ A note has no duration and no place in time. Durations, onsets, and ties belong 
 
 Reading one note is safe for concurrent use, provided reading its source is; changing a note needs exclusive access to it, and different copies can be changed at the same time.
 
-[Package reference](https://pkg.go.dev/github.com/go-muse/musex/note) · [Go examples](../../note/example_test.go)
+First released in v0.23.0.
+
+[Package reference](https://pkg.go.dev/github.com/go-muse/musex/note) · [Go examples](../../note/example_test.go) · [Roadmap](../../ROADMAP.md)
