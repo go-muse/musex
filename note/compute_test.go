@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-muse/musex/cents"
 	"github.com/go-muse/musex/letter"
+	"github.com/go-muse/musex/notation"
 	"github.com/go-muse/musex/note"
 	"github.com/go-muse/musex/octave"
 	"github.com/go-muse/musex/octave/number"
@@ -576,14 +577,19 @@ func TestComputeControlExamples(t *testing.T) {
 		t.Parallel()
 		n := mk(t, spelling.CSharp(), 4, ct(0), stdNotation("romance-italian"))
 		_, err := n.Format()
-		assertErr(t, err, nil)
+		assertErr(t, err, nil, notation.ErrNoOctave)
 		got, err := n.FormatName()
 		require.NoError(t, err, "a name-only notation formats the name")
 		assert.Equal(t, stdNotation("romance-italian").MustFormat(spelling.CSharp()), got)
 
 		x := mk(t, spi(letter.C, 3), 4, ct(0), std())
 		_, err = x.Format()
-		assertErr(t, err, nil)
+		assertErr(t, err, nil, notation.ErrUnwritableName)
+		_, err = x.FormatName()
+		assertErr(t, err, nil, notation.ErrUnwritableName)
+		y := mkName(t, spi(letter.C, 3), ct(0), std())
+		_, err = y.Format()
+		assertErr(t, err, nil, notation.ErrUnwritableName)
 	})
 
 	t.Run("format of an inadmissible name", func(t *testing.T) {

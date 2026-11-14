@@ -178,6 +178,14 @@ func TestSettings(t *testing.T) {
 		assert.EqualValues(t, 1, src.reads()-before)
 	})
 
+	t.Run("no E-5 for an inadmissible name", func(t *testing.T) {
+		t.Parallel()
+		n, src := inadmissibleNote(t)
+		got, err := n.Settings()
+		require.NoError(t, err, "OP-11 has no E-5")
+		assert.Same(t, src.Settings(), got)
+	})
+
 	t.Run("failures", func(t *testing.T) {
 		t.Parallel()
 		unbound := mk(t, spelling.C(), 4, ct(0), nil)
