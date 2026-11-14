@@ -89,10 +89,11 @@
 // # Errors
 //
 // Errors are classified with errors.Is; their texts are not part of the API.
-// Each error of this package matches exactly one of ErrUnset, ErrEmptyName,
-// ErrUnsetPitch, ErrInadmissible, ErrInverted, ErrIncompatible, ErrNoRange,
-// ErrDuplicateName, ErrNotFound and ErrNoPitches. ErrInadmissible also
-// matches system.ErrInadmissible. A refused retuning is an *IncompatibleError
+// Each error with a cause of this package matches exactly one of ErrUnset,
+// ErrEmptyName, ErrUnsetPitch, ErrInadmissible, ErrInverted,
+// ErrIncompatible, ErrNoRange, ErrDuplicateName, ErrNotFound and
+// ErrNoPitches; an error of a dependency (below) matches none of them unless
+// its own cause is one. ErrInadmissible also matches system.ErrInadmissible. A refused retuning is an *IncompatibleError
 // with the report of package settings; it matches ErrIncompatible and
 // settings.ErrIncompatible:
 //
