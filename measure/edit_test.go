@@ -238,8 +238,12 @@ func TestEditSlice(t *testing.T) {
 func TestEditAppend(t *testing.T) {
 	t.Parallel()
 
+	// appendText builds the other grid in the goroutine of this test, while
+	// the table is built, so that a failure of the build stops this test.
 	appendText := func(other string) func(measure.Grid) (measure.Grid, error) {
-		return func(g measure.Grid) (measure.Grid, error) { return g.Append(gridOf(t, other)) }
+		o := gridOf(t, other)
+
+		return func(g measure.Grid) (measure.Grid, error) { return g.Append(o) }
 	}
 
 	runEdits(t, []editCase{

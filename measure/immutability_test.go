@@ -23,6 +23,9 @@ func TestImmutabilityOperations(t *testing.T) {
 
 	type op func(g measure.Grid) error
 
+	// other is built in the goroutine of this test, before the subtests.
+	other := gridOf(t, "3/4;pickup:1/4")
+
 	ops := []struct {
 		name string
 		op   op
@@ -60,7 +63,7 @@ func TestImmutabilityOperations(t *testing.T) {
 		{"DeleteBars 2…3", func(g measure.Grid) error { return e(g.DeleteBars(2, 3)) }},
 		{"Slice 0…0", func(g measure.Grid) error { return e(g.Slice(0, 0)) }},
 		{"Slice 1…3", func(g measure.Grid) error { return e(g.Slice(1, 3)) }},
-		{"Append", func(g measure.Grid) error { return e(g.Append(gridOf(t, "3/4;pickup:1/4"))) }},
+		{"Append", func(g measure.Grid) error { return e(g.Append(other)) }},
 		{"Simplify", func(g measure.Grid) error { return e(g.Simplify()) }},
 		{"Split", func(g measure.Grid) error { return e(g.Split(pos("1/8"), dur("2"))) }},
 		{"SplitBy groups", func(g measure.Grid) error { return e(g.SplitBy(pos("0"), dur("3"), measure.LevelGroups)) }},
