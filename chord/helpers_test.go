@@ -40,9 +40,14 @@ var sentinels = []error{
 // ---------------------------------------------------------------------------
 // Sets of settings and sources (business-spec 1.3).
 
-// std returns the standard settings: a new pointer to an equal set on each
-// call, so two results are two different sources.
+// std returns the standard settings. Two results are equal sets, so
+// settings.SameSource takes them for one source (note П-5а, Р-13); where two
+// notes with the standard settings must be told apart, use stdSource.
 func std() *settings.Settings { return settings.Standard() }
+
+// stdSource returns a new source that gives the standard settings. Each result
+// is its own pointer, so two results are two different sources.
+func stdSource() settings.Source { return newCounting() }
 
 // set19 returns "set 19" (note #requirements 6.1): the 19-position system,
 // 19-EDO rooted at C, A4 at 440 Hz, otherwise standard.
@@ -500,5 +505,57 @@ func sequences(p []note.Note, n int) [][]note.Note {
 		out = append(out, next...)
 		prev = next
 	}
+	return out
+}
+
+// ---------------------------------------------------------------------------
+// Long chords for the stability of the sorts (architecture 5.6, 5.10; ОП-5,
+// ОП-35, К-27). They are longer than 12 notes, where a sort of a short slice
+// may behave as a stable one even when it is not.
+
+// longOrder is a shuffled order of 20 indexes into the records of longBound.
+var longOrder = []int{3, 1, 0, 2, 4, 1, 3, 0, 2, 1, 4, 3, 0, 1, 2, 3, 4, 0, 1, 2}
+
+// longBound returns 20 notes of 5 records (C, C4, C4+5, E4, G4), each bound to
+// its own source with the standard settings: notes of one record are equal by
+// record but told apart by their sources.
+func longBound() []note.Note {
+	records := []func(src settings.Source) note.Note{
+		func(src settings.Source) note.Note { return nn(spelling.C(), src) },
+		func(src settings.Source) note.Note { return pn(spelling.C(), 4, 0, src) },
+		func(src settings.Source) note.Note { return pn(spelling.C(), 4, 5, src) },
+		func(src settings.Source) note.Note { return pn(spelling.E(), 4, 0, src) },
+		func(src settings.Source) note.Note { return pn(spelling.G(), 4, 0, src) },
+	}
+	out := make([]note.Note, 0, len(longOrder))
+	for _, k := range longOrder {
+		out = append(out, records[k](stdSource()))
+	}
+	return out
+}
+
+// longNames returns 20 unbound notes with the names C, E, G in several octaves,
+// with and without octaves and corrections: a rule that compares only the
+// names (byName) finds many of them equal, and they stay distinguishable.
+func longNames() []note.Note {
+	return list(
+		pn(spelling.G(), 5, 0, nil), c4, eNo, pn(spelling.C(), 6, 5, nil), e4,
+		cNo, g4, pn(spelling.E(), 3, 0, nil), c5, pn(spelling.G(), 3, 7, nil),
+		c4p5, e5, pn(spelling.C(), 2, 0, nil), nn(spelling.G(), nil), pn(spelling.E(), 6, 9, nil),
+		c4p30, pn(spelling.G(), 6, 0, nil), pn(spelling.E(), 4, 3, nil), c5p30, pn(spelling.G(), 4, 5, nil),
+	)
+}
+
+// byName compares only the names of the notes, by the agreed order of notes
+// without an octave: C5, C4+5 and C are equal by it.
+func byName(a, b note.Note) (int, error) {
+	return nn(a.Spelling(), nil).Compare(nn(b.Spelling(), nil)), nil
+}
+
+// stableSorted returns a copy of notes sorted stably by cmp: the expectation
+// of a stable sort by its definition.
+func stableSorted(notes []note.Note, cmp func(a, b note.Note) int) []note.Note {
+	out := slices.Clone(notes)
+	slices.SortStableFunc(out, cmp)
 	return out
 }

@@ -471,3 +471,36 @@ func TestRulesSortFuncGetsNotesOfChord(t *testing.T) {
 	}
 	assertChord(t, list(c4, notes[1], g4), c)
 }
+
+func TestOrderStableLong(t *testing.T) {
+	t.Parallel()
+	// ОП-35, К-27: Sort and SortFunc are stable, also for 20 notes.
+	t.Run("Sort", func(t *testing.T) {
+		t.Parallel()
+		notes := longBound()
+		c := mk(t, notes...)
+		require.NoError(t, c.Sort())
+		assertChord(t, stableSorted(notes, note.Note.Compare), c)
+	})
+	t.Run("SortFunc by the names only", func(t *testing.T) {
+		t.Parallel()
+		notes := longNames()
+		c := mk(t, notes...)
+		require.NoError(t, c.SortFunc(byName))
+		assertChord(t, stableSorted(notes, func(a, b note.Note) int { r, _ := byName(a, b); return r }), c)
+	})
+	t.Run("SortFunc by the agreed order, bound notes", func(t *testing.T) {
+		t.Parallel()
+		notes := longBound()
+		c := mk(t, notes...)
+		require.NoError(t, c.SortFunc(byRecord))
+		assertChord(t, stableSorted(notes, note.Note.Compare), c)
+	})
+	t.Run("SortFunc that finds all notes equal", func(t *testing.T) {
+		t.Parallel()
+		notes := longBound()
+		c := mk(t, notes...)
+		require.NoError(t, c.SortFunc(func(note.Note, note.Note) (int, error) { return 0, nil }))
+		assertChord(t, notes, c)
+	})
+}

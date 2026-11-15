@@ -27,8 +27,8 @@ var setOps = []setOp{
 
 func TestSetOpsExamples(t *testing.T) {
 	t.Parallel()
-	st1 := std()
-	st2 := std()
+	st1 := stdSource() // two different sources with the standard settings
+	st2 := stdSource()
 	s19 := set19()
 	c4st1 := pn(c4.Spelling(), 4, 0, st1)
 	c4st2 := pn(c4.Spelling(), 4, 0, st2)

@@ -376,3 +376,13 @@ func TestStringStringer(t *testing.T) {
 	assert.Equal(t, "Chord(unset)", fmt.Sprint(chord.Chord{}))
 	assert.Equal(t, "[]", fmt.Sprint(chord.MustNew()))
 }
+
+func TestReadSortedNotesStableLong(t *testing.T) {
+	t.Parallel()
+	// ОП-5: equal notes keep the record order, also in a chord of 20 notes.
+	notes := longBound()
+	c := mk(t, notes...)
+	before := stateOf(c)
+	assertNotes(t, stableSorted(notes, note.Note.Compare), c.SortedNotes())
+	assertState(t, before, c)
+}
