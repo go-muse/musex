@@ -119,9 +119,3 @@ func toDuration(op string, r *big.Rat) (duration.Duration, error) {
 	// f is positive, so the conversion cannot fail.
 	return duration.MustFromFraction(f), nil
 }
-
-// inRange reports whether r is inside the range of common/fraction.
-func inRange(r *big.Rat) bool {
-	_, err := fraction.FromBigRat(r)
-	return err == nil
-}

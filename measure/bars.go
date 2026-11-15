@@ -1,10 +1,12 @@
 package measure
 
 import (
+	"fmt"
 	"iter"
 	"math"
 	"math/big"
 
+	"github.com/go-muse/musex/common/fraction"
 	"github.com/go-muse/musex/duration"
 	"github.com/go-muse/musex/meter"
 )
@@ -180,13 +182,27 @@ func (g Grid) checkRange(op string, first, last int) error {
 // sequence can be stopped early, iterated again, and iterated concurrently;
 // each iteration starts at first and gives the same values. All failures are
 // reported by Bars itself, before iteration; iteration has no errors. The
-// cost of the call and of each step does not depend on bar numbers.
+// cost of the call does not depend on bar numbers, and each step costs O(1)
+// amortized.
+//
+// The range check is a sufficient condition that does not visit bars. The
+// range is divided into runs of equal length: the longest sequences of
+// adjacent bars of the range with equal lengths. For a run, S is the start
+// of its first bar, L the length of a bar, n the number of bars,
+// F = S + n·L the end of its last bar, and D the least common multiple of
+// the denominators of S and L; K is fraction.MaxComponentBig(). Bars fails
+// if, for some run, (1) S or F is outside the range of common/fraction, or
+// (2) n ≥ 2 and D > K or (F − L)·D > K; or if the shift of a bar of the
+// range is outside the range. After a successful call every bar of the range
+// is representable: each step gives Bar(k) without an error. The check can
+// fail by (2) even when all bars of the range are representable, at values
+// near the limit of the range; such bars are read with Bar. For a run of one
+// bar it is exact, so Bars(k, k) fails exactly when Bar(k) fails.
 //
 // Errors, in this order: ErrUnset for the unset grid; ErrInvalidArgument for
 // a negative first bar, then for first after last; ErrOutsideGrid if g has
 // no bar first, then no bar last; ErrOutOfRange together with
-// fraction.ErrOutOfRange if the end of bar last or the shift of a bar of the
-// range is outside the range of common/fraction.
+// fraction.ErrOutOfRange by the range check above.
 //
 // Example: the bars 1…1<<62 of an open 4/4 grid can be stopped after three
 // bars that start at 0/1, 1/1, and 2/1.
@@ -196,23 +212,10 @@ func (g Grid) Bars(first, last int) (iter.Seq[Bar], error) {
 		return nil, err
 	}
 	fi, li := g.segIndex(first), g.segIndex(last)
-	for i := fi; i <= li; i++ {
-		if g.segs[i].shiftErr {
-			_, err := toFraction(op, g.segs[i].shift)
-			return nil, err
-		}
-		if i > fi && !inRange(g.segs[i].start) {
-			_, err := toFraction(op, g.segs[i].start)
-			return nil, err
-		}
+	if err := g.checkBars(op, first, last, fi, li); err != nil {
+		return nil, err
 	}
 	firstStart := g.barStartRat(first)
-	if _, err := toFraction(op, firstStart); err != nil {
-		return nil, err
-	}
-	if _, err := toFraction(op, g.barEndRat(last)); err != nil {
-		return nil, err
-	}
 	return func(yield func(Bar) bool) {
 		i := fi
 		start := firstStart
@@ -228,6 +231,55 @@ func (g Grid) Bars(first, last int) (iter.Seq[Bar], error) {
 			start = ratAdd(start, s.length)
 		}
 	}, nil
+}
+
+// checkBars checks the range first…last, whose bars are in the segments
+// fi…li, by the sufficient condition of Bars: the shifts of the segments,
+// then every run of equal length.
+func (g Grid) checkBars(op string, first, last, fi, li int) error {
+	for i := fi; i <= li; i++ {
+		if g.segs[i].shiftErr {
+			_, err := toFraction(op, g.segs[i].shift)
+			return err
+		}
+	}
+	limit := fraction.MaxComponentBig()
+	for i := fi; i <= li; {
+		length := g.segs[i].length
+		j := i
+		for j < li && g.segs[j+1].length.Cmp(length) == 0 {
+			j++
+		}
+		runFirst := max(first, g.segs[i].first)
+		runLast := min(last, g.segs[j].last)
+		s := ratAdd(g.segs[i].start, ratMulInt(length, runFirst-g.segs[i].first))
+		n := new(big.Int).Sub(big.NewInt(int64(runLast)), big.NewInt(int64(runFirst)))
+		n.Add(n, big.NewInt(1))
+		f := ratAdd(s, ratMulBigInt(length, n))
+		if _, err := toFraction(op, s); err != nil {
+			return err
+		}
+		if _, err := toFraction(op, f); err != nil {
+			return err
+		}
+		if n.Cmp(big.NewInt(1)) > 0 {
+			d := lcm(s.Denom(), length.Denom())
+			top := ratMulBigInt(ratSub(f, length), d) // an integer
+			if d.Cmp(limit) > 0 || top.Num().Cmp(limit) > 0 {
+				return errCaused(ErrOutOfRange, op, fmt.Errorf(
+					"a bar inside a run of equal length can be outside the range: %w", fraction.ErrOutOfRange))
+			}
+		}
+		i = j + 1
+	}
+	return nil
+}
+
+// lcm returns a new *big.Int equal to the least common multiple of the
+// positive a and b.
+func lcm(a, b *big.Int) *big.Int {
+	g := new(big.Int).GCD(nil, nil, a, b)
+	return new(big.Int).Mul(new(big.Int).Quo(a, g), b)
 }
 
 // MustBars is like Bars but panics with the error of Bars.
