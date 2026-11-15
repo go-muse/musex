@@ -30,7 +30,7 @@
 
 ## 2. Important functionality
 
-- [ ] **18. `interval`** — named intervals, distance, and transposition.
+- [x] **18. [`interval`](guide/packages/interval.md)** — named intervals between names, written pitches, and notes with their direction, size, and quality, transposition, inversion, sums, the line of fifths, positional sizes in a musical system, and the short notation and names in English and Russian.
 - [ ] **19. `degree`** — scale degrees and their names.
 - [ ] **20. `template`** — named and positional mode templates.
 - [ ] **21. `mode`** — mode membership, ordering, and transposition.
