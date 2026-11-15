@@ -27,12 +27,6 @@ The [Roadmap and package guide](ROADMAP.md) lists the planned packages and links
 
 ```mermaid
 flowchart LR
-    subgraph CHORD["Chord"]
-        C1(("Note")) ~~~ C2(("Note")) ~~~ C3(("Note")) ~~~ C4["• • •"]
-    end
-
-    C4 ~~~ I1(("Note")) <-->|"Interval"| I2(("Note"))
-
     subgraph NOTE["Note"]
         subgraph PITCH["Written pitch"]
             SP("Spelling") ~~~ OC("Octave")
@@ -49,6 +43,12 @@ flowchart LR
     end
 
     NOTE -. "reads" .-> SETTINGS
+
+    subgraph CHORD["Chord"]
+        C1(("Note")) ~~~ C2(("Note")) ~~~ C3(("Note")) ~~~ C4["• • •"]
+    end
+
+    I1(("Note")) <-->|"Interval"| I2(("Note"))
 
     classDef note fill:#4f46e5,stroke:#4338ca,color:#ffffff
     classDef setting fill:#0f766e,stroke:#115e59,color:#ffffff
