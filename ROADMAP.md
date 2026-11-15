@@ -50,7 +50,7 @@
 - [x] **28c. [`tempo`](guide/packages/tempo.md)** — tempo markings as a beat unit and BPM, compared by record or by speed, exact seconds of durations and explicit rounding to system time, unit conversion and metric modulation, the formula of bars, units, BPM, and time, approximate markings and tempo ranges, the Maelzel metronome scale, and tempo indications that join a term with a marking.
 - [ ] **28d. `tempomap`** — tempo changes and fermata holds over time, and conversion between seconds, positions, and measures.
 - [ ] **28e. `ticks`** — MusicXML divisions, MIDI ticks, and MIDI tempo for durations, positions, and tempo maps.
-- [ ] **29. `chord`** — chords as groups of notes that sound together, without durations.
+- [x] **29. [`chord`](guide/packages/chord.md)** — chords as groups of notes that sound together, without durations or harmony: notes in their order of record with repeats, membership and equality by record, changes of the notes in place with independent copies, joining, intersecting, and subtracting chords, sorting, and moving all the notes by octaves.
 - [ ] **29a. `event`** — voice elements: a note, chord, or rest with its duration, ties, fermatas, arpeggios, and grace notes.
 - [ ] **29b. `voice`** — sequences of events with positions, ties, grace notes, and sounding notes in time.
 - [ ] **30. `track`** — parts as sequences of measures holding the events of each voice.
