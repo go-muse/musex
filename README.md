@@ -28,29 +28,39 @@ The [Roadmap and package guide](ROADMAP.md) lists the planned packages and links
 ```mermaid
 flowchart LR
     subgraph CHORD["Chord"]
-        direction LR
-        C1(("Note")) ~~~ C2(("Note")) ~~~ C3(("Note"))
+        C1(("Note")) ~~~ C2(("Note")) ~~~ C3(("Note")) ~~~ C4["• • •"]
     end
 
-    I1(("Note")) <-->|"Interval"| I2(("Note"))
+    C4 ~~~ I1(("Note")) <-->|"Interval"| I2(("Note"))
 
     subgraph NOTE["Note"]
-        direction TB
         subgraph PITCH["Written pitch"]
-            direction LR
-            SP["Spelling"] ~~~ OC["Octave"]
+            SP("Spelling") ~~~ OC("Octave")
         end
-        CO["Correction in cents"]
+        CO("Correction#nbsp;in#nbsp;cents")
     end
 
     subgraph INSTRUMENT["Instrument"]
         subgraph SETTINGS["Settings"]
-            direction TB
-            SY["Musical system"] ~~~ TU["Tuning"] ~~~ DE["Designations"]
+            TU("Tuning")
+            DE("Designations")
+            SY("Musical system")
         end
     end
 
     NOTE -. "reads" .-> SETTINGS
+
+    classDef note fill:#4f46e5,stroke:#4338ca,color:#ffffff
+    classDef setting fill:#0f766e,stroke:#115e59,color:#ffffff
+    classDef more fill:none,stroke:none,color:#8b949e
+    class SP,OC,CO,C1,C2,C3,I1,I2 note
+    class TU,DE,SY setting
+    class C4 more
+    style NOTE fill:#4f46e514,stroke:#4f46e5,stroke-width:1.5px,rx:12,ry:12
+    style PITCH fill:#4f46e514,stroke:#4f46e5,stroke-width:1px,rx:10,ry:10
+    style INSTRUMENT fill:#0f766e14,stroke:#0f766e,stroke-width:1.5px,rx:12,ry:12
+    style SETTINGS fill:#0f766e14,stroke:#0f766e,stroke-width:1px,rx:10,ry:10
+    style CHORD fill:#8b949e14,stroke:#8b949e,stroke-width:1.5px,rx:12,ry:12
 ```
 
 ## Definitions
