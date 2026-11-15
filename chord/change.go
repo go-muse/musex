@@ -353,11 +353,12 @@ func (c *Chord) RemoveRepeats() error {
 		return err
 	}
 
-	if !c.HasRepeats() {
+	distinct := c.DistinctNotes()
+	if len(distinct) == len(c.notes) {
 		return nil
 	}
 
-	c.put(c.DistinctNotes())
+	c.put(distinct)
 
 	return nil
 }
