@@ -183,6 +183,18 @@
 // so the start of bar 1<<62 is found at once. Only iteration over bars and
 // splitting depend on the number of bars they produce. Results are exact.
 //
+// [Grid.Bars] reports all its failures before iteration, without visiting
+// bars, by a sufficient condition over the runs of adjacent bars of equal
+// length: the start S and the end F of every run must be in the range of
+// common/fraction, and for a run of n ≥ 2 bars of the length L the least
+// common multiple D of the denominators of S and L and the integer
+// (F − L)·D must not exceed the largest component 2²⁵⁵ − 1; the shifts of
+// the bars must be in the range too. After a successful call every bar of
+// the range is representable, so iteration never stops early. Near the limit
+// of the range the condition can refuse a range whose bars are all
+// representable; such bars are read one by one with [Grid.Bar], and for a
+// single bar the condition is exact.
+//
 // Values are immutable: operations return new values and new slices, and
 // the slices passed to the package are only read during the call. The
 // package has no mutable state, and all its functions, methods, and the
