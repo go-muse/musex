@@ -35,11 +35,11 @@ func runChanges(t *testing.T, tests []change) {
 			c := mk(t, tt.base...)
 			before := stateOf(c)
 			err := tt.op(&c)
-			switch {
-			case tt.err == nil:
+			switch tt.err {
+			case nil:
 				require.NoError(t, err)
 				assertChord(t, tt.want, c)
-			case tt.err == chord.ErrRuleFailed:
+			case chord.ErrRuleFailed:
 				assertRuleFailed(t, err, errRule)
 				assertState(t, before, c, "the chord is the same after a failure")
 			default:

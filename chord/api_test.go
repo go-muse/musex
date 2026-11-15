@@ -21,7 +21,7 @@ func TestAPINotComparable(t *testing.T) {
 	t.Parallel()
 	// КР-4: == does not compile; the type is not comparable.
 	assert.False(t, reflect.TypeFor[chord.Chord]().Comparable())
-	type holder struct{ c chord.Chord }
+	type holder struct{ _ chord.Chord }
 	assert.False(t, reflect.TypeFor[holder]().Comparable(), "a struct with a Chord field is not comparable")
 	assert.Panics(t, func() {
 		var a, b any = chord.MustNew(c4), chord.MustNew(c4)
