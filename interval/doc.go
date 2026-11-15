@@ -41,7 +41,7 @@
 // The perfect unison has no direction: it is always ascending, the opposite
 // of P1 is P1, and Down or WithDirection keep it ascending. There is no
 // diminished unison: lowering a name on the same letter gives an augmented
-// unison down (C to C flat in one register is the descending A1). An unison
+// unison down (C to C flat in one register is the descending A1). A unison
 // with a positive deviation does have a direction.
 //
 // The simple part of an interval keeps its quality and direction and has the
