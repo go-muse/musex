@@ -35,7 +35,7 @@ Two chords are **equal by record** when they have the same notes with the same n
 
 A chord can also include another — contain all its notes, counting repeats — or share notes with it. Chords can be joined, kept to their common notes, or one subtracted from another; repeats are counted in each case. An agreed order sorts chords for steady output; it agrees with equality by record and says nothing about which chord is higher.
 
-The empty chord is a real chord: it equals another empty chord and is included in every chord. A chord that was never made is unset: it accepts no notes and equals nothing, not even another unset chord.
+The empty chord is a real chord: it equals another empty chord and is included in every set chord. A chord that was never made is unset: it accepts no notes and equals nothing, not even another unset chord.
 
 ## Changing a chord and copies
 
