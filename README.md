@@ -23,75 +23,56 @@ The [Roadmap and package guide](ROADMAP.md) lists the planned packages and links
 
 ## Concept
 
-A written name combines a letter with an alteration. An octave identifies a register across naming traditions. A written pitch pairs a written name with a positional octave, preserving both parts independently of any musical system or score notation. A pitch class identifies a position that repeats in each octave, and set classes and their twelve-position catalogs classify pitch-class collections by transpositional, inversional, and affine equivalence. A musical system maps admissible spellings to pitch classes and written pitches to positions, steps, and written octaves; no system is assumed by default. In the traditional twelve-position system with C at 0, C♯ and D♭ are different spellings of class 1. A set of [settings](guide/packages/settings.md) joins one musical system, its tuning, and the chosen textual notation, octave numbering, and octave-name catalog into one immutable value, and checks whether another set can replace it. An [instrument](guide/packages/instrument.md) owns a current set of settings, gives it to notes as their source, and replaces it whole only after that check; it also carries a name and a reference range of pitches compared by position, and comes from a preset of its own or from a catalog of 39 ready-made presets. A [note](guide/packages/note.md) pairs a written name or pitch with a correction in cents and an optional source of settings; it reads the current settings at each use, so its frequency follows a retuned source without recreating the note, and it can be compared with other notes by record, by position, or by sound. A named [interval](guide/packages/interval.md) measures the distance between two names, written pitches, or notes by their spelling — a size in letters, a quality such as major or augmented, and a direction — so B♯3 to C4 is a diminished second up although both share one position in the traditional system; a musical system adds the positional size of an interval in its steps. A [chord](guide/packages/chord.md) holds notes that sound together, without a duration or a harmonic name: it keeps their order of record and repeated notes, finds a note by its record, and is equal to another chord when both hold the same notes the same number of times, in any order.
+`musex` keeps what is written apart from how it sounds. A note is a written record: a spelling such as C♯, usually placed in an octave, with a correction in cents that is zero unless given. It holds no musical system and no tuning. It reads them from a set of settings, for example the one an instrument owns, so retuning the instrument changes the sound of the notes bound to it without rewriting them. A chord holds notes that sound together. An interval is measured between two notes as they are written and is a value of its own: a direction, a size, and a quality.
 
 ```mermaid
 flowchart LR
-    L["Letter · C"] -->|supplies the letter| S["Spelling · C♯"]
-    A["Alteration · +1"] -->|raises by one chromatic unit| S
-    S -->|mapped by a musical system| PC["Pitch class · 1 mod 12"]
-    O["Octave containing middle C"] -->|ASPN numbering| N["4"]
-    O -->|Russian naming catalog| W["первая"]
-    S -->|supplies the written name| P["Pitch · C♯ in ASPN 4"]
-    O -->|supplies the positional octave| P
+    subgraph CHORD["Chord"]
+        direction LR
+        C1(("Note")) ~~~ C2(("Note")) ~~~ C3(("Note"))
+    end
+
+    I1(("Note")) <-->|"Interval"| I2(("Note"))
+
+    subgraph NOTE["Note"]
+        direction TB
+        subgraph PITCH["Written pitch"]
+            direction LR
+            SP["Spelling"] ~~~ OC["Octave"]
+        end
+        CO["Correction in cents"]
+    end
+
+    subgraph INSTRUMENT["Instrument"]
+        subgraph SETTINGS["Settings"]
+            direction TB
+            SY["Musical system"] ~~~ TU["Tuning"] ~~~ DE["Designations"]
+        end
+    end
+
+    NOTE -. "reads" .-> SETTINGS
 ```
 
-The next diagram shows the planned model for modes and scales. In the ascending G major scale from G3 to G4, F♯ names the seventh degree and F♯4 is its written pitch.
+## Definitions
 
-```mermaid
-flowchart LR
-    S["Spelling · F♯"] -->|names| D["Degree VII"]
-    M["Mode · G major"] -->|contains| D
-    SC["Ascending scale · G3 to G4"] -->|traverses one octave of| M
-    S -->|supplies the written name| P["Written pitch · F♯4"]
-    O["Octave · ASPN 4"] -->|supplies the register| P
-    SC -->|includes| P
-```
+Definitions may differ from conventional ones.
 
-## Use Cases
+**Spelling** is the name of a note: a **letter**, one of C D E F G A B, with an **alteration**, the change an accidental makes, counted in sharps. C♯ and D♭ are different spellings.
 
-**Reading the same score across octave conventions.** A teacher working with a French score and a Russian textbook sees octave 3 in the score and *первая* (“first”) in the textbook. Both refer to the register containing middle C. A teaching tool can look up the register using Franco-Belgian numbering and display its Russian name alongside its ASPN number, 4. The student can then match the passages in both sources.
+**Octave** is a register on an ordered axis of registers that has no musical ends. The octave that contains middle C is the same octave whether it is numbered 4 in ASPN, numbered 3 in Franco-Belgian numbering, or called one-line in English.
 
-**Translating names and pitches between textual notations.** A score importer reads the German AM record cis¹ and emits C♯4 for an English ASPN display or ^C for ABC, preserving the same written pitch through one explicit [musical system](guide/packages/system.md). The [notation guide](guide/packages/notation.md) explains why the written register and the positional octave can differ, how aliases remain distinct from canonical output, and why numbering and octave-name catalogs are chosen independently.
+**Musical system** is the set of rules that connects spellings to positions. It fixes how many positions an octave has and gives each spelling it admits a **pitch class**, a position that repeats in every octave; a spelling can be admissible in one system and not in another. In the traditional system of twelve positions C♯ and D♭ share a pitch class; in the system of nineteen positions they do not. No system is assumed by default.
 
-**Keeping triplet subdivisions exact across a measure.** An editor placing triplet eighth notes in a measure scales an eighth note (`1/8` of a whole note) by `2/3` to get `1/12`. Adding two triplet eighths on the same twelfth-note grid keeps the subdivision `2/12` while reducing to `1/6` of a whole note when only the net span is needed, and advancing to the seventh twelfth-note position `6/12` matches the half-measure mark `1/2` by value while preserving the active `1/12` grid.
+**Written pitch** is a spelling in a positional octave, such as C♯ in octave 4. The octave is the octave of positions that holds the pitch, not the number printed next to the letter: in the traditional system the record B♯3 is B♯ in octave 4. C♯ and D♭ in the same octave are different written pitches.
 
-**Cross-referencing Forte and Carter set-class catalogs.** An analyst comparing an article that cites Forte set class `4-Z15` with a study based on Elliott Carter's *Harmony Book* can look up the class in the twelve-tone catalog, inspect its Rahn and Forte prime forms and interval-class vector, navigate to its Z-partner `4-Z29` or directed $T_n$-types `4-Z15A` and `4-Z15B`, and resolve its corresponding Carter chord number (`18`).
+**Tuning** assigns a frequency to every written pitch. It combines four parts: a musical system; a **temperament**, which fixes the height of every position of the octave in cents; the pitch class the temperament starts from; and a reference such as A4 at 440 Hz.
 
-**Tracking written notes across registers and accidentals.** An exercise builder or score editor starts from F♯ in the octave containing middle C (ASPN 4, *первая* in the Russian catalog), generates matching F♯ landmarks across neighboring registers, and raises or strips the accidental while keeping the letter F and its positional octave intact. Because each pitch preserves both its written spelling and its positional octave, C♯ and D♭ in ASPN 4 remain distinct written pitches, and notated B♯3 and C4—which share positional octave ASPN 4 in the traditional system—retain their separate spellings (B♯, ASPN 4) and (C, ASPN 4).
+**Settings** is one unchangeable value that joins a musical system, its tuning, and its **designations**: a textual **notation** for names and octave marks, an octave numbering, and a catalog of octave names. Replacing a part gives a new set of settings.
 
-**Comparing a pure fifth with an equal-tempered fifth and two concert pitches.** A pure fifth with the frequency ratio 3:2 is about 1.955 cents wider than the 700-cent fifth of twelve-tone equal temperament. An orchestra tuned to 442 Hz plays about 7.85 cents higher than one tuned to 440 Hz. A tuning utility or temperament lesson can place both differences on the same cent scale so a musician or student sees how small they are beside a 100-cent semitone.
+**Instrument** is the owner of a set of settings. It gives its current set to the notes that read it and replaces the set as a whole, after checking that the new set can stand in for the old one. It also has a name and an optional reference range of pitches.
 
-**Comparing frequencies and exploring their numeric relationships.** A tuner checks 441 Hz against 440 Hz with [frequency](guide/packages/frequency.md): strict comparison reports different values, a 5-cent criterion accepts them as close, and the three-way comparison reports higher; a composite criterion can instead accept a difference within either 1 cent or 0.5 Hz. The same package transposes 440 Hz by seven equal semitones to 659.255114 Hz, reduces 660/440 to the exact ratio 3/2, and measures 440 to 442 Hz as +7.851415 cents. It also generates partials and subharmonics, calculates the 2 Hz beat frequency between 440 and 442 Hz, shifts and normalizes octaves (880 Hz becomes 110 with a shift of −3 at base 110), and returns a period of 2.272727 ms for 440 Hz.
+**Note** is a written record, a spelling or a written pitch, with a **correction** in cents and an optional source of settings. The correction moves the sound and leaves the record as it is. A note has no duration and stores no settings: a bound note reads them from its source at each use, and an unbound note is given them for each operation.
 
-**Matching a chord against scale templates and comparing interval content.** An analysis tool receives the pitch-class set `{0, 4, 7}` in the twelve-position system and checks which transpositions of the major-scale template `{0, 2, 4, 5, 7, 9, 11}` cover all three positions. The positional search returns tonics 0, 5, and 7—identifying C, F, and G major as the major scales containing a C major triad. Comparing `{0, 4, 7}` with its inversion `{0, 3, 7}` also shows that both triads share the interval-class vector `<0, 0, 1, 1, 1, 0>`, explaining why major and minor triads contain the same pair distances despite their opposite orientation.
+**Interval** is the distance between two spellings, written pitches, or notes as they are written: a direction, a size counted in letters, and a quality such as major or augmented. It is neither a number of semitones nor a frequency ratio: B♯ to C is a diminished second. The **positional size** of an interval is the number of steps it spans in a musical system.
 
-**Reducing a chord to its prime form and counting embedded subsets.** An analytical pass reduces the pitch-class set `{2, 6, 9}` (D major) to [set class](guide/packages/setclass.md) `3-11` (`(0, 3, 7)`) under transpositional and inversional equivalence or separates it from D minor (`{2, 5, 9}`) as directed type `3-11B` (`(0, 4, 7)`) under transposition alone. Querying Lewin's embedding number `EMB(3-11, 7-35)` shows that the diatonic collection contains six major and minor triads (three of each directed type), while Burnside enumeration counts set classes in microtonal divisions without materializing every subset.
-
-**Analyzing twelve-tone rows and their segments.** A serial-analysis tool reads Webern's op. 28 row `⟨0,11,2,1,5,6,3,4,8,7,10,9⟩` as a [pitch-class sequence](guide/packages/pcseq.md), splits it into three tetrachords, and finds transposition and inversion relations between their contents. It can then generate labelled forms and the row matrix, compare row classes, enumerate derivation operators, and check combinatoriality before verifying the all-interval property of Babbitt's *Du*. Repetitions remain significant in an arbitrary sequence, while a non-invertible multiplication can legitimately collapse a complete row into a sequence with repeated classes.
-
-**Keeping the written octave when an accidental changes.** A notation editor stores the record B3 in the traditional [musical system](guide/packages/system.md). Raising it with the system keeps the written octave and gives B♯3, which has the position of C4—one step above B3—whereas raising the pitch alone keeps its positional octave and gives B♯2. The same system tells the editor that B♯3 and C4 are enharmonically equivalent, that E5 lies 16 steps above C4, and spells the class three steps above C4 as D♯4 with the sharps rule or E♭4 with the flats rule; in the 19-position system the same rules keep C♯ and D♭ apart as different positions.
-
-**Comparing historical temperaments and locating wolf intervals.** A keyboard tuner or musicologist comparing quarter-comma meantone, the well [temperament](guide/packages/tuning/temperament.md) now known as Vallotti's, and twelve-tone equal temperament inspects their exact step offsets in cents, checks the width of every fifth and major third around the circle, and identifies the G♯–E♭ wolf fifth in meantone alongside the smooth key-color gradations of historical well temperaments.
-
-**Measuring a note against a chosen tuning.** A tuning utility starts from the standard [tuning](guide/packages/tuning.md)—the traditional system, twelve-tone equal temperament, root C, and A4 at 440 Hz—or selects another temperament and reference. For a measured 445 Hz it selects A4 and reports a deviation of +19.562175 cents; an upward rounding rule instead selects A♯4 with a negative deviation. When the reference is reexpressed through another note, the utility compares pitch levels for domain equivalence rather than expecting the strictly recomputed floating-point frequencies to remain identical.
-
-**Switching an instrument to quarter tones safely.** A tuning app starts from the standard [settings](guide/packages/settings.md)—the traditional system, twelve-tone equal temperament with A4 at 440 Hz, English names with visible octave numbers, and ASPN numbering—and writes C♯4 for a played note. Before switching to the system of 24 quarter tones with 24-tone equal temperament, it checks the replacement: every name and pitch it could show remains expressible, and the change is reported as an extended structure and a changed sound. Switching back is refused with a concrete counterexample — a name with a quarter-tone alteration that the traditional system does not admit — so the app can warn the player before notes that use such names lose their meaning.
-
-**Retuning a violin to Baroque pitch and checking a soprano part.** A practice app creates a violin from the ready-made [instrument](guide/packages/instrument.md) presets and binds its notes to it. A4 sounds at 440 Hz; after the instrument is retuned to A4 at 415 Hz, the same note sounds at 415 Hz without being recreated, and the instrument remains the same source of settings. Switching the violin to German names with AM octave marks is refused with a report that names a concrete counterexample, a name or pitch the German record cannot write, and the violin keeps its previous settings. For a choir part, the soprano voice range C4–G5 is 19 steps wide and holds 20 sounds; B♯3 is inside it, because in the traditional system it stands at the position of C4, while C♭4 is below it and A5 above it. A bass line note E1 folds into the range C3–G5 as E3, E4, or E5, and the nearest fold is E3. Looking up "violin" in the ready-made catalog finds nothing, because names are matched exactly: the preset is called "Violin".
-
-**Building a chord and finding a tied note.** A score importer reads the notes C4, E4, G4, and E4 of one chord and keeps all four [chord](guide/packages/chord.md) notes in their order of record: E4 enters the chord twice, at places 1 and 3. To draw a tie from the previous chord, it finds E4 by its record and gets the first occurrence with the source of settings the note was bound to. Moving the chord one octave up gives C5, E5, G5, E5; a chord that also holds a bare name without an octave refuses the move and stays as it was. The chord reads no settings itself: sorting its notes by position and computing their frequencies are done by the notes, so in the standard settings C4 and E4 sound at 261.6256 Hz and 329.6276 Hz.
-
-**Choosing explicit rounding for musical grids.** A rhythm editor quantizes 1,234 ticks to a 480-tick grid and selects 960 or 1,440 according to the chosen [rounding rule](guide/packages/common/rounding.md); at the exact midpoint of 1,200 ticks, half-down chooses 960 while half-up chooses 1,440. A tuner can apply the same nine rules on a non-uniform temperament grid, supplying its exact distances, zero reference, and step parity rather than forcing temperament steps onto a uniform numeric scale.
-
-**Importing nested tuplets from a score.** A MusicXML importer reads a sextuplet as six notes in the time of four and keeps the [tuplet](guide/packages/tuplet.md) `6:4` distinct from a triplet `3:2`, although both shorten an eighth note to `1/12` of a whole note. Where a score shows only the number 5, the importer derives `5:4` for a plain beat or `5:3` for a dotted beat. For a triplet nested inside a triplet, it multiplies the coefficients to `4/9` so each inner eighth lasts exactly `1/18` of a whole note and positions stay exact however deeply the groups are nested.
-
-**Notating an imported performance with exact durations.** A score editor imports a note that lasts `5/16` of a whole note and writes it with [durations](guide/packages/duration.md) as a quarter tied to a sixteenth, or as a single dotted quarter where the length is `3/8`. Triplet eighths keep their exact positions `1/12`, `1/6`, and `1/4` from the start of the beat, and a played onset at `7/24` is quantized to the eighth-note grid at `1/4` only when the editor asks, with an explicitly chosen rounding rule such as half even.
-
-**Accenting an asymmetrical bar for a metronome.** A metronome app plays `7/8` grouped as `3+2+2` with the [time signature](guide/packages/meter.md) package: the measure lasts `7/8` of a whole note, its three beats are a dotted quarter and two quarters starting at `0`, `3/8`, and `5/8`, and the clicks on the seven eighths are strong, weak, weak, relatively strong, weak, relatively strong, weak. The same app shows that `6/8` is compound duple with two dotted-quarter beats while `3/4` of the same length is simple triple, reports `7/8` as asymmetrical in English-language terms and compound mixed (*сложный смешанный*) in Russian terms, and refuses to count beats in `7/8` until a grouping is chosen, offering `2+2+3`, `2+3+2`, and `3+2+2` as the choices.
-
-**Laying out bars with a pickup and meter changes.** A score editor builds the bars of a piece with the [measure grid](guide/packages/measure.md) package: `3/4` with a pickup of a quarter, so the pickup is bar 0 and bar 1 starts at `1/4`. A click at the position `9/8` lands in bar 2 an eighth after its start, and the pickup sits on the third beat of a full bar, counted as 3 by the place in the meter and as 1 from its own start. With `3/4` from bar 3 of a `4/4` piece and a half-bar at bar 4, the editor finds that the eight bars end at `25/4`, splits a note of five halves from the start of bar 2 into a whole, three quarters, a half, and a quarter at the bar lines, and gets the MEI tstamp `3/2` for the second eighth of a full `4/4` bar while the tstamp of the short bar is refused as undefined. Inserting, deleting, slicing, and joining bars keep every signature in force, and bar 4,611,686,018,427,387,904 is found as quickly as bar 2.
-
-**Timing a score from its tempo indication.** A practice app reads the indication "Allegro, ♩ = 120" above a score with the [tempo](guide/packages/tempo.md) package: a bar of `4/4` lasts exactly 2 seconds, sixty bars take two minutes, and a triplet eighth lasts `1/6` of a second, rounded to nanoseconds for the system clock only with an explicitly chosen rule. The app shows that ♩. = 60 and ♪ = 180 are different records of the same speed, applies a metric modulation in which the new dotted quarter equals the old quarter to get ♩. = 120, and moves 110 to the metronome division 112 or 108 according to the rounding rule, since 110 lies exactly between them. For 115 beats per minute it lists Moderato and Allegretto from the [tempo terms](guide/packages/tempo/term.md) of the English Wikipedia, and it can read the same words in seven other lists or in a list the teacher writes, treating their numbers as references from weak sources rather than as tempos.
-
-**Transposing a melody and naming its intervals.** A theory exercise moves a melody from C major to E major with the [interval](guide/packages/interval.md) package: E moved up by a major third is G♯, and B♯ moved up by an augmented sixth stays spelled as G with three sharps instead of being replaced by a simpler name. The exercise names the leap from C4 to E5 a major tenth (*большая децима*, short *б.10*), inverts a major third into a minor sixth, and checks that the steps of the major scale — major, major, minor, major, major, major, and minor seconds — add up to a perfect octave. It also shows that the augmented fourth and the diminished fifth are different intervals that both span six steps in the traditional system, while in the 19-position system they span nine and ten.
+**Chord** is a group of notes that sound together. It keeps the notes in their order of record, repeats included, and has no duration and no harmonic name.
