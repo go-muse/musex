@@ -135,13 +135,14 @@ func TestLargeOutOfRange(t *testing.T) {
 		return build(t, mt("4/4"), steps...)
 	}
 
-	// tinyEnd is 3/1 with bar 2 of length 1/(2²⁵⁴+1) aligned to the end: the
-	// start 3 and the end of bar 2 are in range, the shift 3 − 1/(2²⁵⁴+1) is
-	// not.
+	// tinyEnd is 3/4 with bar 1 of length a = 1/(2²⁵⁴+1) aligned to the end:
+	// the start 0, the end a, and the length of bar 1 are in range, while its
+	// shift 3/4 − a = (3·2²⁵⁴−1)/(2²⁵⁶+4) is not (architecture 4.6). The end
+	// of bar 2 is out of range too, so only bar 1 isolates the shift.
 	tinyEnd := func(t *testing.T) measure.Grid {
 		l := durRat(ratFrac(big.NewInt(1), new(big.Int).Add(pow2(254), big.NewInt(1))))
 
-		return build(t, mt("3/1"), func(g measure.Grid) (measure.Grid, error) { return g.WithLength(2, l, measure.AlignEnd) })
+		return build(t, mt("3/4"), func(g measure.Grid) (measure.Grid, error) { return g.WithLength(1, l, measure.AlignEnd) })
 	}
 
 	// nearOne is 4/4 with bar 1 of length 2²⁵⁴/(2²⁵⁴+1): at the offset 1/3,
@@ -180,15 +181,34 @@ func TestLargeOutOfRange(t *testing.T) {
 		{"Part.End", func(t *testing.T) error {
 			return e(measure.Part{Address: ad(1, "0"), Start: posRat(ratInt(pow2(254))), Duration: huge}.End())
 		}, []error{fraction.ErrOutOfRange}},
-		{"shift of a bar aligned to the end: Bar", func(t *testing.T) error { return e(tinyEnd(t).Bar(2)) }, []error{fraction.ErrOutOfRange}},
-		{"shift of a bar aligned to the end: BarAt", func(t *testing.T) error { return e(tinyEnd(t).BarAt(pos("3"))) }, []error{fraction.ErrOutOfRange}},
-		{"shift of a bar aligned to the end: Bars", func(t *testing.T) error { return e(tinyEnd(t).Bars(1, 2)) }, []error{fraction.ErrOutOfRange}},
+		{"shift of a bar aligned to the end: Bar", func(t *testing.T) error { return e(tinyEnd(t).Bar(1)) }, []error{fraction.ErrOutOfRange}},
+		{"shift of a bar aligned to the end: BarAt", func(t *testing.T) error { return e(tinyEnd(t).BarAt(pos("0"))) }, []error{fraction.ErrOutOfRange}},
+		{"shift of a bar aligned to the end: Bars", func(t *testing.T) error { return e(tinyEnd(t).Bars(1, 1)) }, []error{fraction.ErrOutOfRange}},
 		{"Elapsed by its value", func(t *testing.T) error { return e(nearOne(t).Elapsed(ad(1, "1/3"))) }, []error{fraction.ErrOutOfRange}},
 		{"Remaining by its value", func(t *testing.T) error { return e(nearOne(t).Remaining(pos("1/3"))) }, []error{fraction.ErrOutOfRange}},
 		{"TstampAt by its value", func(t *testing.T) error { return e(gridOf(t, "4/4").TstampAt(1, tinyPos())) }, []error{fraction.ErrOutOfRange}},
 		{"CountAt by its value", func(t *testing.T) error { return e(gridOf(t, "4/4").CountAt(1, tinyPos())) }, []error{fraction.ErrOutOfRange}},
 		{"MeterCountOffset by its value", func(t *testing.T) error { return e(measure.MeterCountOffset(mt("4/4"), countNearOne())) }, []error{fraction.ErrOutOfRange}},
 		{"CountOffset by its value", func(t *testing.T) error { return e(gridOf(t, "4/4").CountOffset(1, countNearOne())) }, []error{fraction.ErrOutOfRange}},
+		{"MeterCountAt by its value", func(t *testing.T) error { return e(measure.MeterCountAt(mt("4/4"), tinyPos())) }, []error{fraction.ErrOutOfRange}},
+		{"MeterTstampAt by its value", func(t *testing.T) error { return e(measure.MeterTstampAt(mt("4/4"), tinyPos())) }, []error{fraction.ErrOutOfRange}},
+		{"MeterTstampOffset by its value", func(t *testing.T) error { return e(measure.MeterTstampOffset(mt("4/4"), countNearOne())) }, []error{fraction.ErrOutOfRange}},
+		{"MetricCountOffset by its value", func(t *testing.T) error { return e(gridOf(t, "4/4").MetricCountOffset(1, countNearOne())) }, []error{fraction.ErrOutOfRange}},
+		{"TstampOffset by its value", func(t *testing.T) error { return e(gridOf(t, "4/4").TstampOffset(1, countNearOne())) }, []error{fraction.ErrOutOfRange}},
+		// In nearOne, position 3/2 is in bar 2 at the offset 3/2 − L =
+		// (2²⁵⁴+3)/(2²⁵⁵+2), outside the range.
+		{"Locate by the offset", func(t *testing.T) error { return e(nearOne(t).Locate(pos("3/2"))) }, []error{fraction.ErrOutOfRange}},
+		{"Normalize by the offset", func(t *testing.T) error { return e(nearOne(t).Normalize(ad(1, "3/2"))) }, []error{fraction.ErrOutOfRange}},
+		// The first part [1/3, L) has the value L − 1/3 = (2²⁵⁵−1)/(3·2²⁵⁴+3).
+		{"Split by a part", func(t *testing.T) error { return e(nearOne(t).Split(pos("1/3"), dur("1"))) }, []error{fraction.ErrOutOfRange}},
+		// Parts are built in order (architecture 4.2, 4.11): 1/6 at (1, 1/3)
+		// and 1/4 at (1, 1/2) are in range, the third part [3/4, L) of value
+		// (2²⁵⁴−3)/(2²⁵⁶+4) is not. The 258 occupied bars do not exceed
+		// MaxParts, and the whole split would have 1029 parts, more than
+		// MaxParts, but the unrepresentable part comes first: Е-10, not Е-8.
+		{"SplitBy: an unrepresentable part before part MaxParts + 1", func(t *testing.T) error {
+			return e(nearOne(t).SplitBy(pos("1/3"), dur("257"), measure.LevelUnits))
+		}, []error{fraction.ErrOutOfRange}},
 		{"КП-48 insert math.MaxInt bars", func(t *testing.T) error { return e(gridOf(t, "4/4;2:3/4").InsertBars(1, math.MaxInt)) }, nil},
 		{"insert past math.MaxInt in a finite grid", func(t *testing.T) error { return e(gridOf(t, "4/4;bars:4").InsertBars(5, math.MaxInt-3)) }, nil},
 		{"КП-48 add to N = math.MaxInt", func(t *testing.T) error { return e(gridOf(t, "4/4;bars:9223372036854775807").AddBars(1)) }, nil},
@@ -230,6 +250,38 @@ func TestLargeOutOfRange(t *testing.T) {
 		o, err := gridOf(t, "4/4;pickup:1/4").Ordinal(math.MaxInt - 1)
 		require.NoError(t, err)
 		assert.Equal(t, math.MaxInt, o)
+
+		// In tinyEnd, only the shift of bar 1 is outside the range.
+		te := tinyEnd(t)
+		tiny := ratFrac(big.NewInt(1), new(big.Int).Add(pow2(254), big.NewInt(1)))
+
+		start, err := te.BarStart(1)
+		require.NoError(t, err)
+		assertText(t, "0/1", start)
+
+		end, err := te.BarEnd(1)
+		require.NoError(t, err)
+		assert.Equal(t, 0, ratP(end).Cmp(tiny))
+
+		l, err := te.BarLength(1)
+		require.NoError(t, err)
+		assert.Equal(t, 0, ratD(l).Cmp(tiny))
+
+		// In nearOne, the position 3/2 and the parts before the third one
+		// are in range.
+		n := nearOne(t)
+
+		first, last, err := n.BarsSpanned(pos("1/3"), dur("257"))
+		require.NoError(t, err)
+		assert.Equal(t, [2]int{1, 258}, [2]int{first, last})
+
+		parts, err := n.SplitBy(pos("1/3"), dur("1/6"), measure.LevelUnits)
+		require.NoError(t, err)
+		assert.Equal(t, []string{"1/6@1:1/3"}, partTexts(parts))
+
+		parts, err = n.SplitBy(pos("1/3"), dur("5/12"), measure.LevelUnits)
+		require.NoError(t, err)
+		assert.Equal(t, []string{"1/6@1:1/3", "1/4@1:1/2"}, partTexts(parts))
 	})
 }
 
@@ -275,19 +327,37 @@ func TestLargeShift(t *testing.T) {
 		assert.False(t, closing.IsSet())
 	})
 
-	t.Run("other bars are in range", func(t *testing.T) {
+	// The end of bar 1, a + 3/4 = (3·2²⁵⁴+7)/(2²⁵⁶+4), and the ends of the
+	// following bars are outside the range: Bar and Bars fail by the end
+	// (architecture 4.5, 4.6), not by a shift.
+	t.Run("ends of the following bars", func(t *testing.T) {
 		t.Parallel()
 		defer guard(t)
 
 		g := tinyPickup(t)
 
-		b, err := g.Bar(1)
-		require.NoError(t, err)
-		assertText(t, "0/1", b.Shift)
+		assertErr(t, e(g.Bar(1)), measure.ErrOutOfRange, fraction.ErrOutOfRange)
+		assertErr(t, e(g.Bars(1, 3)), measure.ErrOutOfRange, fraction.ErrOutOfRange)
+		assertErr(t, e(g.BarEnd(1)), measure.ErrOutOfRange, fraction.ErrOutOfRange)
+	})
 
-		seq, err := g.Bars(1, 3)
+	t.Run("other values are in range", func(t *testing.T) {
+		t.Parallel()
+		defer guard(t)
+
+		g := tinyPickup(t)
+
+		s, err := g.BarStart(1)
 		require.NoError(t, err)
-		assert.Len(t, collect(seq), 3)
+		assert.Equal(t, 0, ratP(s).Cmp(ratFrac(big.NewInt(1), new(big.Int).Add(pow2(254), big.NewInt(1)))))
+
+		l, err := g.BarLength(1)
+		require.NoError(t, err)
+		assertText(t, "3/4", l)
+
+		bm, err := g.BarMeter(1)
+		require.NoError(t, err)
+		assertText(t, "3/4", bm)
 
 		a, err := g.Locate(pos("0"))
 		require.NoError(t, err)

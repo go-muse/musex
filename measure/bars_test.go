@@ -145,7 +145,7 @@ func TestBarInfoFields(t *testing.T) {
 		{"repeated mark", "4/4;5:4/4", barOf{5, "4/4", "1", "4", "5", measure.KindFull, false, false, measure.AlignStart, "0", true, false}},
 		{"change to C", "4/4;5:C", barOf{5, "C", "1", "4", "5", measure.KindFull, false, false, measure.AlignStart, "0", true, true}},
 		{"after a change", "4/4;5:C", barOf{6, "C", "1", "5", "6", measure.KindFull, false, false, measure.AlignStart, "0", false, false}},
-		{"pickup with change from bar 1", "6/8;pickup:1/8", barOf{0, "6/8", "1/8", "0", "1/8", measure.KindIncomplete, true, false, measure.AlignEnd, "5/8", false, false}},
+		{"pickup in 6/8", "6/8;pickup:1/8", barOf{0, "6/8", "1/8", "0", "1/8", measure.KindIncomplete, true, false, measure.AlignEnd, "5/8", false, false}},
 	}
 
 	for _, tt := range tests {
