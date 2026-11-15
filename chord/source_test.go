@@ -92,9 +92,9 @@ func TestSourceNotRead(t *testing.T) {
 	require.NoError(t, d.RemoveFunc(func(n note.Note) (bool, error) { return !n.HasOctave(), nil }))
 	require.NoError(t, d.KeepFunc(hasOctave))
 	require.NoError(t, d.RemoveRepeats())
-	require.NoError(t, d.Union(other))
-	require.NoError(t, d.Intersect(c))
-	require.NoError(t, d.Subtract(other))
+	// The order and the octave shifts run on bound notes, before the
+	// operations that may empty the chord.
+	require.Equal(t, 5, d.Len(), "precondition: the chord has bound notes")
 	require.NoError(t, d.Sort())
 	require.NoError(t, d.SortFunc(byRecord))
 	require.NoError(t, d.Reverse())
@@ -102,7 +102,13 @@ func TestSourceNotRead(t *testing.T) {
 	require.NoError(t, d.ShiftDown(1))
 	require.NoError(t, d.Up())
 	require.NoError(t, d.Down())
-	require.NoError(t, d.Clear())
+	require.Equal(t, 5, d.Len())
+	require.NoError(t, d.Union(other))
+	require.NoError(t, d.Intersect(c))
+	require.Equal(t, 1, d.Len(), "precondition: E4 is common with c")
+	require.NoError(t, d.Subtract(other))
+	require.NoError(t, d.Add(bc4, be4, bc))
+	require.NoError(t, d.Clear()) // on bound notes
 
 	e := c
 	_ = e.Add(note.Note{})

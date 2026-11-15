@@ -93,20 +93,37 @@ func TestCopyK34(t *testing.T) {
 func TestCopyK35(t *testing.T) {
 	t.Parallel()
 	// K-35: different notes added to two copies after copying, for chords
-	// that were built at once and note by note (a spare capacity must not be
-	// shared).
+	// that were built at once and note by note. A chord built note by note
+	// may hold a spare capacity; it must not be shared by the copies.
+	base := list(c4, e4, g4)
+	byOne := func(t *testing.T, notes ...note.Note) chord.Chord {
+		t.Helper()
+		c := chord.MustNew()
+		for _, n := range notes {
+			require.NoError(t, c.Add(n))
+		}
+		return c
+	}
 	builds := map[string]func(t *testing.T) chord.Chord{
-		"created": func(t *testing.T) chord.Chord { return mk(t, c4, e4) },
-		"added one by one": func(t *testing.T) chord.Chord {
+		"created":             func(t *testing.T) chord.Chord { return mk(t, base...) },
+		"added one by one: 3": func(t *testing.T) chord.Chord { return byOne(t, base...) },
+		"added one by one: 5 - 2": func(t *testing.T) chord.Chord {
+			c := byOne(t, c4, e4, g4, b4, d4)
+			require.NoError(t, c.RemoveAt(4))
+			require.NoError(t, c.RemoveAt(3))
+			return c
+		},
+		"inserted one by one": func(t *testing.T) chord.Chord {
 			c := chord.MustNew()
-			require.NoError(t, c.Add(c4))
-			require.NoError(t, c.Add(e4))
+			for i, n := range base {
+				require.NoError(t, c.Insert(i, n))
+			}
 			return c
 		},
 		"after removing": func(t *testing.T) chord.Chord {
-			c := mk(t, c4, e4, g4, b4)
+			c := mk(t, c4, e4, g4, b4, d4)
+			require.NoError(t, c.RemoveAt(4))
 			require.NoError(t, c.RemoveAt(3))
-			require.NoError(t, c.RemoveAt(2))
 			return c
 		},
 	}
@@ -114,18 +131,39 @@ func TestCopyK35(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			c := build(t)
+			require.True(t, assertChord(t, base, c), "precondition: the chord is C4 E4 G4")
 			d := c
-			require.NoError(t, c.Add(g4))
+			require.NoError(t, c.Add(f4))
 			require.NoError(t, d.Add(b4))
-			assertChord(t, list(c4, e4, g4), c)
-			assertChord(t, list(c4, e4, b4), d)
+			assertChord(t, list(c4, e4, g4, f4), c)
+			assertChord(t, list(c4, e4, g4, b4), d)
 
+			// The other order: the copy first.
 			x := build(t)
 			y := x
-			require.NoError(t, x.Insert(2, g4))
-			require.NoError(t, y.Insert(2, b4))
-			assertChord(t, list(c4, e4, g4), x)
-			assertChord(t, list(c4, e4, b4), y)
+			require.NoError(t, y.Add(b4))
+			require.NoError(t, x.Add(f4))
+			assertChord(t, list(c4, e4, g4, f4), x)
+			assertChord(t, list(c4, e4, g4, b4), y)
+
+			// Several notes one by one into both.
+			p := build(t)
+			q := p
+			for _, n := range list(f4, d4, c5) {
+				require.NoError(t, p.Add(n))
+			}
+			for _, n := range list(b4, g5, e5) {
+				require.NoError(t, q.Add(n))
+			}
+			assertChord(t, list(c4, e4, g4, f4, d4, c5), p)
+			assertChord(t, list(c4, e4, g4, b4, g5, e5), q)
+
+			u := build(t)
+			v := u
+			require.NoError(t, u.Insert(3, f4))
+			require.NoError(t, v.Insert(3, b4))
+			assertChord(t, list(c4, e4, g4, f4), u)
+			assertChord(t, list(c4, e4, g4, b4), v)
 		})
 	}
 }

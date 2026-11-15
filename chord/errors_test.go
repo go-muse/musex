@@ -128,14 +128,22 @@ func TestErrorsRuleChainKept(t *testing.T) {
 	t.Parallel()
 	// П-10а: the cause of the rule is available through errors.Is and
 	// errors.As.
-	type ruleError struct{ error }
-	cause := ruleError{error: errRule}
+	cause := ruleError{err: errRule}
 	c := mk(t, c4, e4)
 	_, err := c.CountFunc(func(note.Note) (bool, error) { return false, cause })
 	assertRuleFailed(t, err, errRule)
+	assert.ErrorIs(t, err, cause, "the error of the rule itself is in the chain")
 	var got ruleError
 	require.True(t, errors.As(err, &got), "errors.As finds the error of the rule")
+	assert.Equal(t, cause, got)
 }
+
+// ruleError is an error type of a rule that wraps its cause.
+type ruleError struct{ err error }
+
+func (e ruleError) Error() string { return "rule error: " + e.err.Error() }
+
+func (e ruleError) Unwrap() error { return e.err }
 
 func TestErrorsResultsOnFailure(t *testing.T) {
 	t.Parallel()
