@@ -13,9 +13,8 @@
 // An interval is computed from spelling: from the letters and the alteration
 // values of the names, without a musical system. It is not a number of
 // semitones: B sharp to C up is a diminished second, C to D double flat is a
-// diminished second too, and both differ from the unison and from each other
-// as intervals, although in the traditional system they all have the size of
-// zero steps.
+// diminished second too, and both differ from the unison as intervals,
+// although in the traditional system all three have the size of zero steps.
 //
 // # Quality and groups
 //
