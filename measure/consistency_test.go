@@ -4,6 +4,7 @@ import (
 	"errors"
 	"math/big"
 	"math/rand/v2"
+	"strconv"
 	"testing"
 
 	"github.com/go-muse/musex/common/fraction"
@@ -149,10 +150,14 @@ func TestConsistency(t *testing.T) {
 		grids = append(exampleGrids(t), generatedGrids(t)...)
 	}()
 
-	for _, g := range grids {
-		t.Run(g.String(), func(t *testing.T) {
+	// Subtests are named by index: the texts of grids contain "/", which
+	// -run patterns treat as a separator of levels; the text is logged.
+	for i, g := range grids {
+		t.Run("grid "+strconv.Itoa(i), func(t *testing.T) {
 			t.Parallel()
 			defer guard(t)
+
+			t.Logf("grid %s", g)
 
 			checkText(t, g)
 			checkBars(t, g)
@@ -409,9 +414,11 @@ func checkSplit(t *testing.T, g measure.Grid) {
 	start := posRat(ratAdd(ratP(b.Start), ratMul(ratD(b.Length), big.NewRat(1, 3))))
 	value := durRat(ratMul(ratD(whole), big.NewRat(1, 2)))
 
+	grouped := spannedGrouped(t, g, start, value)
+
 	for _, level := range []measure.Level{measure.LevelBars, measure.LevelGroups, measure.LevelBeats, measure.LevelUnits} {
 		parts, err := g.SplitBy(start, value, level)
-		if err != nil && (level == measure.LevelGroups || level == measure.LevelBeats) {
+		if !grouped && (level == measure.LevelGroups || level == measure.LevelBeats) {
 			assertErr(t, err, measure.ErrGroupingRequired, meter.ErrGroupingRequired)
 
 			continue
@@ -420,4 +427,29 @@ func checkSplit(t *testing.T, g measure.Grid) {
 		require.NoError(t, err, "level %s", level)
 		assertParts(t, g, start, value, parts)
 	}
+}
+
+// spannedGrouped reports whether the meter of every bar occupied by
+// [start, start + value) has a grouping: the condition of Е-7 for the levels
+// of groups and beats (architecture 4.2, 4.11). The meters are read by runs,
+// without enumerating bars.
+func spannedGrouped(t *testing.T, g measure.Grid, start duration.Position, value duration.Duration) bool {
+	t.Helper()
+
+	first, last, err := g.BarsSpanned(start, value)
+	require.NoError(t, err)
+
+	runs, err := g.MeterRuns(first, last)
+	require.NoError(t, err)
+
+	for _, r := range runs {
+		has, err := r.Meter.HasGrouping()
+		require.NoError(t, err)
+
+		if !has {
+			return false
+		}
+	}
+
+	return true
 }
