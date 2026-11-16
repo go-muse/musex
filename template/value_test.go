@@ -100,7 +100,7 @@ func TestFromIntervals(t *testing.T) {
 		{name: "fifth and fourth", text: "P5 P4", places: 2, cycle: "P8", hasCycle: true, octave: true, placeText: []string{"P1", "P5"}},
 		{name: "blues", text: "m3 M2 A1 m2 m3 M2", places: 6, cycle: "P8", hasCycle: true, octave: true, placeText: []string{"P1", "m3", "P4", "A4", "P5", "m7"}},
 		{name: "diminished second", text: "d2 A7", places: 2, cycle: "P8", hasCycle: true, octave: true, placeText: []string{"P1", "d2"}},
-		{name: "mixed interval sizes", text: "A3 dd2 A2 P4", places: 4, cycle: "P8", hasCycle: true, octave: true, placeText: []string{"P1", "A3", "P4", "P5"}},
+		{name: "mixed interval sizes", text: "A3 dd2 A2 P4", places: 4, cycle: "P8", hasCycle: true, octave: true, placeText: []string{"P1", "A3", "d4", "P5"}},
 		{name: "obikhod", text: "M2 M2 m2", places: 3, cycle: "P4", hasCycle: true, placeText: []string{"P1", "M2", "M3"}},
 		{name: "wide cycle", text: "M9 m7", places: 2, cycle: "P15", hasCycle: true, placeText: []string{"P1", "M9"}},
 		{name: "seven major seconds", text: "M2 M2 M2 M2 M2 M2 M2", places: 7, cycle: "AA8", hasCycle: true, placeText: []string{"P1", "M2", "M3", "A4", "A5", "A6", "A7"}},
