@@ -25,6 +25,8 @@ linters:
           allow:
             - $gostd
             - github.com/go-muse/musex/
+            - golang.org/x/text/cases$
+            - golang.org/x/text/unicode/norm$
         # Test files, including examples and fuzz tests: the standard library,
         # any musex package, and Testify.
         tests:
@@ -304,8 +306,11 @@ linters:
             - "!$test"
           allow:
             - $gostd
-            - github.com/go-muse/musex/system$
+            - github.com/go-muse/musex/alteration$
+            - github.com/go-muse/musex/spelling$
             - github.com/go-muse/musex/interval$
+            - golang.org/x/text/cases$
+            - golang.org/x/text/unicode/norm$
         mode:
           list-mode: strict
           files:

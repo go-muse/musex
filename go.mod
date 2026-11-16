@@ -2,7 +2,10 @@ module github.com/go-muse/musex
 
 go 1.27.3
 
-require github.com/stretchr/testify v1.11.1
+require (
+	github.com/stretchr/testify v1.11.1
+	golang.org/x/text v0.31.0
+)
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
