@@ -47,14 +47,15 @@ func TestNewWithNoteAcceptsEveryNoteFormAndCopiesInput(t *testing.T) {
 	correction := cents.MustFromInt(30)
 	bound := degreeTestASPNNote(t, spelling.C(), 4, correction, settings.Standard())
 	tests := []struct {
-		name string
-		note note.Note
+		name       string
+		note       note.Note
+		sameSource bool
 	}{
-		{"without octave", degreeTestNote(t, spelling.B(), cents.Zero(), nil)},
-		{"with octave", degreeTestASPNNote(t, spelling.D(), 4, cents.Zero(), nil)},
-		{"with correction", degreeTestNote(t, spelling.B(), correction, nil)},
-		{"unbound", degreeTestASPNNote(t, spelling.A(), 4, cents.Zero(), nil)},
-		{"bound", bound},
+		{"without octave", degreeTestNote(t, spelling.B(), cents.Zero(), nil), false},
+		{"with octave", degreeTestASPNNote(t, spelling.D(), 4, cents.Zero(), nil), false},
+		{"with correction", degreeTestNote(t, spelling.B(), correction, nil), false},
+		{"unbound", degreeTestASPNNote(t, spelling.A(), 4, cents.Zero(), nil), false},
+		{"bound", bound, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -69,7 +70,7 @@ func TestNewWithNoteAcceptsEveryNoteFormAndCopiesInput(t *testing.T) {
 			original := input
 			input.MustRaise()
 			assertDegreeState(t, d, 4, true, original)
-			assert.True(t, original.SameSource(d.Note()))
+			assert.Equal(t, tt.sameSource, original.SameSource(d.Note()))
 		})
 	}
 }

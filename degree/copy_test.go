@@ -35,14 +35,15 @@ func TestDegreeAssignmentCopiesAreIndependentInBothDirections(t *testing.T) {
 	t.Parallel()
 	correction := cents.MustFromInt(30)
 	tests := []struct {
-		name string
-		note note.Note
+		name       string
+		note       note.Note
+		sameSource bool
 	}{
-		{"without octave", degreeTestNote(t, spelling.B(), cents.Zero(), nil)},
-		{"with octave", degreeTestASPNNote(t, spelling.D(), 4, cents.Zero(), nil)},
-		{"with correction", degreeTestNote(t, spelling.B(), correction, nil)},
-		{"unbound", degreeTestASPNNote(t, spelling.A(), 4, cents.Zero(), nil)},
-		{"bound", degreeTestASPNNote(t, spelling.C(), 4, correction, settings.Standard())},
+		{"without octave", degreeTestNote(t, spelling.B(), cents.Zero(), nil), false},
+		{"with octave", degreeTestASPNNote(t, spelling.D(), 4, cents.Zero(), nil), false},
+		{"with correction", degreeTestNote(t, spelling.B(), correction, nil), false},
+		{"unbound", degreeTestASPNNote(t, spelling.A(), 4, cents.Zero(), nil), false},
+		{"bound", degreeTestASPNNote(t, spelling.C(), 4, correction, settings.Standard()), true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -50,7 +51,7 @@ func TestDegreeAssignmentCopiesAreIndependentInBothDirections(t *testing.T) {
 			original := degree.MustNewWithNote(4, tt.note)
 			clone := original
 			originalNote := original.Note()
-			assert.True(t, originalNote.SameSource(clone.Note()))
+			assert.Equal(t, tt.sameSource, originalNote.SameSource(clone.Note()))
 
 			clone.MustSetNote(degreeTestNote(t, spelling.C(), cents.Zero(), nil))
 			clone.MustSetNumber(5)
