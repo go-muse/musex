@@ -85,6 +85,8 @@ Definitions may differ from conventional ones.
 
 **Interval** is the distance between two spellings, written pitches, or notes as they are written: a direction, a size counted in letters, and a quality such as major or augmented. It is neither a number of semitones nor a frequency ratio: B♯ to C is a diminished second. The **positional size** of an interval is the number of steps it spans in a musical system.
 
+**Mode template** is an ordered record of the intervals between neighboring places of a mode. A closed template repeats after an arbitrary cycle; an open template ends after its last place. Templates can be rotated, compared, serialized, and stored in immutable catalogs with codes and English and Russian names. A template is not a mode and has no tonic, degrees, or musical system.
+
 **Chord** is a group of notes that sound together. It keeps the notes in their order of record, repeats included, and has no duration and no harmonic name.
 
 **Degree** is an ordinal number with an optional note. It is not tied to a tonic or mode: its number can be formatted and parsed, and circular operations count positions with an explicit cycle count.
