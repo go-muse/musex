@@ -449,12 +449,12 @@ func TestDegreeAllSmallCirclesAndEarlyTermination(t *testing.T) {
 				}
 				return values
 			}
-			values := collect(k)
+			values := collect(k + 1)
 			require.Len(t, values, k)
 			for i, d := range values {
 				assertDegreeState(t, d, i+1, false, note.Note{})
 			}
-			repeated := collect(k)
+			repeated := collect(k + 1)
 			require.Len(t, repeated, k)
 			for i := range values {
 				assertSameDegree(t, values[i], repeated[i])
