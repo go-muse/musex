@@ -296,8 +296,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
-            - github.com/go-muse/musex/spelling$
-            - github.com/go-muse/musex/interval$
+            - github.com/go-muse/musex/note$
         template:
           list-mode: strict
           files:
