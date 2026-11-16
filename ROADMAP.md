@@ -31,7 +31,7 @@
 ## 2. Important functionality
 
 - [x] **18. [`interval`](guide/packages/interval.md)** — named intervals between names, written pitches, and notes with their direction, size, and quality, transposition, inversion, sums, the line of fifths, positional sizes in a musical system, and the short notation and names in English and Russian.
-- [ ] **19. `degree`** — scale degrees and their names.
+- [x] **19. [`degree`](guide/packages/degree.md)** — ordinal degrees with optional notes and independent copies, comparison, decimal and Roman number forms, circular transitions, shifts and distances, normalization and denormalization, and lazy enumeration.
 - [ ] **20. `template`** — named and positional mode templates.
 - [ ] **21. `mode`** — mode membership, ordering, and transposition.
 - [ ] **22. `scale`** — scales and their multi-octave expansion.
