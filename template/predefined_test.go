@@ -227,6 +227,13 @@ func TestBuiltInZeroDifferenceRelations(t *testing.T) {
 				related, err := catalog.Related(tmpl, 0, measure, false)
 				require.NoError(t, err)
 				assert.Equal(t, entryCodes(identified), entryCodes(relationEntries(related)))
+				for _, relation := range related {
+					places, err := relation.Entry.Template().MismatchingPlaces(tmpl, measure)
+					require.NoError(t, err)
+					assert.Equal(t, places, relation.Places)
+					assert.Equal(t, len(places), relation.Count())
+					assert.Equal(t, 1, relation.Place)
+				}
 				relatedRotations, err := catalog.Related(tmpl, 0, measure, true)
 				require.NoError(t, err)
 				assert.Equal(t, rotationCodes(rotations), rotationCodes(relationRotations(relatedRotations)))

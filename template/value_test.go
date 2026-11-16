@@ -123,7 +123,11 @@ func TestFromIntervals(t *testing.T) {
 			require.NoError(t, err)
 			require.True(t, got.IsValid())
 			assert.Equal(t, tc.places, got.Len())
-			assert.Equal(t, tc.places, len(input))
+			wantAdjacent := tc.places
+			if tc.isOpen {
+				wantAdjacent--
+			}
+			assert.Equal(t, wantAdjacent, len(input))
 			assert.Equal(t, !tc.isOpen, got.IsClosed())
 			assert.Equal(t, tc.isOpen, got.IsOpen())
 			assert.Equal(t, tc.isOpen, got.Kind() == template.Open)
@@ -403,8 +407,9 @@ func TestSpellingsConstructorErrors(t *testing.T) {
 
 func majorSecondPlaces(count int) []interval.Interval {
 	places := make([]interval.Interval, count)
-	for i := range count {
-		places[i] = interval.MustFromDeviation(i+1, alteration.Natural())
+	places[0] = interval.PerfectUnison()
+	for i := 1; i < count; i++ {
+		places[i] = places[i-1].MustAdd(interval.MajorSecond())
 	}
 	return places
 }
@@ -451,7 +456,7 @@ func TestMaxPlaces(t *testing.T) {
 			if tc.isOpen {
 				fromPlaces, err = template.OpenFromPlaceIntervals(places)
 			} else {
-				cycle := interval.MustFromDeviation(tc.count+1, alteration.Natural())
+				cycle := places[len(places)-1].MustAdd(interval.MajorSecond())
 				fromPlaces, err = template.ClosedFromPlaceIntervals(places, cycle)
 			}
 			if tc.want != nil {
@@ -682,9 +687,11 @@ func TestExactArithmeticRegressions(t *testing.T) {
 		assert.NotNil(t, places)
 		assert.Empty(t, places)
 
-		changedAdjacent := rotated.AdjacentIntervals()
-		changedAdjacent[2] = deviation(-6_000_001)
-		changed, err := template.ClosedFromIntervals(changedAdjacent)
+		changedAdjacent := tmpl.AdjacentIntervals()
+		changedAdjacent[0] = deviation(-6_000_001)
+		changedOriginal, err := template.ClosedFromIntervals(changedAdjacent)
+		require.NoError(t, err)
+		changed, err := changedOriginal.Rotate(2)
 		require.NoError(t, err)
 		places, err = rotated.MismatchingPlaces(changed, template.FromFirst)
 		require.NoError(t, err)
