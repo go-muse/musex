@@ -1,0 +1,2284 @@
+[
+  {
+    "code": "ionian",
+    "adjacent": "M2 M2 m2 M2 M2 M2 m2",
+    "names": [
+      "натуральный мажор",
+      "ионийский",
+      "major",
+      "Ionian"
+    ],
+    "function": "Ionian",
+    "semitones": [
+      2,
+      2,
+      1,
+      2,
+      2,
+      2,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E",
+      "F",
+      "G",
+      "A",
+      "B"
+    ]
+  },
+  {
+    "code": "dorian",
+    "adjacent": "M2 m2 M2 M2 M2 m2 M2",
+    "names": [
+      "дорийский",
+      "Dorian"
+    ],
+    "function": "Dorian",
+    "semitones": [
+      2,
+      1,
+      2,
+      2,
+      2,
+      1,
+      2
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E♭",
+      "F",
+      "G",
+      "A",
+      "B♭"
+    ]
+  },
+  {
+    "code": "phrygian",
+    "adjacent": "m2 M2 M2 M2 m2 M2 M2",
+    "names": [
+      "фригийский",
+      "Phrygian"
+    ],
+    "function": "Phrygian",
+    "semitones": [
+      1,
+      2,
+      2,
+      2,
+      1,
+      2,
+      2
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "E♭",
+      "F",
+      "G",
+      "A♭",
+      "B♭"
+    ]
+  },
+  {
+    "code": "lydian",
+    "adjacent": "M2 M2 M2 m2 M2 M2 m2",
+    "names": [
+      "лидийский",
+      "Lydian"
+    ],
+    "function": "Lydian",
+    "semitones": [
+      2,
+      2,
+      2,
+      1,
+      2,
+      2,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E",
+      "F♯",
+      "G",
+      "A",
+      "B"
+    ]
+  },
+  {
+    "code": "mixolydian",
+    "adjacent": "M2 M2 m2 M2 M2 m2 M2",
+    "names": [
+      "миксолидийский",
+      "Mixolydian",
+      "Mixolydian ♭7"
+    ],
+    "function": "Mixolydian",
+    "semitones": [
+      2,
+      2,
+      1,
+      2,
+      2,
+      1,
+      2
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E",
+      "F",
+      "G",
+      "A",
+      "B♭"
+    ]
+  },
+  {
+    "code": "aeolian",
+    "adjacent": "M2 m2 M2 M2 m2 M2 M2",
+    "names": [
+      "натуральный минор",
+      "эолийский",
+      "natural minor",
+      "Aeolian"
+    ],
+    "function": "Aeolian",
+    "semitones": [
+      2,
+      1,
+      2,
+      2,
+      1,
+      2,
+      2
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E♭",
+      "F",
+      "G",
+      "A♭",
+      "B♭"
+    ]
+  },
+  {
+    "code": "locrian",
+    "adjacent": "m2 M2 M2 m2 M2 M2 M2",
+    "names": [
+      "локрийский",
+      "Locrian"
+    ],
+    "function": "Locrian",
+    "semitones": [
+      1,
+      2,
+      2,
+      1,
+      2,
+      2,
+      2
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "E♭",
+      "F",
+      "G♭",
+      "A♭",
+      "B♭"
+    ]
+  },
+  {
+    "code": "harmonic-major",
+    "adjacent": "M2 M2 m2 M2 m2 A2 m2",
+    "names": [
+      "гармонический мажор",
+      "harmonic major",
+      "Ionian ♭6"
+    ],
+    "function": "HarmonicMajor",
+    "semitones": [
+      2,
+      2,
+      1,
+      2,
+      1,
+      3,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E",
+      "F",
+      "G",
+      "A♭",
+      "B"
+    ]
+  },
+  {
+    "code": "melodic-major",
+    "adjacent": "M2 M2 m2 M2 m2 M2 M2",
+    "names": [
+      "мелодический мажор",
+      "мажорно-минорный",
+      "Mixolydian ♭6",
+      "Aeolian dominant",
+      "Descending melodic major",
+      "Hindu",
+      "Mixolydian-♭6",
+      "major minor scale"
+    ],
+    "function": "MelodicMajor",
+    "semitones": [
+      2,
+      2,
+      1,
+      2,
+      1,
+      2,
+      2
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E",
+      "F",
+      "G",
+      "A♭",
+      "B♭"
+    ]
+  },
+  {
+    "code": "harmonic-minor",
+    "adjacent": "M2 m2 M2 M2 m2 A2 m2",
+    "names": [
+      "гармонический минор",
+      "harmonic minor"
+    ],
+    "function": "HarmonicMinor",
+    "semitones": [
+      2,
+      1,
+      2,
+      2,
+      1,
+      3,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E♭",
+      "F",
+      "G",
+      "A♭",
+      "B"
+    ]
+  },
+  {
+    "code": "melodic-minor",
+    "adjacent": "M2 m2 M2 M2 M2 M2 m2",
+    "names": [
+      "мелодический минор",
+      "melodic minor ascending",
+      "jazz minor"
+    ],
+    "function": "MelodicMinor",
+    "semitones": [
+      2,
+      1,
+      2,
+      2,
+      2,
+      2,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E♭",
+      "F",
+      "G",
+      "A",
+      "B"
+    ]
+  },
+  {
+    "code": "double-harmonic-major",
+    "adjacent": "m2 A2 m2 M2 m2 A2 m2",
+    "names": [
+      "дважды гармонический мажор",
+      "цыганская мажорная гамма",
+      "венгерская гамма",
+      "доминантовый лад",
+      "андалусийский лад",
+      "арабская гамма",
+      "double harmonic major",
+      "Ionian ♭2 ♭6",
+      "Byzantine",
+      "Arabic",
+      "Hijaz Kar",
+      "Gypsy major"
+    ],
+    "function": "DoubleHarmonicMajor",
+    "semitones": [
+      1,
+      3,
+      1,
+      2,
+      1,
+      3,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "E",
+      "F",
+      "G",
+      "A♭",
+      "B"
+    ]
+  },
+  {
+    "code": "double-harmonic-minor",
+    "adjacent": "M2 m2 A2 m2 m2 A2 m2",
+    "names": [
+      "дважды гармонический минор",
+      "цыганская минорная гамма",
+      "венгерская гамма",
+      "Hungarian minor",
+      "double harmonic minor",
+      "Gypsy minor",
+      "Harmonic minor ♯4",
+      "Japanese Minor"
+    ],
+    "function": "DoubleHarmonicMinor",
+    "semitones": [
+      2,
+      1,
+      3,
+      1,
+      1,
+      3,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E♭",
+      "F♯",
+      "G",
+      "A♭",
+      "B"
+    ]
+  },
+  {
+    "code": "acoustic",
+    "adjacent": "M2 M2 M2 m2 M2 m2 M2",
+    "names": [
+      "акустический",
+      "лидийский доминантовый",
+      "гуральский",
+      "лидийско-миксолидийский",
+      "Lydian dominant",
+      "Mixolydian ♯4",
+      "Overtone",
+      "Lydian-Dominant",
+      "lydian ♭7"
+    ],
+    "function": "Acoustic",
+    "semitones": [
+      2,
+      2,
+      2,
+      1,
+      2,
+      1,
+      2
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E",
+      "F♯",
+      "G",
+      "A",
+      "B♭"
+    ]
+  },
+  {
+    "code": "dorian-b2",
+    "adjacent": "m2 M2 M2 M2 M2 m2 M2",
+    "names": [
+      "фригийский с повышенной VI ст.",
+      "Dorian ♭2",
+      "Phrygian ♮6",
+      "Phrygian-Dorian"
+    ],
+    "function": "DorianB2",
+    "semitones": [
+      1,
+      2,
+      2,
+      2,
+      2,
+      1,
+      2
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "E♭",
+      "F",
+      "G",
+      "A",
+      "B♭"
+    ]
+  },
+  {
+    "code": "lydian-augmented",
+    "adjacent": "M2 M2 M2 M2 m2 M2 m2",
+    "names": [
+      "лидийский с повышенной V ст.",
+      "Lydian augmented",
+      "Lydian-Augmented"
+    ],
+    "function": "LydianAugmented",
+    "semitones": [
+      2,
+      2,
+      2,
+      2,
+      1,
+      2,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E",
+      "F♯",
+      "G♯",
+      "A",
+      "B"
+    ]
+  },
+  {
+    "code": "locrian-sharp2",
+    "adjacent": "M2 m2 M2 m2 M2 M2 M2",
+    "names": [
+      "полууменьшённый",
+      "Locrian ♯2",
+      "Half-diminished",
+      "Aeolian ♭5"
+    ],
+    "function": "LocrianSharp2",
+    "semitones": [
+      2,
+      1,
+      2,
+      1,
+      2,
+      2,
+      2
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E♭",
+      "F",
+      "G♭",
+      "A♭",
+      "B♭"
+    ]
+  },
+  {
+    "code": "altered",
+    "adjacent": "m2 M2 m2 M2 M2 M2 M2",
+    "names": [
+      "альтерированный лад",
+      "Altered scale",
+      "Super Locrian",
+      "Altered dominant scale",
+      "diminished whole-tone",
+      "Diminished-Whole Tone"
+    ],
+    "function": "Altered",
+    "semitones": [
+      1,
+      2,
+      1,
+      2,
+      2,
+      2,
+      2
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "E♭",
+      "F♭",
+      "G♭",
+      "A♭",
+      "B♭"
+    ]
+  },
+  {
+    "code": "pentatonic-major",
+    "adjacent": "M2 M2 m3 M2 m3",
+    "names": [
+      "мажорная пентатоника",
+      "major pentatonic"
+    ],
+    "function": "PentatonicMajor",
+    "semitones": [
+      2,
+      2,
+      3,
+      2,
+      3
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E",
+      "G",
+      "A"
+    ]
+  },
+  {
+    "code": "pentatonic-minor",
+    "adjacent": "m3 M2 M2 m3 M2",
+    "names": [
+      "минорная пентатоника",
+      "minor pentatonic"
+    ],
+    "function": "PentatonicMinor",
+    "semitones": [
+      3,
+      2,
+      2,
+      3,
+      2
+    ],
+    "spellings": [
+      "C",
+      "E♭",
+      "F",
+      "G",
+      "B♭"
+    ]
+  },
+  {
+    "code": "blues",
+    "adjacent": "m3 M2 A1 m2 m3 M2",
+    "names": [
+      "блюзовая",
+      "blues scale"
+    ],
+    "function": "Blues",
+    "semitones": [
+      3,
+      2,
+      1,
+      1,
+      3,
+      2
+    ],
+    "spellings": [
+      "C",
+      "E♭",
+      "F",
+      "F♯",
+      "G",
+      "B♭"
+    ]
+  },
+  {
+    "code": "blues-b5",
+    "adjacent": "m3 M2 m2 A1 m3 M2",
+    "names": [
+      "блюзовая",
+      "blues scale"
+    ],
+    "function": "BluesB5",
+    "semitones": [
+      3,
+      2,
+      1,
+      1,
+      3,
+      2
+    ],
+    "spellings": [
+      "C",
+      "E♭",
+      "F",
+      "G♭",
+      "G",
+      "B♭"
+    ]
+  },
+  {
+    "code": "blues-major",
+    "adjacent": "M2 A1 m2 m3 M2 m3",
+    "names": [
+      "мажорная блюзовая",
+      "major blues scale"
+    ],
+    "function": "BluesMajor",
+    "semitones": [
+      2,
+      1,
+      1,
+      3,
+      2,
+      3
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "D♯",
+      "E",
+      "G",
+      "A"
+    ]
+  },
+  {
+    "code": "whole-tone",
+    "adjacent": "M2 M2 M2 M2 M2 d3",
+    "names": [
+      "целотоновая",
+      "увеличенный лад",
+      "лад Мессиана 1",
+      "whole tone"
+    ],
+    "function": "WholeTone",
+    "semitones": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E",
+      "F♯",
+      "G♯",
+      "A♯"
+    ]
+  },
+  {
+    "code": "octatonic-wh",
+    "adjacent": "M2 m2 M2 m2 M2 A1 M2 m2",
+    "names": [
+      "октатоника тон–полутон",
+      "уменьшённый лад",
+      "гамма Римского-Корсакова",
+      "Octatonic Whole-Half",
+      "whole step/half-step diminished scale",
+      "Korsakovian scale",
+      "Pijper scale"
+    ],
+    "function": "OctatonicWH",
+    "semitones": [
+      2,
+      1,
+      2,
+      1,
+      2,
+      1,
+      2,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E♭",
+      "F",
+      "G♭",
+      "A♭",
+      "A",
+      "B"
+    ]
+  },
+  {
+    "code": "octatonic-hw",
+    "adjacent": "m2 M2 A1 M2 m2 M2 m2 M2",
+    "names": [
+      "октатоника полутон–тон",
+      "лад Мессиана 2",
+      "Octatonic Half-Whole",
+      "diminished scale",
+      "half-step/whole step diminished scale",
+      "Mode 2",
+      "second mode of limited transposition",
+      "second mode",
+      "M2"
+    ],
+    "function": "OctatonicHW",
+    "semitones": [
+      1,
+      2,
+      1,
+      2,
+      1,
+      2,
+      1,
+      2
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "E♭",
+      "E",
+      "F♯",
+      "G",
+      "A",
+      "B♭"
+    ]
+  },
+  {
+    "code": "hexatonic",
+    "adjacent": "A1 m3 m2 A2 m2 m3",
+    "names": [
+      "гексатоника",
+      "hexatonic"
+    ],
+    "function": "Hexatonic",
+    "semitones": [
+      1,
+      3,
+      1,
+      3,
+      1,
+      3
+    ],
+    "spellings": [
+      "C",
+      "C♯",
+      "E",
+      "F",
+      "G♯",
+      "A"
+    ]
+  },
+  {
+    "code": "messiaen-3",
+    "adjacent": "M2 m2 A1 M2 m2 m2 M2 A1 m2",
+    "names": [
+      "лад Мессиана 3",
+      "third mode of limited transposition",
+      "third mode",
+      "Mode 3",
+      "M3"
+    ],
+    "function": "Messiaen3",
+    "semitones": [
+      2,
+      1,
+      1,
+      2,
+      1,
+      1,
+      2,
+      1,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E♭",
+      "E",
+      "F♯",
+      "G",
+      "A♭",
+      "B♭",
+      "B"
+    ]
+  },
+  {
+    "code": "messiaen-3-commons",
+    "adjacent": "M2 m2 A1 d3 A1 m2 M2 A1 m2",
+    "names": [
+      "лад Мессиана 3",
+      "third mode of limited transposition",
+      "third mode",
+      "Mode 3",
+      "M3"
+    ],
+    "function": "Messiaen3Commons",
+    "semitones": [
+      2,
+      1,
+      1,
+      2,
+      1,
+      1,
+      2,
+      1,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E♭",
+      "E",
+      "G♭",
+      "G",
+      "A♭",
+      "B♭",
+      "B"
+    ]
+  },
+  {
+    "code": "messiaen-4-papadopoulos",
+    "adjacent": "m2 A1 m3 A1 m2 m2 A2 m2",
+    "names": [
+      "лад Мессиана 4",
+      "fourth mode",
+      "Mode 4",
+      "M4"
+    ],
+    "function": "Messiaen4Papadopoulos",
+    "semitones": [
+      1,
+      1,
+      3,
+      1,
+      1,
+      1,
+      3,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "D",
+      "F",
+      "F♯",
+      "G",
+      "A♭",
+      "B"
+    ]
+  },
+  {
+    "code": "messiaen-4-degraaf",
+    "adjacent": "m2 A1 m3 A1 m2 A1 m3 m2",
+    "names": [
+      "лад Мессиана 4",
+      "fourth mode",
+      "Mode 4",
+      "M4"
+    ],
+    "function": "Messiaen4Degraaf",
+    "semitones": [
+      1,
+      1,
+      3,
+      1,
+      1,
+      1,
+      3,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "D",
+      "F",
+      "F♯",
+      "G",
+      "G♯",
+      "B"
+    ]
+  },
+  {
+    "code": "messiaen-4-commons",
+    "adjacent": "m2 A1 m3 m2 A1 m2 A2 m2",
+    "names": [
+      "лад Мессиана 4",
+      "fourth mode",
+      "Mode 4",
+      "M4"
+    ],
+    "function": "Messiaen4Commons",
+    "semitones": [
+      1,
+      1,
+      3,
+      1,
+      1,
+      1,
+      3,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "D",
+      "F",
+      "G♭",
+      "G",
+      "A♭",
+      "B"
+    ]
+  },
+  {
+    "code": "messiaen-5-papadopoulos",
+    "adjacent": "m2 M3 A1 m2 M3 m2",
+    "names": [
+      "лад Мессиана 5",
+      "fifth mode of limited transposition",
+      "fifth mode",
+      "Mode 5",
+      "M5"
+    ],
+    "function": "Messiaen5Papadopoulos",
+    "semitones": [
+      1,
+      4,
+      1,
+      1,
+      4,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "F",
+      "F♯",
+      "G",
+      "B"
+    ]
+  },
+  {
+    "code": "messiaen-5-degraaf",
+    "adjacent": "A1 d4 A1 m2 M3 m2",
+    "names": [
+      "лад Мессиана 5",
+      "fifth mode of limited transposition",
+      "fifth mode",
+      "Mode 5",
+      "M5"
+    ],
+    "function": "Messiaen5Degraaf",
+    "semitones": [
+      1,
+      4,
+      1,
+      1,
+      4,
+      1
+    ],
+    "spellings": [
+      "C",
+      "C♯",
+      "F",
+      "F♯",
+      "G",
+      "B"
+    ]
+  },
+  {
+    "code": "messiaen-5-commons",
+    "adjacent": "m2 M3 m2 A1 M3 m2",
+    "names": [
+      "лад Мессиана 5",
+      "fifth mode of limited transposition",
+      "fifth mode",
+      "Mode 5",
+      "M5"
+    ],
+    "function": "Messiaen5Commons",
+    "semitones": [
+      1,
+      4,
+      1,
+      1,
+      4,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "F",
+      "G♭",
+      "G",
+      "B"
+    ]
+  },
+  {
+    "code": "messiaen-6",
+    "adjacent": "M2 M2 m2 A1 M2 M2 m2 m2",
+    "names": [
+      "лад Мессиана 6",
+      "sixth mode",
+      "Mode 6",
+      "M6"
+    ],
+    "function": "Messiaen6",
+    "semitones": [
+      2,
+      2,
+      1,
+      1,
+      2,
+      2,
+      1,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E",
+      "F",
+      "F♯",
+      "G♯",
+      "A♯",
+      "B"
+    ]
+  },
+  {
+    "code": "messiaen-7-degraaf",
+    "adjacent": "A1 m2 A1 d3 A1 m2 A1 m2 M2 m2",
+    "names": [
+      "лад Мессиана 7",
+      "seventh mode",
+      "Mode 7",
+      "M7"
+    ],
+    "function": "Messiaen7Degraaf",
+    "semitones": [
+      1,
+      1,
+      1,
+      2,
+      1,
+      1,
+      1,
+      1,
+      2,
+      1
+    ],
+    "spellings": [
+      "C",
+      "C♯",
+      "D",
+      "D♯",
+      "F",
+      "F♯",
+      "G",
+      "G♯",
+      "A",
+      "B"
+    ]
+  },
+  {
+    "code": "messiaen-7-commons",
+    "adjacent": "m2 A1 m2 M2 m2 A1 m2 A1 M2 m2",
+    "names": [
+      "лад Мессиана 7",
+      "seventh mode",
+      "Mode 7",
+      "M7"
+    ],
+    "function": "Messiaen7Commons",
+    "semitones": [
+      1,
+      1,
+      1,
+      2,
+      1,
+      1,
+      1,
+      1,
+      2,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "D",
+      "E♭",
+      "F",
+      "G♭",
+      "G",
+      "A♭",
+      "A",
+      "B"
+    ]
+  },
+  {
+    "code": "bebop-dominant",
+    "adjacent": "M2 M2 m2 M2 M2 m2 A1 m2",
+    "names": [
+      "бибоп доминантовый",
+      "bebop dominant"
+    ],
+    "function": "BebopDominant",
+    "semitones": [
+      2,
+      2,
+      1,
+      2,
+      2,
+      1,
+      1,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E",
+      "F",
+      "G",
+      "A",
+      "B♭",
+      "B"
+    ]
+  },
+  {
+    "code": "bebop-major",
+    "adjacent": "M2 M2 m2 M2 A1 m2 M2 m2",
+    "names": [
+      "бибоп мажорный",
+      "bebop major",
+      "major sixth diminished scale"
+    ],
+    "function": "BebopMajor",
+    "semitones": [
+      2,
+      2,
+      1,
+      2,
+      1,
+      1,
+      2,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E",
+      "F",
+      "G",
+      "G♯",
+      "A",
+      "B"
+    ]
+  },
+  {
+    "code": "locrian-natural6",
+    "adjacent": "m2 M2 M2 m2 A2 m2 M2",
+    "names": [
+      "Locrian ♮6",
+      "Javanese ♭5"
+    ],
+    "function": "LocrianNatural6",
+    "semitones": [
+      1,
+      2,
+      2,
+      1,
+      3,
+      1,
+      2
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "E♭",
+      "F",
+      "G♭",
+      "A",
+      "B♭"
+    ]
+  },
+  {
+    "code": "ionian-sharp5",
+    "adjacent": "M2 M2 m2 A2 m2 M2 m2",
+    "names": [
+      "Ionian ♯5",
+      "augmented major",
+      "Major Augmented"
+    ],
+    "function": "IonianSharp5",
+    "semitones": [
+      2,
+      2,
+      1,
+      3,
+      1,
+      2,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E",
+      "F",
+      "G♯",
+      "A",
+      "B"
+    ]
+  },
+  {
+    "code": "ukrainian-dorian",
+    "adjacent": "M2 m2 A2 m2 M2 m2 M2",
+    "names": [
+      "гуцульский",
+      "дорийский с повышенной IV",
+      "Ukrainian Dorian",
+      "Dorian ♯4",
+      "Dorian ♯11",
+      "Romanian minor",
+      "Nikriz",
+      "Mi Sheberakh",
+      "altered dorian",
+      "Lydian ♭3 ♭7",
+      "Hutsul mode"
+    ],
+    "function": "UkrainianDorian",
+    "semitones": [
+      2,
+      1,
+      3,
+      1,
+      2,
+      1,
+      2
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E♭",
+      "F♯",
+      "G",
+      "A",
+      "B♭"
+    ]
+  },
+  {
+    "code": "phrygian-dominant",
+    "adjacent": "m2 A2 m2 M2 m2 M2 M2",
+    "names": [
+      "Phrygian dominant",
+      "Hijaz",
+      "Double Harmonic Major ♭7",
+      "Mixolydian ♭2 ♭6",
+      "Freygish",
+      "Phrygian ♮3",
+      "harmonic dominant",
+      "altered Phrygian",
+      "dominant flat 2 flat 6",
+      "Ahava Rabbah",
+      "Jewish scale",
+      "Spanish Gypsy",
+      "Spanish Phrygian"
+    ],
+    "function": "PhrygianDominant",
+    "semitones": [
+      1,
+      3,
+      1,
+      2,
+      1,
+      2,
+      2
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "E",
+      "F",
+      "G",
+      "A♭",
+      "B♭"
+    ]
+  },
+  {
+    "code": "lydian-sharp2",
+    "adjacent": "A2 m2 M2 m2 M2 M2 m2",
+    "names": [
+      "лидийский мажор с повышенной II ступенью",
+      "Lydian ♯2"
+    ],
+    "function": "LydianSharp2",
+    "semitones": [
+      3,
+      1,
+      2,
+      1,
+      2,
+      2,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D♯",
+      "E",
+      "F♯",
+      "G",
+      "A",
+      "B"
+    ]
+  },
+  {
+    "code": "ultralocrian",
+    "adjacent": "m2 M2 m2 M2 M2 m2 A2",
+    "names": [
+      "Super-Locrian 𝄫7",
+      "altered diminished",
+      "Ultralocrian"
+    ],
+    "function": "Ultralocrian",
+    "semitones": [
+      1,
+      2,
+      1,
+      2,
+      2,
+      1,
+      3
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "E♭",
+      "F♭",
+      "G♭",
+      "A♭",
+      "B𝄫"
+    ]
+  },
+  {
+    "code": "dorian-b5",
+    "adjacent": "M2 m2 M2 m2 A2 m2 M2",
+    "names": [
+      "Dorian ♭5",
+      "Locrian ♮2 ♮6"
+    ],
+    "function": "DorianB5",
+    "semitones": [
+      2,
+      1,
+      2,
+      1,
+      3,
+      1,
+      2
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E♭",
+      "F",
+      "G♭",
+      "A",
+      "B♭"
+    ]
+  },
+  {
+    "code": "phrygian-b4",
+    "adjacent": "m2 M2 m2 A2 m2 M2 M2",
+    "names": [
+      "Phrygian ♭4",
+      "Altered Dominant ♮5",
+      "Superlocrian ♮5"
+    ],
+    "function": "PhrygianB4",
+    "semitones": [
+      1,
+      2,
+      1,
+      3,
+      1,
+      2,
+      2
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "E♭",
+      "F♭",
+      "G",
+      "A♭",
+      "B♭"
+    ]
+  },
+  {
+    "code": "lydian-b3",
+    "adjacent": "M2 m2 A2 m2 M2 M2 m2",
+    "names": [
+      "Lydian ♭3",
+      "Jazz minor ♯4"
+    ],
+    "function": "LydianB3",
+    "semitones": [
+      2,
+      1,
+      3,
+      1,
+      2,
+      2,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E♭",
+      "F♯",
+      "G",
+      "A",
+      "B"
+    ]
+  },
+  {
+    "code": "mixolydian-b2",
+    "adjacent": "m2 A2 m2 M2 M2 m2 M2",
+    "names": [
+      "Mixolydian ♭2"
+    ],
+    "function": "MixolydianB2",
+    "semitones": [
+      1,
+      3,
+      1,
+      2,
+      2,
+      1,
+      2
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "E",
+      "F",
+      "G",
+      "A",
+      "B♭"
+    ]
+  },
+  {
+    "code": "lydian-sharp2-sharp5",
+    "adjacent": "A2 m2 M2 M2 m2 M2 m2",
+    "names": [
+      "Lydian ♯2 ♯5",
+      "Aeolian Flat"
+    ],
+    "function": "LydianSharp2Sharp5",
+    "semitones": [
+      3,
+      1,
+      2,
+      2,
+      1,
+      2,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D♯",
+      "E",
+      "F♯",
+      "G♯",
+      "A",
+      "B"
+    ]
+  },
+  {
+    "code": "locrian-bb7",
+    "adjacent": "m2 M2 M2 m2 M2 m2 A2",
+    "names": [
+      "Locrian 𝄫7"
+    ],
+    "function": "LocrianBB7",
+    "semitones": [
+      1,
+      2,
+      2,
+      1,
+      2,
+      1,
+      3
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "E♭",
+      "F",
+      "G♭",
+      "A♭",
+      "B𝄫"
+    ]
+  },
+  {
+    "code": "lydian-sharp2-sharp6",
+    "adjacent": "A2 m2 M2 m2 A2 m2 m2",
+    "names": [
+      "Lydian ♯2 ♯6"
+    ],
+    "function": "LydianSharp2Sharp6",
+    "semitones": [
+      3,
+      1,
+      2,
+      1,
+      3,
+      1,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D♯",
+      "E",
+      "F♯",
+      "G",
+      "A♯",
+      "B"
+    ]
+  },
+  {
+    "code": "ultraphrygian",
+    "adjacent": "m2 M2 m2 A2 m2 m2 A2",
+    "names": [
+      "Ultraphrygian",
+      "Ultralocrian ♮5",
+      "Phrygian ♭4 𝄫7"
+    ],
+    "function": "Ultraphrygian",
+    "semitones": [
+      1,
+      2,
+      1,
+      3,
+      1,
+      1,
+      3
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "E♭",
+      "F♭",
+      "G",
+      "A♭",
+      "B𝄫"
+    ]
+  },
+  {
+    "code": "oriental",
+    "adjacent": "m2 A2 m2 m2 A2 m2 M2",
+    "names": [
+      "Mixolydian ♭2 ♭5",
+      "Locrian Dominant ♮6",
+      "Oriental",
+      "Chinese Dominant",
+      "Asian Dominant"
+    ],
+    "function": "Oriental",
+    "semitones": [
+      1,
+      3,
+      1,
+      1,
+      3,
+      1,
+      2
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "E",
+      "F",
+      "G♭",
+      "A",
+      "B♭"
+    ]
+  },
+  {
+    "code": "ionian-augmented-sharp2",
+    "adjacent": "A2 m2 m2 A2 m2 M2 m2",
+    "names": [
+      "Ionian Augmented ♯2",
+      "Ionian ♯2 ♯5"
+    ],
+    "function": "IonianAugmentedSharp2",
+    "semitones": [
+      3,
+      1,
+      1,
+      3,
+      1,
+      2,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D♯",
+      "E",
+      "F",
+      "G♯",
+      "A",
+      "B"
+    ]
+  },
+  {
+    "code": "locrian-bb3-bb7",
+    "adjacent": "m2 m2 A2 m2 M2 m2 A2",
+    "names": [
+      "Locrian 𝄫3 𝄫7"
+    ],
+    "function": "LocrianBB3BB7",
+    "semitones": [
+      1,
+      1,
+      3,
+      1,
+      2,
+      1,
+      3
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "E𝄫",
+      "F",
+      "G♭",
+      "A♭",
+      "B𝄫"
+    ]
+  },
+  {
+    "code": "hungarian-major",
+    "adjacent": "A2 m2 M2 m2 M2 m2 M2",
+    "names": [
+      "Hungarian major",
+      "Lydian Dominant ♯2"
+    ],
+    "function": "HungarianMajor",
+    "semitones": [
+      3,
+      1,
+      2,
+      1,
+      2,
+      1,
+      2
+    ],
+    "spellings": [
+      "C",
+      "D♯",
+      "E",
+      "F♯",
+      "G",
+      "A",
+      "B♭"
+    ]
+  },
+  {
+    "code": "aeolian-sharp4",
+    "adjacent": "M2 m2 A2 m2 m2 M2 M2",
+    "names": [
+      "Aeolian ♯4",
+      "Gypsy",
+      "Romani Minor",
+      "Natural Minor ♯4",
+      "Hungarian/Gypsy Minor ♭7"
+    ],
+    "function": "AeolianSharp4",
+    "semitones": [
+      2,
+      1,
+      3,
+      1,
+      1,
+      2,
+      2
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E♭",
+      "F♯",
+      "G",
+      "A♭",
+      "B♭"
+    ]
+  },
+  {
+    "code": "neapolitan-minor",
+    "adjacent": "m2 M2 M2 M2 m2 A2 m2",
+    "names": [
+      "Neapolitan minor",
+      "minor Neapolitan scale",
+      "Phrygian harmonic minor"
+    ],
+    "function": "NeapolitanMinor",
+    "semitones": [
+      1,
+      2,
+      2,
+      2,
+      1,
+      3,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "E♭",
+      "F",
+      "G",
+      "A♭",
+      "B"
+    ]
+  },
+  {
+    "code": "neapolitan-major",
+    "adjacent": "m2 M2 M2 M2 M2 M2 m2",
+    "names": [
+      "неаполитанский мажор",
+      "Neapolitan major",
+      "major Neapolitan scale",
+      "Phrygian melodic minor"
+    ],
+    "function": "NeapolitanMajor",
+    "semitones": [
+      1,
+      2,
+      2,
+      2,
+      2,
+      2,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "E♭",
+      "F",
+      "G",
+      "A",
+      "B"
+    ]
+  },
+  {
+    "code": "persian",
+    "adjacent": "m2 A2 m2 m2 M2 A2 m2",
+    "names": [
+      "Persian",
+      "Double Harmonic Major ♭5"
+    ],
+    "function": "Persian",
+    "semitones": [
+      1,
+      3,
+      1,
+      1,
+      2,
+      3,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "E",
+      "F",
+      "G♭",
+      "A♭",
+      "B"
+    ]
+  },
+  {
+    "code": "enigmatic",
+    "adjacent": "m2 A2 M2 M2 M2 m2 m2",
+    "names": [
+      "Enigmatic",
+      "scala enigmatica"
+    ],
+    "function": "Enigmatic",
+    "semitones": [
+      1,
+      3,
+      2,
+      2,
+      2,
+      1,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "E",
+      "F♯",
+      "G♯",
+      "A♯",
+      "B"
+    ]
+  },
+  {
+    "code": "prometheus",
+    "adjacent": "M2 M2 M2 m3 m2 M2",
+    "names": [
+      "Prometheus",
+      "Lydian-Mixolydian"
+    ],
+    "function": "Prometheus",
+    "semitones": [
+      2,
+      2,
+      2,
+      3,
+      1,
+      2
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E",
+      "F♯",
+      "A",
+      "B♭"
+    ]
+  },
+  {
+    "code": "tritone",
+    "adjacent": "m2 A2 d3 A1 m3 M2",
+    "names": [
+      "Tritone"
+    ],
+    "function": "Tritone",
+    "semitones": [
+      1,
+      3,
+      2,
+      1,
+      3,
+      2
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "E",
+      "G♭",
+      "G",
+      "B♭"
+    ]
+  },
+  {
+    "code": "two-semitone-tritone",
+    "adjacent": "m2 A1 M3 m2 m2 M3",
+    "names": [
+      "Two-semitone tritone",
+      "fifth mode of Messiaen's list"
+    ],
+    "function": "TwoSemitoneTritone",
+    "semitones": [
+      1,
+      1,
+      4,
+      1,
+      1,
+      4
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "D",
+      "F♯",
+      "G",
+      "A♭"
+    ]
+  },
+  {
+    "code": "augmented",
+    "adjacent": "m3 A1 m3 A1 m3 m2",
+    "names": [
+      "Augmented",
+      "symmetrical augmented scale",
+      "minor-third half-step scale"
+    ],
+    "function": "Augmented",
+    "semitones": [
+      3,
+      1,
+      3,
+      1,
+      3,
+      1
+    ],
+    "spellings": [
+      "C",
+      "E♭",
+      "E",
+      "G",
+      "G♯",
+      "B"
+    ]
+  },
+  {
+    "code": "pentatonic-suspended",
+    "adjacent": "M2 m3 M2 m3 M2",
+    "names": [
+      "Suspended",
+      "Egyptian",
+      "shāng mode"
+    ],
+    "function": "PentatonicSuspended",
+    "semitones": [
+      2,
+      3,
+      2,
+      3,
+      2
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "F",
+      "G",
+      "B♭"
+    ]
+  },
+  {
+    "code": "pentatonic-blues-minor",
+    "adjacent": "m3 M2 m3 M2 M2",
+    "names": [
+      "Blues minor",
+      "Man Gong",
+      "jué mode"
+    ],
+    "function": "PentatonicBluesMinor",
+    "semitones": [
+      3,
+      2,
+      3,
+      2,
+      2
+    ],
+    "spellings": [
+      "C",
+      "E♭",
+      "F",
+      "A♭",
+      "B♭"
+    ]
+  },
+  {
+    "code": "yo",
+    "adjacent": "M2 m3 M2 M2 m3",
+    "names": [
+      "Yo",
+      "Blues major",
+      "ritsusen",
+      "zhǐ mode"
+    ],
+    "function": "Yo",
+    "semitones": [
+      2,
+      3,
+      2,
+      2,
+      3
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "F",
+      "G",
+      "A"
+    ]
+  },
+  {
+    "code": "hirajoshi-burrows",
+    "adjacent": "M3 M2 m2 M3 m2",
+    "names": [
+      "Hirajōshi",
+      "hira-choshi"
+    ],
+    "function": "HirajoshiBurrows",
+    "semitones": [
+      4,
+      2,
+      1,
+      4,
+      1
+    ],
+    "spellings": [
+      "C",
+      "E",
+      "F♯",
+      "G",
+      "B"
+    ]
+  },
+  {
+    "code": "hirajoshi-sachs",
+    "adjacent": "m2 M3 m2 M3 M2",
+    "names": [
+      "Hirajōshi",
+      "hira-choshi"
+    ],
+    "function": "HirajoshiSachs",
+    "semitones": [
+      1,
+      4,
+      1,
+      4,
+      2
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "F",
+      "G♭",
+      "B♭"
+    ]
+  },
+  {
+    "code": "hirajoshi-kostka",
+    "adjacent": "M2 m2 M3 m2 M3",
+    "names": [
+      "Hirajōshi",
+      "hira-choshi"
+    ],
+    "function": "HirajoshiKostka",
+    "semitones": [
+      2,
+      1,
+      4,
+      1,
+      4
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E♭",
+      "G",
+      "A♭"
+    ]
+  },
+  {
+    "code": "iwato",
+    "adjacent": "m2 M3 m2 M3 M2",
+    "names": [
+      "Iwato"
+    ],
+    "function": "Iwato",
+    "semitones": [
+      1,
+      4,
+      1,
+      4,
+      2
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "F",
+      "G♭",
+      "B♭"
+    ]
+  },
+  {
+    "code": "in",
+    "adjacent": "m2 M3 M2 m2 M3",
+    "names": [
+      "In",
+      "Sakura pentatonic",
+      "miyako-bushi",
+      "Japanese mode"
+    ],
+    "function": "In",
+    "semitones": [
+      1,
+      4,
+      2,
+      1,
+      4
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "F",
+      "G",
+      "A♭"
+    ]
+  },
+  {
+    "code": "insen",
+    "adjacent": "m2 M3 M2 m3 M2",
+    "names": [
+      "Insen",
+      "In Sen"
+    ],
+    "function": "Insen",
+    "semitones": [
+      1,
+      4,
+      2,
+      3,
+      2
+    ],
+    "spellings": [
+      "C",
+      "D♭",
+      "F",
+      "G",
+      "B♭"
+    ]
+  },
+  {
+    "code": "bebop-melodic-minor",
+    "adjacent": "M2 m2 M2 M2 A1 m2 M2 m2",
+    "names": [
+      "Bebop melodic minor",
+      "minor sixth diminished scale"
+    ],
+    "function": "BebopMelodicMinor",
+    "semitones": [
+      2,
+      1,
+      2,
+      2,
+      1,
+      1,
+      2,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E♭",
+      "F",
+      "G",
+      "G♯",
+      "A",
+      "B"
+    ]
+  },
+  {
+    "code": "bebop-harmonic-minor",
+    "adjacent": "M2 m2 M2 M2 m2 M2 A1 m2",
+    "names": [
+      "Bebop harmonic minor",
+      "bebop natural minor"
+    ],
+    "function": "BebopHarmonicMinor",
+    "semitones": [
+      2,
+      1,
+      2,
+      2,
+      1,
+      2,
+      1,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E♭",
+      "F",
+      "G",
+      "A♭",
+      "B♭",
+      "B"
+    ]
+  },
+  {
+    "code": "seventh-flat5-diminished",
+    "adjacent": "M2 M2 m2 m2 M2 M2 A1 m2",
+    "names": [
+      "Seventh flat 5 diminished",
+      "Messiaen's sixth mode"
+    ],
+    "function": "SeventhFlat5Diminished",
+    "semitones": [
+      2,
+      2,
+      1,
+      1,
+      2,
+      2,
+      1,
+      1
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E",
+      "F",
+      "G♭",
+      "A♭",
+      "B♭",
+      "B"
+    ]
+  },
+  {
+    "code": "bebop-dorian",
+    "adjacent": "M2 m2 A1 m2 M2 M2 m2 M2",
+    "names": [
+      "Minor bebop",
+      "Bebop Dorian",
+      "bebop minor"
+    ],
+    "function": "BebopDorian",
+    "semitones": [
+      2,
+      1,
+      1,
+      1,
+      2,
+      2,
+      1,
+      2
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E♭",
+      "E",
+      "F",
+      "G",
+      "A",
+      "B♭"
+    ]
+  },
+  {
+    "code": "kumoi",
+    "adjacent": "M2 m2 M3 M2 m3",
+    "names": [
+      "Kumoi",
+      "Dorian Pentatonic",
+      "Akebono I"
+    ],
+    "function": "Kumoi",
+    "semitones": [
+      2,
+      1,
+      4,
+      2,
+      3
+    ],
+    "spellings": [
+      "C",
+      "D",
+      "E♭",
+      "G",
+      "A"
+    ]
+  }
+]
