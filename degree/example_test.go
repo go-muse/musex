@@ -97,7 +97,7 @@ func ExampleDegree_changeNoteAndNumber() {
 	// Output:
 	// 4 B
 	// 4 false
-	// 5 B
+	// 5 B♭
 }
 
 func ExampleDegree_compareAndSort() {
