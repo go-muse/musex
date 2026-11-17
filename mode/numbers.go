@@ -230,11 +230,14 @@ func (m Mode) sameInSystem(sys *system.System, start spelling.Spelling, other Mo
 }
 
 // CycleIn compares the cycle with the octave of a regular system.
+// Only the size of the cycle needs to fit in a Step.
 func (m Mode) CycleIn(sys *system.System) (CycleInfo, error) {
 	return m.cycleIn(sys, spelling.Spelling{}, false)
 }
 
 // CycleInFrom compares the cycle with the system octave from start.
+// The initial spelling, all degree spellings, and the spelling at the end of
+// the cycle must be admissible in sys.
 func (m Mode) CycleInFrom(sys *system.System, start spelling.Spelling) (CycleInfo, error) {
 	return m.cycleIn(sys, start, true)
 }
@@ -250,11 +253,16 @@ func (m Mode) cycleIn(sys *system.System, start spelling.Spelling, requireStart 
 	if err := m.checkClosedIn(sys, start, requireStart); err != nil {
 		return CycleInfo{}, err
 	}
-	positions, err := m.numbers(sys, start, requireStart)
-	if err != nil {
-		return CycleInfo{}, err
+	if requireStart {
+		if err := m.checkDegreeNames(sys, start); err != nil {
+			return CycleInfo{}, err
+		}
 	}
-	cycle, octave := int(positions.Cycle), sys.Classes()
+	cycleSize, err := m.cycle.Steps(sys, start)
+	if err != nil {
+		return CycleInfo{}, positionError("cycle", err)
+	}
+	cycle, octave := int(cycleSize), sys.Classes()
 	if cycle < 1 {
 		return CycleInfo{}, ErrNonPositiveNumber
 	}
@@ -263,6 +271,25 @@ func (m Mode) cycleIn(sys *system.System, start spelling.Spelling, requireStart 
 		gcd, remainder = remainder, gcd%remainder
 	}
 	return CycleInfo{Comparison: cmp.Compare(cycle, octave), Cycles: octave / gcd, Octaves: cycle / gcd}, nil
+}
+
+func (m Mode) checkDegreeNames(sys *system.System, start spelling.Spelling) error {
+	for i, prefix := range m.prefixes {
+		// The first prefix is P1, so this also validates start before any
+		// subsequent names. No intermediate position is needed here.
+		name, err := interval.Transpose(start, prefix)
+		if err != nil {
+			return positionError(fmt.Sprintf("degree %d", i+1), err)
+		}
+		admitted, err := sys.Admits(name)
+		if err != nil {
+			return fmt.Errorf("degree %d: %w", i+1, err)
+		}
+		if !admitted {
+			return fmt.Errorf("degree %d (%v): %w", i+1, name, system.ErrInadmissible)
+		}
+	}
+	return nil
 }
 
 // SymmetryIn describes the numerical symmetry in a regular system.
