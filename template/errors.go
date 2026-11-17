@@ -73,6 +73,53 @@ func opError(op string, sentinel error) error {
 	return operationError{op: op, sentinel: sentinel}
 }
 
+const maxErrorTextBytes = 512
+
+// boundedTextError replaces only the displayed text of an oversized error. The
+// complete original error remains available through Unwrap.
+type boundedTextError struct {
+	message string
+	cause   error
+}
+
+func (e boundedTextError) Error() string {
+	return e.message
+}
+
+func (e boundedTextError) Unwrap() error {
+	return e.cause
+}
+
+// boundTextError preserves short errors unchanged. For a longer error it uses
+// a short ASCII operation and package category without retaining the input.
+func boundTextError(op string, err error) error {
+	if err == nil || len(err.Error()) <= maxErrorTextBytes {
+		return err
+	}
+	sentinel := ErrParse
+	for _, candidate := range [...]error{
+		ErrUnset,
+		ErrInvalidArgument,
+		ErrEmptyInput,
+		ErrInvalidInterval,
+		ErrOpenRotation,
+		ErrDuplicateCode,
+		ErrUnknownCode,
+		ErrOutOfRange,
+		ErrParse,
+		ErrIncomparable,
+	} {
+		if errors.Is(err, candidate) {
+			sentinel = candidate
+			break
+		}
+	}
+	return boundedTextError{
+		message: fmt.Sprintf("template: %s: %v", op, sentinel),
+		cause:   err,
+	}
+}
+
 // dependencyError is a comparable error with a package sentinel and one direct
 // dependency cause. Its value form preserves equality across a Must call.
 type dependencyError struct {

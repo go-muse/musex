@@ -29,7 +29,10 @@
 // MaxPlaces limits the number of actual places to 65536. Virtual place numbers
 // of closed templates are limited only by int. Arithmetic uses exact extended
 // intermediate coordinates, so an operation fails only when a required final
-// interval cannot be represented by package interval.
+// interval cannot be represented by package interval. Constructing a closed
+// template requires only its complete cycle to be representable; an
+// unrepresentable intermediate place interval returns ErrOutOfRange when read.
+// An open template requires every place interval to be representable.
 //
 // # Rotation, equality, and comparison
 //
@@ -79,7 +82,10 @@
 // Template.MarshalText, Template.AppendText, and Template.UnmarshalText provide
 // the machine form used as a JSON string by standard encoders. Template.Russian
 // writes Russian abbreviations when every interval has one and otherwise
-// reports that no such representation exists.
+// reports that no such representation exists. Every error returned by Parse or
+// UnmarshalText is at most 512 bytes, including UnmarshalText's operation
+// context, and preserves its package category and all dependency causes through
+// its unwrap tree.
 //
 // # Errors, zero values, and concurrency
 //
