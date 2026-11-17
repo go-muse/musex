@@ -191,10 +191,10 @@ func (s *changeableSource) Settings() *settings.Settings { return s.current.Load
 func TestCreateFromNotes(t *testing.T) {
 	t.Parallel()
 	for _, tt := range []struct{ names, want string }{
-		{"C D E♭ F G A♭ B", "M2 m2 M2 M2 m2 A2 m2"},
-		{"G♯ A♯ B C♯ D♯ E F𝄪", "M2 m2 M2 M2 m2 A2 m2"},
+		{"C D E-1 F G A-1 B", "M2 m2 M2 M2 m2 A2 m2"},
+		{"G+1 A+1 B C+1 D+1 E F+2", "M2 m2 M2 M2 m2 A2 m2"},
 		{"B C D", "m2 M2 M6"},
-		{"C D C♭", "M2 d7 A1"},
+		{"C D C-1", "M2 d7 A1"},
 	} {
 		t.Run(tt.names, func(t *testing.T) {
 			input := notes(t, tt.names, cents.MustFromInt(30), nil)

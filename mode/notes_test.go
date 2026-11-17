@@ -19,14 +19,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func spellingText(input string) string {
-	tokens := strings.Fields(input)
-	for i, s := range tokens {
-		tokens[i] = spelling.MustParse(s).String()
-	}
-	return strings.Join(tokens, " ")
-}
-
 func noteAt(t *testing.T, name string, aspn int, delta cents.Cents, src settings.Source) note.Note {
 	t.Helper()
 	n, err := note.FromASPN(spelling.MustParse(name), aspn, delta, src)
@@ -38,14 +30,14 @@ func TestNotesFromNamesAndOwnership(t *testing.T) {
 	t.Parallel()
 	for _, tt := range []struct{ name, structure, first, want string }{
 		{"dorian from D", dorian, "D", "D E F G A B C"},
-		{"dorian from C", dorian, "C", "C D E♭ F G A B♭"},
-		{"harmonic minor", "M2 m2 M2 M2 m2 A2 m2", "G♯", "G♯ A♯ B C♯ D♯ E F𝄪"},
-		{"seven flats", ionian, "C♭", "C♭ D♭ E♭ F♭ G♭ A♭ B♭"},
-		{"pentatonic minor", "m3 M2 M2 m3 M2", "C", "C E♭ F G B♭"},
-		{"blues", "m3 M2 A1 m2 m3 M2", "C", "C E♭ F F♯ G B♭"},
-		{"whole tone", "M2 M2 M2 M2 M2 d3", "C", "C D E F♯ G♯ A♯"},
-		{"bebop major", "M2 M2 m2 M2 A1 m2 M2 m2", "C", "C D E F G G♯ A B"},
-		{"two steps", "A4 d5", "C", "C F♯"},
+		{"dorian from C", dorian, "C", "C D E-1 F G A B-1"},
+		{"harmonic minor", "M2 m2 M2 M2 m2 A2 m2", "G+1", "G+1 A+1 B C+1 D+1 E F+2"},
+		{"seven flats", ionian, "C-1", "C-1 D-1 E-1 F-1 G-1 A-1 B-1"},
+		{"pentatonic minor", "m3 M2 M2 m3 M2", "C", "C E-1 F G B-1"},
+		{"blues", "m3 M2 A1 m2 m3 M2", "C", "C E-1 F F+1 G B-1"},
+		{"whole tone", "M2 M2 M2 M2 M2 d3", "C", "C D E F+1 G+1 A+1"},
+		{"bebop major", "M2 M2 m2 M2 A1 m2 M2 m2", "C", "C D E F G G+1 A B"},
+		{"two steps", "A4 d5", "C", "C F+1"},
 		{"one step", "P8", "D", "D"},
 		{"open", "m3 M2 |", "E", "E G A"},
 	} {
@@ -55,7 +47,7 @@ func TestNotesFromNamesAndOwnership(t *testing.T) {
 			first := notes(t, tt.first, delta, nil)[0]
 			result, err := m.NotesFrom(first)
 			require.NoError(t, err)
-			assert.Equal(t, spellingText(tt.want), noteNames(result))
+			assert.Equal(t, tt.want, noteNames(result))
 			for _, n := range result {
 				assert.False(t, n.HasOctave())
 				assert.Nil(t, n.Source())
@@ -148,7 +140,7 @@ func TestBoundAndExplicitNoteSystems(t *testing.T) {
 	got, err := m.NotesFrom(first)
 	require.NoError(t, err)
 	require.Len(t, got, 7)
-	assert.Equal(t, spellingText("D E F G A B C"), noteNames(got))
+	assert.Equal(t, "D E F G A B C", noteNames(got))
 	for i, n := range got {
 		assert.True(t, n.HasOctave())
 		assert.Same(t, src, n.Source())
@@ -162,7 +154,7 @@ func TestBoundAndExplicitNoteSystems(t *testing.T) {
 	assert.True(t, first.Spelling().Equal(spelling.MustParse("D")))
 	assert.Equal(t, 4, first.MustASPN())
 	assert.Equal(t, 5, m.MustNoteFrom(first, 2, 1).MustASPN())
-	assert.Equal(t, spellingText("E"), m.MustNoteFrom(first, 2, 1).Spelling().String())
+	assert.Equal(t, "E", m.MustNoteFrom(first, 2, 1).Spelling().String())
 	assert.Equal(t, 3, m.MustNoteFrom(first, 1, -1).MustASPN())
 
 	unattached := noteAt(t, "D", 4, delta, nil)
@@ -176,7 +168,7 @@ func TestBoundAndExplicitNoteSystems(t *testing.T) {
 	sys := system.Traditional()
 	got, err = m.NotesFromIn(sys, unattached)
 	require.NoError(t, err)
-	assert.Equal(t, spellingText("D E F G A B C"), noteNames(got))
+	assert.Equal(t, "D E F G A B C", noteNames(got))
 	ds, err := m.DegreesFromIn(sys, unattached)
 	require.NoError(t, err)
 	require.Len(t, ds, 7)
@@ -188,7 +180,7 @@ func TestBoundAndExplicitNoteSystems(t *testing.T) {
 	assert.Nil(t, out.Source())
 
 	restricted := system.MustNewRegular(2, 1, letter.C, system.MustIntegerRange(-1, 1), "Single accidentals")
-	bound := noteAt(t, "G♯", 4, delta, src.MustWithSystem(restricted))
+	bound := noteAt(t, "G+1", 4, delta, src.MustWithSystem(restricted))
 	harmonic := mode.MustFromCode("harmonic-minor")
 	got, err = harmonic.NotesFrom(bound)
 	checkError(t, err, mode.ErrCannotBuildNote, note.ErrInadmissible, system.ErrInadmissible)
@@ -196,7 +188,7 @@ func TestBoundAndExplicitNoteSystems(t *testing.T) {
 	ds, err = harmonic.DegreesFrom(bound)
 	checkError(t, err, mode.ErrCannotBuildNote, note.ErrInadmissible, system.ErrInadmissible)
 	assert.Nil(t, ds)
-	got, err = harmonic.NotesFromIn(restricted, noteAt(t, "G♯", 4, delta, nil))
+	got, err = harmonic.NotesFromIn(restricted, noteAt(t, "G+1", 4, delta, nil))
 	checkError(t, err, mode.ErrCannotBuildNote, system.ErrInadmissible)
 	assert.Nil(t, got)
 	got, err = m.NotesFromIn(nil, first)
@@ -219,7 +211,7 @@ func TestNoteFromArbitraryCyclesAndExactFinalNote(t *testing.T) {
 		{"M2 M2 m2", "G", "C", 1, 1, 5},
 		{"M2 M2 m2", "G", "E", 3, 1, 5},
 		{"M2 M2 m2", "G", "A", 3, 2, 5},
-		{"M2 M2 m2", "G", "B♭", 1, 3, 5},
+		{"M2 M2 m2", "G", "B-1", 1, 3, 5},
 		{"M9 m7", "C", "D", 2, 0, 5},
 		{"M9 m7", "C", "C", 1, 1, 6},
 		{"m3 M2 |", "E", "A", 3, 0, 4},
@@ -264,11 +256,11 @@ func TestKeySignatureFromNames(t *testing.T) {
 		code, first, want string
 		index             int
 	}{
-		{"mixolydian", "F♯", "F♯ C♯ G♯ D♯ A♯", 5},
+		{"mixolydian", "F+1", "F+1 C+1 G+1 D+1 A+1", 5},
 		{"dorian", "D", "", 0},
-		{"aeolian", "C", "B♭ E♭ A♭", -3},
-		{"ionian", "C♭", "B♭ E♭ A♭ D♭ G♭ C♭ F♭", -7},
-		{"ionian", "G♯", "F𝄪 C♯ G♯ D♯ A♯ E♯ B♯", 8},
+		{"aeolian", "C", "B-1 E-1 A-1", -3},
+		{"ionian", "C-1", "B-1 E-1 A-1 D-1 G-1 C-1 F-1", -7},
+		{"ionian", "G+1", "F+2 C+1 G+1 D+1 A+1 E+1 B+1", 8},
 	} {
 		t.Run(tt.code+"_"+tt.first, func(t *testing.T) {
 			m := mode.MustFromCode(tt.code)
@@ -329,10 +321,10 @@ func TestFirstSpellingForSignature(t *testing.T) {
 		index int
 		want  string
 	}{
-		{"ionian", 3, "A"}, {"dorian", 3, "B"}, {"aeolian", 3, "F♯"}, {"lydian", 3, "D"}, {"locrian", 3, "G♯"},
-		{"ionian", -4, "A♭"}, {"aeolian", -4, "F"}, {"phrygian", -4, "C"},
-		{"dorian", 0, "D"}, {"lydian", 0, "F"}, {"locrian", 0, "B"}, {"mixolydian", 5, "F♯"},
-		{"ionian", 8, "G♯"},
+		{"ionian", 3, "A"}, {"dorian", 3, "B"}, {"aeolian", 3, "F+1"}, {"lydian", 3, "D"}, {"locrian", 3, "G+1"},
+		{"ionian", -4, "A-1"}, {"aeolian", -4, "F"}, {"phrygian", -4, "C"},
+		{"dorian", 0, "D"}, {"lydian", 0, "F"}, {"locrian", 0, "B"}, {"mixolydian", 5, "F+1"},
+		{"ionian", 8, "G+1"},
 	} {
 		m := mode.MustFromCode(tt.code)
 		got, err := m.FirstSpellingForSignature(tt.index)

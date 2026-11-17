@@ -124,6 +124,6 @@ func ExampleMode_KeySignatureFrom() {
 	fmt.Println(m.MustFirstSpellingForSignature(signature.Index))
 	// Output:
 	// -3 true
-	// [B♭ E♭ A♭]
+	// [B-1 E-1 A-1]
 	// C
 }

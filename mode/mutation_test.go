@@ -102,7 +102,7 @@ func TestEditDegreeIntervals(t *testing.T) {
 			return m.RemoveDegree(4)
 		}},
 		{"remove first closed", ionian, "M2 m2 M2 M2 M2 m3", func(m *mode.Mode) error { return m.RemoveDegree(1) }},
-		{"last open degree has no upper bound", "m3 M2 |", "m3 P4 |", func(m *mode.Mode) error { return m.SetDegreeInterval(3, interval.MustParse("m7")) }},
+		{"last open degree has no upper bound", "m3 M2 |", "m3 P5 |", func(m *mode.Mode) error { return m.SetDegreeInterval(3, interval.MustParse("m7")) }},
 		{"append to open", "m3 M2 |", "m3 M2 M3 |", func(m *mode.Mode) error { return m.AddDegreeInterval(interval.MustParse("M6")) }},
 		{"remove first open", "m3 M2 |", "M2 |", func(m *mode.Mode) error { return m.RemoveDegree(1) }},
 		{"remove last open", "m3 M2 |", "m3 |", func(m *mode.Mode) error { return m.RemoveDegree(3) }},
