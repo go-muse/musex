@@ -85,9 +85,9 @@ func assertDegreeError(t *testing.T, err, expected error) {
 	}
 }
 
-func assertMustPanic(t *testing.T, expected error, fn func()) {
+func assertMustPanic(t *testing.T, sentinel error, fn func()) error {
 	t.Helper()
-	require.Error(t, expected)
+	require.Error(t, sentinel)
 	var recovered any
 	func() {
 		defer func() { recovered = recover() }()
@@ -96,6 +96,6 @@ func assertMustPanic(t *testing.T, expected error, fn func()) {
 	require.NotNil(t, recovered, "Must variant did not panic")
 	actual, ok := recovered.(error)
 	require.True(t, ok, "panic value has type %T, not error", recovered)
-	assert.True(t, expected == actual, "Must panic is not the error returned by the wrapped operation")
-	assert.ErrorIs(t, actual, expected)
+	assertDegreeError(t, actual, sentinel)
+	return actual
 }

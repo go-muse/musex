@@ -70,7 +70,7 @@ func TestDegreeNilPointerMutators(t *testing.T) {
 			var d *degree.Degree
 			err := tt.call(d)
 			assertDegreeError(t, err, degree.ErrUnset)
-			assertMustPanic(t, err, func() { tt.must(d) })
+			_ = assertMustPanic(t, degree.ErrUnset, func() { tt.must(d) })
 		})
 	}
 }
