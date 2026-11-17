@@ -37,7 +37,7 @@ A continuous number can also be normalized to a circle position and a nonnegativ
 
 Degrees of a circle can be enumerated lazily from first to last. No slice sized for the whole circle is allocated, early termination is safe, and repeated or concurrent traversals are independent. A very large circle still requires the caller to limit how much of it is traversed.
 
-The package stops at this boundary. A mode as a set of degrees, its tonic, membership of notes, rotation, and transposition belong to the future mode package. Accidentals relative to a tonic, degree names, solfège, and mode formulas are also outside this package.
+The [mode package](mode.md) uses degrees to describe a mode's structure, count transitions in its cycle, and derive notes from a caller-supplied starting note. Accidentals relative to a tonic, degree names, solfège, and mode formulas are also outside this package.
 
 First released in v0.30.0.
 

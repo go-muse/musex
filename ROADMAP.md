@@ -33,7 +33,7 @@
 - [x] **18. [`interval`](guide/packages/interval.md)** — named intervals between names, written pitches, and notes with their direction, size, and quality, transposition, inversion, sums, the line of fifths, positional sizes in a musical system, and the short notation and names in English and Russian.
 - [x] **19. [`degree`](guide/packages/degree.md)** — ordinal degrees with optional notes and independent copies, comparison, decimal and Roman number forms, circular transitions, shifts and distances, normalization and denormalization, and lazy enumeration.
 - [x] **20. [`template`](guide/packages/template.md)** — closed and open mode templates with arbitrary cycles, virtual places, rotations, comparison, text notation, and immutable built-in and custom catalogs with name lookup, identification, and related-entry search.
-- [ ] **21. `mode`** — mode membership, ordering, and transposition.
+- [x] **21. [`mode`](guide/packages/mode.md)** — closed and open modes with numbered degrees, notes from a starting note, key signatures, structural comparison and editing, system positions, and catalog search.
 - [ ] **22. `scale`** — scales and their multi-octave expansion.
 - [ ] **23. `search`** — finding modes from sets of notes.
 - [ ] **24. `modal`** — relative and absolute modal positions.
