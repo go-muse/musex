@@ -92,6 +92,7 @@ func TestNumber_AllSequenceParallel(t *testing.T) {
 	t.Parallel()
 
 	const workers = 8
+	seq := midi.All()
 	results := make([][]int, workers)
 	var wg sync.WaitGroup
 	for i := range workers {
@@ -99,7 +100,7 @@ func TestNumber_AllSequenceParallel(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			values := make([]int, 0, midi.Count())
-			for number := range midi.All() {
+			for number := range seq {
 				value, err := number.Int()
 				if err != nil {
 					return

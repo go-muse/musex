@@ -122,8 +122,10 @@ func TestFromNote_Errors(t *testing.T) {
 
 	number, err = midi.FromNoteIn(nil, withoutOctave)
 	assertMidiError(t, err, midi.ErrUnset)
-	require.ErrorIs(t, err, note.ErrUnset)
+	require.NotErrorIs(t, err, note.ErrUnset)
+	require.NotErrorIs(t, err, note.ErrNoOctave)
 	require.Equal(t, midi.Number{}, number)
+	requirePanicError(t, err, func() { midi.MustFromNoteIn(nil, withoutOctave) })
 }
 
 func TestFromNoteIn_NilAndUnsetSources(t *testing.T) {
@@ -133,13 +135,13 @@ func TestFromNoteIn_NilAndUnsetSources(t *testing.T) {
 	var nilSource settings.Source
 	number, err := midi.FromNoteIn(nilSource, freeA4)
 	assertMidiError(t, err, midi.ErrUnset)
-	require.ErrorIs(t, err, note.ErrUnset)
+	require.NotErrorIs(t, err, note.ErrUnset)
 	require.Equal(t, midi.Number{}, number)
 	requirePanicError(t, err, func() { midi.MustFromNoteIn(nilSource, freeA4) })
 
 	created, err := midi.MustNew(69).Note(nilSource, system.Sharps(), cents.Zero())
 	assertMidiError(t, err, midi.ErrUnset)
-	require.ErrorIs(t, err, note.ErrUnset)
+	require.NotErrorIs(t, err, note.ErrUnset)
 	require.False(t, created.IsValid())
 	requirePanicError(t, err, func() { midi.MustNew(69).MustNote(nilSource, system.Sharps(), cents.Zero()) })
 

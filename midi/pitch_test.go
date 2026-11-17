@@ -27,22 +27,24 @@ type midiReferenceCase struct {
 	expectedClass    int
 	expectedPosition int
 	expectedNumber   int
+	expectedSharps   spelling.Spelling
+	expectedFlats    spelling.Spelling
 	valid            bool
 }
 
 var midiReferenceCases = []midiReferenceCase{
-	{name: "C-1", written: "C−1", spelling: spelling.C(), writtenASPN: -1, expectedOctave: -1, expectedClass: 0, expectedPosition: -12, expectedNumber: 0, valid: true},
-	{name: "C0", written: "C0", spelling: spelling.C(), writtenASPN: 0, expectedOctave: 0, expectedClass: 0, expectedPosition: 0, expectedNumber: 12, valid: true},
-	{name: "A0", written: "A0", spelling: spelling.A(), writtenASPN: 0, expectedOctave: 0, expectedClass: 9, expectedPosition: 9, expectedNumber: 21, valid: true},
-	{name: "C4", written: "C4", spelling: spelling.C(), writtenASPN: 4, expectedOctave: 4, expectedClass: 0, expectedPosition: 48, expectedNumber: 60, valid: true},
-	{name: "A4", written: "A4", spelling: spelling.A(), writtenASPN: 4, expectedOctave: 4, expectedClass: 9, expectedPosition: 57, expectedNumber: 69, valid: true},
-	{name: "C5", written: "C5", spelling: spelling.C(), writtenASPN: 5, expectedOctave: 5, expectedClass: 0, expectedPosition: 60, expectedNumber: 72, valid: true},
-	{name: "C8", written: "C8", spelling: spelling.C(), writtenASPN: 8, expectedOctave: 8, expectedClass: 0, expectedPosition: 96, expectedNumber: 108, valid: true},
-	{name: "G9", written: "G9", spelling: spelling.G(), writtenASPN: 9, expectedOctave: 9, expectedClass: 7, expectedPosition: 115, expectedNumber: 127, valid: true},
-	{name: "B#3", written: "B♯3", spelling: spelling.BSharp(), writtenASPN: 3, expectedOctave: 4, expectedClass: 0, expectedPosition: 48, expectedNumber: 60, valid: true},
-	{name: "Cb4", written: "C♭4", spelling: spelling.CFlat(), writtenASPN: 4, expectedOctave: 3, expectedClass: 11, expectedPosition: 47, expectedNumber: 59, valid: true},
-	{name: "B3", written: "B3", spelling: spelling.B(), writtenASPN: 3, expectedOctave: 3, expectedClass: 11, expectedPosition: 47, expectedNumber: 59, valid: true},
-	{name: "B4", written: "B4", spelling: spelling.B(), writtenASPN: 4, expectedOctave: 4, expectedClass: 11, expectedPosition: 59, expectedNumber: 71, valid: true},
+	{name: "C-1", written: "C−1", spelling: spelling.C(), writtenASPN: -1, expectedOctave: -1, expectedClass: 0, expectedPosition: -12, expectedNumber: 0, expectedSharps: spelling.C(), expectedFlats: spelling.C(), valid: true},
+	{name: "C0", written: "C0", spelling: spelling.C(), writtenASPN: 0, expectedOctave: 0, expectedClass: 0, expectedPosition: 0, expectedNumber: 12, expectedSharps: spelling.C(), expectedFlats: spelling.C(), valid: true},
+	{name: "A0", written: "A0", spelling: spelling.A(), writtenASPN: 0, expectedOctave: 0, expectedClass: 9, expectedPosition: 9, expectedNumber: 21, expectedSharps: spelling.A(), expectedFlats: spelling.A(), valid: true},
+	{name: "C4", written: "C4", spelling: spelling.C(), writtenASPN: 4, expectedOctave: 4, expectedClass: 0, expectedPosition: 48, expectedNumber: 60, expectedSharps: spelling.C(), expectedFlats: spelling.C(), valid: true},
+	{name: "A4", written: "A4", spelling: spelling.A(), writtenASPN: 4, expectedOctave: 4, expectedClass: 9, expectedPosition: 57, expectedNumber: 69, expectedSharps: spelling.A(), expectedFlats: spelling.A(), valid: true},
+	{name: "C5", written: "C5", spelling: spelling.C(), writtenASPN: 5, expectedOctave: 5, expectedClass: 0, expectedPosition: 60, expectedNumber: 72, expectedSharps: spelling.C(), expectedFlats: spelling.C(), valid: true},
+	{name: "C8", written: "C8", spelling: spelling.C(), writtenASPN: 8, expectedOctave: 8, expectedClass: 0, expectedPosition: 96, expectedNumber: 108, expectedSharps: spelling.C(), expectedFlats: spelling.C(), valid: true},
+	{name: "G9", written: "G9", spelling: spelling.G(), writtenASPN: 9, expectedOctave: 9, expectedClass: 7, expectedPosition: 115, expectedNumber: 127, expectedSharps: spelling.G(), expectedFlats: spelling.G(), valid: true},
+	{name: "B#3", written: "B♯3", spelling: spelling.BSharp(), writtenASPN: 3, expectedOctave: 4, expectedClass: 0, expectedPosition: 48, expectedNumber: 60, expectedSharps: spelling.C(), expectedFlats: spelling.C(), valid: true},
+	{name: "Cb4", written: "C♭4", spelling: spelling.CFlat(), writtenASPN: 4, expectedOctave: 3, expectedClass: 11, expectedPosition: 47, expectedNumber: 59, expectedSharps: spelling.B(), expectedFlats: spelling.B(), valid: true},
+	{name: "B3", written: "B3", spelling: spelling.B(), writtenASPN: 3, expectedOctave: 3, expectedClass: 11, expectedPosition: 47, expectedNumber: 59, expectedSharps: spelling.B(), expectedFlats: spelling.B(), valid: true},
+	{name: "B4", written: "B4", spelling: spelling.B(), writtenASPN: 4, expectedOctave: 4, expectedClass: 11, expectedPosition: 59, expectedNumber: 71, expectedSharps: spelling.B(), expectedFlats: spelling.B(), valid: true},
 	{name: "Cb-1", written: "C♭−1", spelling: spelling.CFlat(), writtenASPN: -1, expectedOctave: -2, expectedClass: 11, expectedPosition: -13, expectedNumber: -1, valid: false},
 	{name: "G#9", written: "G♯9", spelling: spelling.GSharp(), writtenASPN: 9, expectedOctave: 9, expectedClass: 8, expectedPosition: 116, expectedNumber: 128, valid: false},
 	{name: "B9", written: "B9", spelling: spelling.B(), writtenASPN: 9, expectedOctave: 9, expectedClass: 11, expectedPosition: 119, expectedNumber: 131, valid: false},
@@ -77,12 +79,18 @@ func TestFromPitch_ReferenceRows(t *testing.T) {
 			require.Equal(t, 12, class.Modulus())
 			require.Equal(t, tt.expectedPosition, position)
 
-			for _, rule := range []system.SpellingRule{system.Sharps(), system.Flats()} {
-				reversed, err := number.Pitch(system.Traditional(), rule)
+			for _, ruleCase := range []struct {
+				rule     system.SpellingRule
+				expected spelling.Spelling
+			}{
+				{rule: system.Sharps(), expected: tt.expectedSharps},
+				{rule: system.Flats(), expected: tt.expectedFlats},
+			} {
+				reversed, err := number.Pitch(system.Traditional(), ruleCase.rule)
 				require.NoError(t, err)
-				expectedNatural := tt.spelling.Natural()
-				require.True(t, reversed.Equal(pitch.MustFromASPN(expectedNatural, tt.expectedOctave)),
-					"neutral rule must not reconstruct the original enharmonic spelling")
+				expectedPitch := pitch.MustFromASPN(ruleCase.expected, tt.expectedOctave)
+				require.True(t, reversed.Equal(expectedPitch),
+					"neutral rule must select the expected spelling without reconstructing the input")
 				roundTrip, err := midi.FromPitch(reversed, system.Traditional())
 				require.NoError(t, err)
 				requireNumberValue(t, tt.expectedNumber, roundTrip)
