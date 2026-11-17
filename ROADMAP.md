@@ -26,7 +26,7 @@
 - [x] **14. [`settings`](guide/packages/settings.md)** — a compatible set of system, tuning, and notation settings.
 - [x] **15. [`instrument`](guide/packages/instrument.md)** — instrument settings, presets, and pitch range.
 - [x] **16. [`note`](guide/packages/note.md)** — a note connected to its musical settings.
-- [ ] **17. `midi`** — conversion between pitches and MIDI note numbers.
+- [x] **17. [`midi`](guide/packages/midi.md)** — MIDI note numbers, positional octaves and classes, checked shifts, and conversion to and from written pitches and notes in the traditional C layout with explicit spelling rules.
 
 ## 2. Important functionality
 

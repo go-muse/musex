@@ -277,6 +277,9 @@ linters:
             - github.com/go-muse/musex/pitch$
             - github.com/go-muse/musex/system$
             - github.com/go-muse/musex/note$
+            - github.com/go-muse/musex/settings$
+            - github.com/go-muse/musex/pitchclass$
+            - github.com/go-muse/musex/cents$
         interval:
           list-mode: strict
           files:

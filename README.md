@@ -95,8 +95,11 @@ Definitions may differ from conventional ones.
 
 **Degree** is an ordinal number with an optional note. It is not tied to a tonic or mode: its number can be formatted and parsed, and circular operations count positions with an explicit cycle count.
 
+**MIDI note number** is an integer position from 0 through 127 in the ordinary MIDI map. C4 is 60 and A4 is 69. The number depends on the positional octave, not the register digit: B♯3 and C4 both give 60, while C♭4 and B3 both give 59. Reverse conversion requires an explicit spelling rule; a correction in cents is passed separately and does not change the number.
+
 ## Use Cases
 
+- **Convert between the written model and MIDI note numbers.** Create any of the 128 numbers, inspect its positional octave and class, shift it without overflow, and convert written pitches and notes in a traditional C-layout system. Choose the return spelling explicitly with sharps, flats, or a custom rule, attach zero or a specific correction, and handle missing inputs, unsupported layouts, and out-of-range results as distinct errors.
 - **Track positions in a caller-defined cycle.** Create numbered degrees with or without notes, move to neighboring positions or by an arbitrary shift, measure directed and shortest distances, and convert between continuous and normalized numbers while keeping cycle counts explicit.
 
 ### Build a voice event
