@@ -66,7 +66,7 @@ func TestNumbersUseEachSuccessiveName(t *testing.T) {
 	got, err := m.NumbersFrom(sys, d)
 	require.NoError(t, err)
 	assert.Equal(t, mode.Positions{Degrees: []system.Step{0, 1, 3, 4, 6, 8, 10}, Adjacent: []system.Step{1, 2, 1, 2, 2, 2, 2}, Cycle: 12, HasCycle: true}, got)
-	assert.Equal(t, got, m.MustNumbersFrom(sys, spelling.MustParse("D♯")))
+	assert.Equal(t, got, m.MustNumbersFrom(sys, spelling.MustParse("D+1")))
 	assert.Equal(t, mode.CycleInfo{Cycles: 1, Octaves: 1}, m.MustCycleInFrom(sys, d))
 	assert.Equal(t, mode.Symmetry{Rotations: 7, Transpositions: 12}, m.MustSymmetryInFrom(sys, d))
 	got, err = m.Numbers(sys)
