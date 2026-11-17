@@ -62,13 +62,13 @@ func TestKP23ATempoRequiresCurrentDeviation(t *testing.T) {
 	requireTempomapError(t, err, tempomap.ErrNoDeviation)
 	assert.Equal(t, before, base.String())
 
-	m = base.MustWithChange(tempomap.MustNewJump(at(1, 1), quarter(120))).
+	completed := base.MustWithChange(tempomap.MustNewJump(at(1, 1), quarter(120))).
 		MustWithChange(tempomap.MustNewATempo(at(2, 1)))
-	before = m.String()
-	m, err = m.WithChange(tempomap.MustNewATempo(at(3, 1)))
-	assert.False(t, m.IsSet())
+	before = completed.String()
+	returned, err := completed.WithChange(tempomap.MustNewATempo(at(3, 1)))
+	assert.False(t, returned.IsSet())
 	requireTempomapError(t, err, tempomap.ErrNoDeviation)
-	assert.Equal(t, before, m.String())
+	assert.Equal(t, before, completed.String())
 }
 
 func TestKP24InvalidGradualSequences(t *testing.T) {

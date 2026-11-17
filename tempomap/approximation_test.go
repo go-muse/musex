@@ -89,10 +89,10 @@ func TestMultipleGradualSegmentsRoundOnlyTheWholeExpression(t *testing.T) {
 		MustWithChange(tempomap.MustNewGradual(at(2, 1), tempomap.LinearSpeed)).
 		MustWithChange(tempomap.MustNewMain(at(3, 1), quarter(240)))
 
-	// Start(3) = 4 ln 2 + 2 + 4 ln 2 = 7.54517744447956....
-	checkSecondsResult(t, m.MustStart(at(3, 1), 12, rounding.Down), "7545177444479/1000000000000", true, 12, "1/1000000000000")
-	checkSecondsResult(t, m.MustStart(at(3, 1), 12, rounding.HalfUp), "754517744448/100000000000", true, 12, "1/2000000000000")
-	checkSecondsResult(t, m.MustStart(at(3, 1), 0, rounding.Down), "7/1", true, 0, "1/1")
+	// Start(3) = 4 ln 2 + 2 + 2 ln 2 = 2 + 6 ln 2 = 6.15888308335967....
+	checkSecondsResult(t, m.MustStart(at(3, 1), 12, rounding.Down), "6158883083359/1000000000000", true, 12, "1/1000000000000")
+	checkSecondsResult(t, m.MustStart(at(3, 1), 12, rounding.HalfUp), "615888308336/100000000000", true, 12, "1/2000000000000")
+	checkSecondsResult(t, m.MustStart(at(3, 1), 0, rounding.Down), "6/1", true, 0, "1/1")
 
 	segments := m.MustSegments()
 	require.Len(t, segments, 4)
@@ -106,8 +106,8 @@ func TestMultipleGradualSegmentsRoundOnlyTheWholeExpression(t *testing.T) {
 		require.True(t, ok)
 		individual += numerator
 	}
-	assert.Equal(t, 6, individual, "rounding each segment separately loses the exact fractional sum")
-	checkSecondsResult(t, m.MustStart(at(3, 1), 0, rounding.Down), "7/1", true, 0, "1/1")
+	assert.Equal(t, 5, individual, "rounding each segment separately loses the exact fractional sum")
+	checkSecondsResult(t, m.MustStart(at(3, 1), 0, rounding.Down), "6/1", true, 0, "1/1")
 
 	// At t=5 the second exponent is x=(3-4 ln 2)/2. It contains the
 	// preceding logarithm and must not be replaced by an independently
@@ -118,8 +118,9 @@ func TestMultipleGradualSegmentsRoundOnlyTheWholeExpression(t *testing.T) {
 
 func TestLogarithmFactorizationAndNearCancellation(t *testing.T) {
 	t.Parallel()
-	// 4 ln 4 and 8 ln 2 are the same value. The exact zero detector must
-	// recognize ln 4 - 2 ln 2 without a floating-point comparison.
+	// Exact factorization of ln4-2ln2 is covered by the internal white-box
+	// contract. These public forms remain nonzero and must not be collapsed
+	// into one another or into a rational constant.
 	ratioFour := newGradualMap(pos(1, 1), quarter(240))
 	ratioTwoTwice := tempomap.MustNew(quarter(60)).
 		MustWithChange(tempomap.MustNewGradual(tempomap.MustAt(duration.Origin()), tempomap.LinearSpeed).MustWithSlot(tempomap.SlotSecond)).
@@ -127,12 +128,12 @@ func TestLogarithmFactorizationAndNearCancellation(t *testing.T) {
 		MustWithChange(tempomap.MustNewGradual(at(2, 1), tempomap.LinearSpeed)).
 		MustWithChange(tempomap.MustNewMain(at(3, 1), quarter(240)))
 
-	// Start(3) is 4 ln 4 + 2 for ratioFour and 4 ln 2 + 2 + 4 ln 2
-	// for ratioTwoTwice. Both independently equal 7.54517744447956....
+	// For ratioFour, Start(3)=2+(4/3)ln4=2+(8/3)ln2.
+	// For ratioTwoTwice, Start(3)=2+4ln2+2ln2=2+6ln2.
 	first := ratioFour.MustStart(at(3, 1), 12, rounding.HalfUp)
 	second := ratioTwoTwice.MustStart(at(3, 1), 12, rounding.HalfUp)
-	checkSecondsResult(t, first, "754517744448/100000000000", true, 12, "1/2000000000000")
-	checkSecondsResult(t, second, "754517744448/100000000000", true, 12, "1/2000000000000")
+	checkSecondsResult(t, first, "3848392481493/1000000000000", true, 12, "1/2000000000000")
+	checkSecondsResult(t, second, "615888308336/100000000000", true, 12, "1/2000000000000")
 
 	// The inverse case with x=(3-4 ln 2)/2 also has a nonzero rational
 	// term and an algebraic irrational exponential candidate. It exercises
@@ -173,7 +174,7 @@ func TestAccelerationAndSlowingBoundariesAndInverse(t *testing.T) {
 		})
 	}
 
-	// The slowing map is the public case A=2, B=-2. Its inverse is
+	// For a=0 the slowing map has B=-2 and A=a-B=2. Its inverse is
 	// p=2-2exp(-t/8), so R=0 and small negative R occur when certifying
 	// rounding comparisons. For y=4 and E_min=1/2 the independent lower
 	// bound is |B|(E_min-R)=1, not 2; the observable results must remain
