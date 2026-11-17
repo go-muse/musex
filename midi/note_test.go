@@ -31,15 +31,20 @@ func TestFromNote_OwnSourceUsesOneSnapshot(t *testing.T) {
 	requireNumberValue(t, 69, number)
 	calls, snapshots := src.State()
 	require.Equal(t, callsBefore+1, calls)
-	require.Len(t, snapshots, 1)
-	require.True(t, snapshots[0].Equal(settings.Standard()))
+	newSnapshots := snapshots[callsBefore:]
+	require.Len(t, newSnapshots, 1)
+	require.True(t, newSnapshots[0].Equal(settings.Standard()))
 	require.True(t, original.Equal(before))
 	require.True(t, original.SameSource(before))
 	require.True(t, original.Cents().Equal(cents.MustFromInt(30)))
 
 	requireNumberValue(t, 69, midi.MustFromNote(original))
-	calls, _ = src.State()
-	require.Equal(t, callsBefore+2, calls)
+	previousCalls := calls
+	calls, snapshots = src.State()
+	require.Equal(t, previousCalls+1, calls)
+	newSnapshots = snapshots[previousCalls:]
+	require.Len(t, newSnapshots, 1)
+	require.True(t, newSnapshots[0].Equal(settings.Standard()))
 }
 
 func TestFromNoteIn_ExplicitSourceDoesNotChangeNote(t *testing.T) {
