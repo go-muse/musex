@@ -165,7 +165,9 @@ func (n Number) ShiftOctaves(k int) (Number, error) {
 
 	m := int(n.value)
 	q := m / classCount
-	if k < -q || k > 10-q {
+	r := m % classCount
+	upper := (maxNumber-r)/classCount - q
+	if k < -q || k > upper {
 		return Number{}, fmt.Errorf("midi: shift %d by %d octaves: %w", m, k, ErrOutOfRange)
 	}
 
