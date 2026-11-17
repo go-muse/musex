@@ -379,54 +379,53 @@ func decimalStep(places int) *big.Rat {
 }
 
 func roundExpression(expression numericExpression, places int, mode rounding.Mode) *big.Rat {
-	step := decimalStep(places)
 	precision := initialPrecision(places, expression.inputBits())
+	eval := func(p uint) (*big.Rat, *big.Rat) {
+		value := expression.interval(p)
+		return ratOfFloat(value.lo), ratOfFloat(value.hi)
+	}
 	for {
-		value := expression.interval(precision)
-		_, lower, err := mode.RatMultiple(ratOfFloat(value.lo), step)
-		if err != nil {
-			panic(err)
+		lower, upper := eval(precision)
+		attempt := makeRoundingAttempt(precision, precision, lower, upper, places, mode)
+		if attempt.decided {
+			return roundingNode(attempt.lowerK, places)
 		}
-		_, upper, err := mode.RatMultiple(ratOfFloat(value.hi), step)
-		if err != nil {
-			panic(err)
+		lowerNode := roundingNode(attempt.lowerK, places)
+		upperNode := roundingNode(attempt.upperK, places)
+		if expression.isZeroAt(lowerNode) {
+			return lowerNode
 		}
-		if lower.Cmp(upper) == 0 {
-			return lower
-		}
-		if expression.isZeroAt(lower) {
-			return lower
-		}
-		if expression.isZeroAt(upper) {
-			return upper
+		if expression.isZeroAt(upperNode) {
+			return upperNode
 		}
 
 		var midpoint *big.Rat
-		if !mode.IsDirected() && new(big.Rat).Sub(upper, lower).Cmp(step) == 0 {
-			midpoint = new(big.Rat).Add(lower, upper)
+		if !mode.IsDirected() && new(big.Rat).Sub(upperNode, lowerNode).Cmp(decimalStep(places)) == 0 {
+			midpoint = new(big.Rat).Add(lowerNode, upperNode)
 			midpoint.Quo(midpoint, big.NewRat(2, 1))
 			if expression.isZeroAt(midpoint) {
-				_, rounded, roundErr := mode.RatMultiple(midpoint, step)
-				if roundErr != nil {
-					panic(roundErr)
-				}
-				return rounded
+				midpointAttempt := makeRoundingAttempt(precision, precision, midpoint, midpoint, places, mode)
+				return roundingNode(midpointAttempt.lowerK, places)
 			}
 		}
 
-		limit := precisionLimit(expression, lower, places)
-		if upperLimit := precisionLimit(expression, upper, places); upperLimit > limit {
-			limit = upperLimit
+		maxPrecision := precisionLimit(expression, lowerNode, places)
+		if upperLimit := precisionLimit(expression, upperNode, places); upperLimit > maxPrecision {
+			maxPrecision = upperLimit
 		}
 		if midpoint != nil {
-			if midpointLimit := precisionLimit(expression, midpoint, places); midpointLimit > limit {
-				limit = midpointLimit
+			if midpointLimit := precisionLimit(expression, midpoint, places); midpointLimit > maxPrecision {
+				maxPrecision = midpointLimit
 			}
 		}
-		if precision >= limit {
+		if precision >= maxPrecision {
 			panic("tempomap: certified precision limit did not select a rounding node")
 		}
-		precision *= 2
+		k, usedPrecision, _, ok := roundWithLimit(places, mode, precision, maxPrecision, eval)
+		if ok {
+			return roundingNode(k, places)
+		}
+		precision = usedPrecision
 	}
 }
 

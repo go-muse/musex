@@ -207,14 +207,14 @@ func parseAddress(text string) (Address, error) {
 	if strings.HasPrefix(text, "p:") {
 		p, err := duration.ParsePosition(text[2:])
 		if err != nil {
-			return Address{}, nestedTextError(text, err)
+			return Address{}, nestedTextError(text, text[2:], err)
 		}
 		return At(p)
 	}
 	if strings.HasPrefix(text, "m:") {
 		a, err := measure.ParseAddress(text[2:])
 		if err != nil {
-			return Address{}, nestedTextError(text, err)
+			return Address{}, nestedTextError(text, text[2:], err)
 		}
 		return AtBar(a)
 	}

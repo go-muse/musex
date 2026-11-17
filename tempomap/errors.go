@@ -3,6 +3,7 @@ package tempomap
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"strconv"
 	"unicode/utf8"
 
@@ -101,8 +102,20 @@ func invalidTextError(text string) error {
 	return fmt.Errorf("%w: %s", ErrInvalidText, quoteExcerpt(text))
 }
 
+type textParseError struct {
+	message string
+	causes  []error
+}
+
+func (e *textParseError) Error() string { return e.message }
+
+func (e *textParseError) Unwrap() []error { return e.causes }
+
 func quotedTextError(text string, causes ...error) error {
-	return fmt.Errorf("%w: %s", errors.Join(causes...), quoteExcerpt(text))
+	return &textParseError{
+		message: causes[0].Error() + ": " + quoteExcerpt(text),
+		causes:  causes,
+	}
 }
 
 func rangeTextError(text string, cause error) error {
@@ -161,14 +174,35 @@ func normalizeTextError(text string, err error) error {
 	return quotedTextError(text, causes...)
 }
 
-func nestedTextError(text string, err error) error {
-	if !errors.Is(err, fraction.ErrOutOfRange) &&
-		!errors.Is(err, duration.ErrOutOfRange) &&
-		!errors.Is(err, measure.ErrOutOfRange) &&
-		!errors.Is(err, tempo.ErrOutOfRange) {
-		return invalidTextError(text)
+func numericTextOutOfRange(text string) bool {
+	if text == "" {
+		return false
 	}
-	return rangeTextError(text, err)
+	digits := text
+	if digits[0] == '-' {
+		digits = digits[1:]
+		if digits == "" {
+			return false
+		}
+	}
+	for i := range len(digits) {
+		if digits[i] < '0' || digits[i] > '9' {
+			return false
+		}
+	}
+	component, ok := new(big.Int).SetString(digits, 10)
+	return ok && component.Cmp(fraction.MaxComponentBig()) > 0
+}
+
+func nestedTextError(text, value string, err error) error {
+	if errors.Is(err, fraction.ErrOutOfRange) ||
+		errors.Is(err, duration.ErrOutOfRange) ||
+		errors.Is(err, measure.ErrOutOfRange) ||
+		errors.Is(err, tempo.ErrOutOfRange) ||
+		numericTextOutOfRange(value) {
+		return rangeTextError(text, err)
+	}
+	return invalidTextError(text)
 }
 
 func must[T any](value T, err error) T {

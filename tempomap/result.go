@@ -286,7 +286,7 @@ func parseSecondsResult(text string) (SecondsResult, error) {
 	if strings.HasPrefix(text, "s:") {
 		v, err := tempo.ParseSeconds(text[2:])
 		if err != nil {
-			return SecondsResult{}, nestedTextError(text, err)
+			return SecondsResult{}, nestedTextError(text, text[2:], err)
 		}
 		return exactSecondsResult(v), nil
 	}
@@ -307,11 +307,11 @@ func parseSecondsResult(text string) (SecondsResult, error) {
 	}
 	value, err := tempo.ParseSeconds(valueText)
 	if err != nil {
-		return SecondsResult{}, nestedTextError(text, err)
+		return SecondsResult{}, nestedTextError(text, valueText, err)
 	}
 	bound, err := tempo.ParseSeconds(boundText)
 	if err != nil {
-		return SecondsResult{}, nestedTextError(text, err)
+		return SecondsResult{}, nestedTextError(text, boundText, err)
 	}
 	valueRat, _ := value.MustFraction().BigRat()
 	boundRat, _ := bound.MustFraction().BigRat()
@@ -337,7 +337,7 @@ func parsePositionResult(text string) (PositionResult, error) {
 	if strings.HasPrefix(text, "p:") {
 		v, err := duration.ParsePosition(text[2:])
 		if err != nil {
-			return PositionResult{}, nestedTextError(text, err)
+			return PositionResult{}, nestedTextError(text, text[2:], err)
 		}
 		return exactPositionResult(v), nil
 	}
@@ -358,11 +358,11 @@ func parsePositionResult(text string) (PositionResult, error) {
 	}
 	value, err := duration.ParsePosition(valueText)
 	if err != nil {
-		return PositionResult{}, nestedTextError(text, err)
+		return PositionResult{}, nestedTextError(text, valueText, err)
 	}
 	bound, err := duration.ParsePosition(boundText)
 	if err != nil {
-		return PositionResult{}, nestedTextError(text, err)
+		return PositionResult{}, nestedTextError(text, boundText, err)
 	}
 	valueRat, _ := value.MustFraction().BigRat()
 	boundRat, _ := bound.MustFraction().BigRat()
