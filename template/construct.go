@@ -51,16 +51,30 @@ func templateFromIntervals(intervals []interval.Interval, open bool, op string) 
 		}
 	}
 
-	// Validate every place interval and, for a closed template, its cycle using
-	// exact intermediate coordinates. Only each required result is materialized.
+	if err := validateDerivedIntervals(intervals, open, op); err != nil {
+		return Template{}, err
+	}
+	return Template{intervals: append([]interval.Interval{}, intervals...), open: open}, nil
+}
+
+// validateDerivedIntervals checks every place interval of an open template and
+// only the complete cycle of a closed template. Accumulation uses exact
+// intermediate coordinates, and only each required result is materialized.
+func validateDerivedIntervals(intervals []interval.Interval, open bool, op string) error {
 	total := zeroCoordinates()
 	for _, current := range intervals {
 		total = addCoordinates(total, coordinatesOf(current))
-		if _, err := intervalFromCoordinates(total, op); err != nil {
-			return Template{}, err
+		if open {
+			if _, err := intervalFromCoordinates(total, op); err != nil {
+				return err
+			}
 		}
 	}
-	return Template{intervals: append([]interval.Interval{}, intervals...), open: open}, nil
+	if !open {
+		_, err := intervalFromCoordinates(total, op)
+		return err
+	}
+	return nil
 }
 
 // ClosedFromPlaceIntervals creates a closed template from intervals from the
@@ -220,12 +234,8 @@ func templateFromSpellings(names []spelling.Spelling, cycle interval.Interval, o
 		}
 		adjacent[i] = converted
 	}
-	total = zeroCoordinates()
-	for _, current := range adjacent {
-		total = addCoordinates(total, coordinatesOf(current))
-		if _, err := intervalFromCoordinates(total, op); err != nil {
-			return Template{}, err
-		}
+	if err := validateDerivedIntervals(adjacent, open, op); err != nil {
+		return Template{}, err
 	}
 	return Template{intervals: adjacent, open: open}, nil
 }
