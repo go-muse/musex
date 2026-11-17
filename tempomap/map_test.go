@@ -188,7 +188,7 @@ func TestMeasuredStartEndAndBetween(t *testing.T) {
 	)
 	checkSecondsResult(t, m.MustStart(bar(1, 1, 2), 0, rounding.HalfUp, grid), "3/1", false, 0, "0/1")
 	checkSecondsResult(t, m.MustEnd(bar(1, 1, 2), 0, rounding.HalfUp, grid), "4/1", false, 0, "0/1")
-	checkSecondsResult(t, m.MustBetween(bar(1, 1, 2), bar(1, 3, 4), 0, rounding.HalfUp, grid), "2/1", false, 0, "0/1")
+	checkSecondsResult(t, m.MustBetween(bar(1, 1, 2), bar(2, 0, 1), 0, rounding.HalfUp, grid), "2/1", false, 0, "0/1")
 }
 
 func TestKP16AndKP17IntervalsWithExtensions(t *testing.T) {
@@ -297,22 +297,26 @@ func TestTimelineRejectsDifferentSpeeds(t *testing.T) {
 func TestKP36GradualCompletionByATempoAndTempoI(t *testing.T) {
 	t.Parallel()
 	for _, tt := range []struct {
-		name       string
-		returnKind tempomap.ChangeKind
-		mid        tempo.Tempo
-		final      tempo.Tempo
-		exact      bool
+		name              string
+		returnKind        tempomap.ChangeKind
+		mid               tempo.Tempo
+		final             tempo.Tempo
+		exact             bool
+		jumpBeforeGradual bool
 	}{
-		{"a tempo unequal", tempomap.ChangeATempo, quarter(90), quarter(60), false},
-		{"a tempo equal", tempomap.ChangeATempo, eighth(120), quarter(60), true},
-		{"tempo i unequal", tempomap.ChangeTempoI, quarter(90), quarter(60), false},
-		{"tempo i equal", tempomap.ChangeTempoI, eighth(120), quarter(60), true},
+		{"a tempo unequal", tempomap.ChangeATempo, quarter(90), quarter(90), false, true},
+		{"a tempo equal", tempomap.ChangeATempo, eighth(120), eighth(120), true, false},
+		{"tempo i unequal", tempomap.ChangeTempoI, quarter(90), quarter(60), false, false},
+		{"tempo i equal", tempomap.ChangeTempoI, eighth(120), quarter(60), true, false},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			m := tempomap.MustNew(quarter(60)).
-				MustWithChange(tempomap.MustNewMain(at(1, 4), tt.mid)).
-				MustWithChange(tempomap.MustNewGradual(at(1, 2), tempomap.LinearSpeed))
+				MustWithChange(tempomap.MustNewMain(at(1, 4), tt.mid))
+			if tt.jumpBeforeGradual {
+				m = m.MustWithChange(tempomap.MustNewJump(at(3, 8), quarter(120)))
+			}
+			m = m.MustWithChange(tempomap.MustNewGradual(at(1, 2), tempomap.LinearSpeed))
 			var change tempomap.Change
 			if tt.returnKind == tempomap.ChangeATempo {
 				change = tempomap.MustNewATempo(at(1, 1))
@@ -382,19 +386,23 @@ func TestKP47InitialPairEditing(t *testing.T) {
 	origin := tempomap.MustAt(duration.Origin())
 	gradual := tempomap.MustNewGradual(origin, tempomap.LinearSpeed).MustWithSlot(tempomap.SlotSecond)
 	pair := base.MustWithChange(gradual).MustWithChange(tempomap.MustNewMain(at(1, 1), quarter(120)))
-	require.Len(t, pair.MustChanges(), 2)
+	require.Len(t, pair.MustChanges(), 3)
 	assert.Equal(t, tempomap.SlotFirst, pair.MustChanges()[0].MustSlot())
 	assert.Equal(t, tempomap.SlotSecond, pair.MustChanges()[1].MustSlot())
+	assert.Equal(t, tempomap.ChangeMain, pair.MustChanges()[2].MustKind())
 
 	replacedFirst := pair.MustWithChange(tempomap.MustNewMain(origin, quarter(90)).MustWithSlot(tempomap.SlotFirst))
-	require.Len(t, replacedFirst.MustChanges(), 2)
+	require.Len(t, replacedFirst.MustChanges(), 3)
 	assert.True(t, quarter(90).Equal(replacedFirst.MustInitial()))
 	assert.Equal(t, tempomap.ChangeGradual, replacedFirst.MustChanges()[1].MustKind())
 
 	replacedSecond := pair.MustWithChange(gradual)
 	assert.True(t, pair.Equal(replacedSecond))
-	removedSecond := pair.MustWithoutChange(origin, tempomap.SlotSecond)
+	removedSecond := base.MustWithChange(gradual).MustWithoutChange(origin, tempomap.SlotSecond)
 	assert.True(t, base.Equal(removedSecond))
+	completedWithoutSecond := pair.MustWithoutChange(origin, tempomap.SlotSecond)
+	expectedWithoutSecond := base.MustWithChange(tempomap.MustNewMain(at(1, 1), quarter(120)))
+	assert.True(t, expectedWithoutSecond.Equal(completedWithoutSecond))
 
 	before := pair.String()
 	third, err := pair.WithChange(tempomap.MustNewJump(origin, quarter(180)))
@@ -412,7 +420,7 @@ func TestKP48InitialPairHasNoZeroLengthSegment(t *testing.T) {
 	t.Parallel()
 	m := newGradualMap(pos(1, 1), quarter(120))
 	segments := m.MustSegments()
-	require.Len(t, segments, 1)
+	require.Len(t, segments, 2)
 	segment := segments[0]
 	assert.Equal(t, tempomap.ChangeGradual, segment.MustChange().MustKind())
 	assert.True(t, tempomap.MustAt(duration.Origin()).Equal(segment.MustStart()))
@@ -423,4 +431,15 @@ func TestKP48InitialPairHasNoZeroLengthSegment(t *testing.T) {
 	endSpeed, ok := segment.MustEndSpeed()
 	require.True(t, ok)
 	assert.True(t, fraction.FromInt(30).Equal(endSpeed))
+
+	open := segments[1]
+	assert.Equal(t, tempomap.ChangeMain, open.MustChange().MustKind())
+	assert.True(t, at(1, 1).Equal(open.MustStart()))
+	assert.True(t, fraction.FromInt(30).Equal(open.MustStartSpeed()))
+	_, ok = open.MustEnd()
+	assert.False(t, ok)
+	_, ok = open.MustEndSpeed()
+	assert.False(t, ok)
+	_, ok = open.MustSeconds(0, rounding.HalfUp)
+	assert.False(t, ok)
 }

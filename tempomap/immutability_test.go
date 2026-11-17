@@ -109,7 +109,7 @@ func TestConcurrentReadOnlyOperations(t *testing.T) {
 					errorsCh <- fmt.Errorf("Speed returned an invalid fraction")
 					return
 				}
-				if len(m.MustChanges()) != 3 || len(m.MustExtensions()) != 1 || len(m.MustSegments()) != 3 {
+				if len(m.MustChanges()) != 4 || len(m.MustExtensions()) != 1 || len(m.MustSegments()) != 3 {
 					errorsCh <- fmt.Errorf("unexpected record or segment count")
 					return
 				}
