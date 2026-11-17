@@ -381,7 +381,6 @@ func decimalStep(places int) *big.Rat {
 func roundExpression(expression numericExpression, places int, mode rounding.Mode) *big.Rat {
 	step := decimalStep(places)
 	precision := initialPrecision(places, expression.inputBits())
-	var limit uint
 	for {
 		value := expression.interval(precision)
 		_, lower, err := mode.RatMultiple(ratOfFloat(value.lo), step)
@@ -401,12 +400,27 @@ func roundExpression(expression numericExpression, places int, mode rounding.Mod
 		if expression.isZeroAt(upper) {
 			return upper
 		}
-		if limit == 0 {
-			lowerLimit := precisionLimit(expression, lower, places)
-			upperLimit := precisionLimit(expression, upper, places)
-			limit = lowerLimit
-			if upperLimit > limit {
-				limit = upperLimit
+
+		var midpoint *big.Rat
+		if !mode.IsDirected() && new(big.Rat).Sub(upper, lower).Cmp(step) == 0 {
+			midpoint = new(big.Rat).Add(lower, upper)
+			midpoint.Quo(midpoint, big.NewRat(2, 1))
+			if expression.isZeroAt(midpoint) {
+				_, rounded, roundErr := mode.RatMultiple(midpoint, step)
+				if roundErr != nil {
+					panic(roundErr)
+				}
+				return rounded
+			}
+		}
+
+		limit := precisionLimit(expression, lower, places)
+		if upperLimit := precisionLimit(expression, upper, places); upperLimit > limit {
+			limit = upperLimit
+		}
+		if midpoint != nil {
+			if midpointLimit := precisionLimit(expression, midpoint, places); midpointLimit > limit {
+				limit = midpointLimit
 			}
 		}
 		if precision >= limit {

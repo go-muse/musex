@@ -101,8 +101,64 @@ func invalidTextError(text string) error {
 	return fmt.Errorf("%w: %s", ErrInvalidText, quoteExcerpt(text))
 }
 
+func quotedTextError(text string, causes ...error) error {
+	return fmt.Errorf("%w: %s", errors.Join(causes...), quoteExcerpt(text))
+}
+
 func rangeTextError(text string, cause error) error {
-	return fmt.Errorf("%w: %w: %s", ErrOutOfRange, cause, quoteExcerpt(text))
+	causes := []error{ErrOutOfRange, fraction.ErrOutOfRange}
+	for _, dependency := range []error{duration.ErrOutOfRange, measure.ErrOutOfRange, tempo.ErrOutOfRange} {
+		if errors.Is(cause, dependency) {
+			causes = append(causes, dependency)
+		}
+	}
+	return quotedTextError(text, causes...)
+}
+
+func normalizeTextError(text string, err error) error {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, ErrOutOfRange) ||
+		errors.Is(err, fraction.ErrOutOfRange) ||
+		errors.Is(err, duration.ErrOutOfRange) ||
+		errors.Is(err, measure.ErrOutOfRange) ||
+		errors.Is(err, tempo.ErrOutOfRange) {
+		return rangeTextError(text, err)
+	}
+	var sentinel error
+	switch {
+	case errors.Is(err, ErrInvalidArgument):
+		sentinel = ErrInvalidArgument
+	case errors.Is(err, ErrNoInitialTempo):
+		sentinel = ErrNoInitialTempo
+	case errors.Is(err, ErrDuplicateAddress):
+		sentinel = ErrDuplicateAddress
+	case errors.Is(err, ErrInvalidAddress):
+		sentinel = ErrInvalidAddress
+	case errors.Is(err, ErrNoDeviation):
+		sentinel = ErrNoDeviation
+	case errors.Is(err, ErrInvalidSequence):
+		sentinel = ErrInvalidSequence
+	case errors.Is(err, ErrNegativeTime):
+		sentinel = ErrNegativeTime
+	default:
+		return invalidTextError(text)
+	}
+	causes := []error{sentinel}
+	for _, dependency := range []error{
+		duration.ErrUnset,
+		measure.ErrUnset,
+		measure.ErrOutsideGrid,
+		measure.ErrOutsideBar,
+		tempo.ErrUnset,
+		tempo.ErrNegativeTime,
+	} {
+		if errors.Is(err, dependency) {
+			causes = append(causes, dependency)
+		}
+	}
+	return quotedTextError(text, causes...)
 }
 
 func nestedTextError(text string, err error) error {
