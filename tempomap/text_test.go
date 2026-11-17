@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-muse/musex/common/fraction"
 	"github.com/go-muse/musex/common/rounding"
 	"github.com/go-muse/musex/duration"
 	"github.com/go-muse/musex/tempo"
@@ -174,8 +175,6 @@ func TestKP32InvalidTextAndSpecialUnsetStrings(t *testing.T) {
 		{"law grammar", func() error { _, err := tempomap.ParseLaw("LINEAR-SPEED"); return err }},
 		{"seconds grammar", func() error { _, err := tempomap.ParseSecondsResult("s:1/2 "); return err }},
 		{"position grammar", func() error { _, err := tempomap.ParsePositionResult("p:1/2 "); return err }},
-		{"approximation is not seconds", func() error { _, err := tempo.ParseSeconds("s~2773/1000@3:1/2000"); return err }},
-		{"approximation is not position", func() error { _, err := duration.ParsePosition("p~284/1000@3:1/2000"); return err }},
 		{"seconds value off decimal grid", func() error { _, err := tempomap.ParseSecondsResult("s~1/3@3:1/2000"); return err }},
 		{"position value off decimal grid", func() error { _, err := tempomap.ParsePositionResult("p~1/3@3:1/2000"); return err }},
 		{"seconds wrong bound", func() error { _, err := tempomap.ParseSecondsResult("s~1/1@3:1/7"); return err }},
@@ -183,9 +182,14 @@ func TestKP32InvalidTextAndSpecialUnsetStrings(t *testing.T) {
 	} {
 		t.Run(operation.name, func(t *testing.T) {
 			t.Parallel()
-			require.Error(t, operation.call())
+			requireTempomapError(t, operation.call(), tempomap.ErrInvalidText)
 		})
 	}
+
+	_, secondsErr := tempo.ParseSeconds("s~2773/1000@3:1/2000")
+	require.Error(t, secondsErr)
+	_, positionErr := duration.ParsePosition("p~284/1000@3:1/2000")
+	require.Error(t, positionErr)
 
 	for _, operation := range []struct {
 		name string
@@ -201,7 +205,7 @@ func TestKP32InvalidTextAndSpecialUnsetStrings(t *testing.T) {
 	}
 
 	_, err := tempomap.ParseSecondsResult("s~1/1@77:1/2000000000000000000000000000000000000000000000000000000000000000000000000000000")
-	requireTempomapError(t, err, tempomap.ErrOutOfRange)
+	requireTempomapError(t, err, tempomap.ErrOutOfRange, fraction.ErrOutOfRange)
 }
 
 func TestUnmarshalFailurePreservesReceiverAndNilReceiverIsInvalid(t *testing.T) {

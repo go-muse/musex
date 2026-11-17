@@ -41,8 +41,10 @@ func TestNineRoundingModesAtZeroPlaces(t *testing.T) {
 func TestNearestModesImmediatelyAroundMidpoints(t *testing.T) {
 	t.Parallel()
 	// Independently evaluated full-segment times:
-	// 83.829 -> 1.49999192580057..., 83.830 -> 1.50000332003022...,
-	// 36.033 -> 2.50002848135288..., 36.034 -> 2.49998878793752....
+	// BPM 335.32 (speed 83.830) -> 1.49999192580057... (below),
+	// BPM 335.316 (speed 83.829) -> 1.50000332003022... (above),
+	// BPM 144.132 (speed 36.033) -> 2.50002848135288... (above),
+	// BPM 144.136 (speed 36.034) -> 2.49998878793752... (below).
 	for _, tt := range []struct {
 		name       string
 		finalBPM   string
@@ -54,10 +56,10 @@ func TestNearestModesImmediatelyAroundMidpoints(t *testing.T) {
 		down       string
 		up         string
 	}{
-		{"below odd midpoint", "83829/250", "1/1", "1/1", "1/1", "1/1", "1/1", "1/1", "2/1"},
-		{"above odd midpoint", "83830/250", "2/1", "2/1", "2/1", "2/1", "2/1", "1/1", "2/1"},
-		{"above even midpoint", "36033/1000", "3/1", "3/1", "3/1", "3/1", "3/1", "2/1", "3/1"},
-		{"below even midpoint", "36034/1000", "2/1", "2/1", "2/1", "2/1", "2/1", "2/1", "3/1"},
+		{"below odd midpoint", "83830/250", "1/1", "1/1", "1/1", "1/1", "1/1", "1/1", "2/1"},
+		{"above odd midpoint", "83829/250", "2/1", "2/1", "2/1", "2/1", "2/1", "1/1", "2/1"},
+		{"above even midpoint", "36033/250", "3/1", "3/1", "3/1", "3/1", "3/1", "2/1", "3/1"},
+		{"below even midpoint", "36034/250", "2/1", "2/1", "2/1", "2/1", "2/1", "2/1", "3/1"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
@@ -109,9 +111,9 @@ func TestMultipleGradualSegmentsRoundOnlyTheWholeExpression(t *testing.T) {
 
 	// At t=5 the second exponent is x=(3-4 ln 2)/2. It contains the
 	// preceding logarithm and must not be replaced by an independently
-	// rounded prefix.
-	checkPositionResult(t, m.MustPosition(sec(5, 1), 12, rounding.Down), "2240844535169/1000000000000", true, 12, "1/1000000000000")
-	checkPositionResult(t, m.MustPosition(sec(5, 1), 12, rounding.HalfUp), "2240844535169/1000000000000", true, 12, "1/2000000000000")
+	// rounded prefix. Algebraically p=1+exp((3-4 ln 2)/2).
+	checkPositionResult(t, m.MustPosition(sec(5, 1), 12, rounding.Down), "2120422267584/1000000000000", true, 12, "1/1000000000000")
+	checkPositionResult(t, m.MustPosition(sec(5, 1), 12, rounding.HalfUp), "2120422267585/1000000000000", true, 12, "1/2000000000000")
 }
 
 func TestLogarithmFactorizationAndNearCancellation(t *testing.T) {
@@ -141,7 +143,7 @@ func TestLogarithmFactorizationAndNearCancellation(t *testing.T) {
 		MustWithChange(tempomap.MustNewGradual(at(2, 1), tempomap.LinearSpeed)).
 		MustWithChange(tempomap.MustNewMain(at(3, 1), quarter(240)))
 	result := chained.MustPosition(sec(5, 1), 12, rounding.HalfEven)
-	checkPositionResult(t, result, "2240844535169/1000000000000", true, 12, "1/2000000000000")
+	checkPositionResult(t, result, "2120422267585/1000000000000", true, 12, "1/2000000000000")
 }
 
 func TestAccelerationAndSlowingBoundariesAndInverse(t *testing.T) {
@@ -154,7 +156,7 @@ func TestAccelerationAndSlowingBoundariesAndInverse(t *testing.T) {
 		inverseValue string
 	}{
 		{"acceleration", quarter(120), "15/1", "30/1", "284025416688/1000000000000"},
-		{"slowing", quarter(30), "15/1", "15/2", "442398433857/1000000000000"},
+		{"slowing", quarter(30), "15/1", "15/2", "235006194831/1000000000000"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
@@ -162,7 +164,11 @@ func TestAccelerationAndSlowingBoundariesAndInverse(t *testing.T) {
 			assert.True(t, fractionRat(tt.startSpeed).Equal(m.MustSpeed(tempomap.MustAt(duration.Origin()))))
 			assert.True(t, fractionRat(tt.endSpeed).Equal(m.MustSpeed(at(1, 1))))
 			checkPositionResult(t, m.MustPosition(tempo.ZeroSeconds(), 12, rounding.HalfUp), "0/1", false, 0, "0/1")
-			checkSecondsResult(t, m.MustStart(at(1, 1), 12, rounding.HalfUp), "277258872224/100000000000", true, 12, "1/2000000000000")
+			if tt.name == "slowing" {
+				checkSecondsResult(t, m.MustStart(at(1, 1), 12, rounding.HalfUp), "554517744448/100000000000", true, 12, "1/2000000000000")
+			} else {
+				checkSecondsResult(t, m.MustStart(at(1, 1), 12, rounding.HalfUp), "277258872224/100000000000", true, 12, "1/2000000000000")
+			}
 			checkPositionResult(t, m.MustPosition(sec(1, 1), 12, rounding.HalfUp), tt.inverseValue, true, 12, "1/2000000000000")
 		})
 	}
@@ -219,7 +225,7 @@ func TestHighPrecisionChainStress(t *testing.T) {
 		MustWithChange(tempomap.MustNewMain(at(1, 1), quarter(120))).
 		MustWithChange(tempomap.MustNewGradual(at(2, 1), tempomap.LinearSpeed)).
 		MustWithChange(tempomap.MustNewMain(at(3, 1), quarter(240)))
-	value := "22408445351690324113010277300596379095028749341848335283863250413929683372334/10000000000000000000000000000000000000000000000000000000000000000000000000000"
+	value := "21204222675845162056505138650298189547514374670924167641931625206964841686167/10000000000000000000000000000000000000000000000000000000000000000000000000000"
 	checkPositionResult(t, m.MustPosition(sec(5, 1), 76, rounding.HalfUp), value, true, 76, "1/"+pow10Times(2, 76))
 }
 

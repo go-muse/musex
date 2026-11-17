@@ -272,7 +272,7 @@ func TestKP34ChangeAndBarlineBoundaries(t *testing.T) {
 
 	grid := grid34Pickup()
 	measured := tempomap.MustNewMeasured(grid, quarter(60))
-	address, result := measured.MustAddressAt(grid, sec(2, 1), 0, rounding.HalfUp)
+	address, result := measured.MustAddressAt(grid, sec(1, 1), 0, rounding.HalfUp)
 	assert.True(t, measure.MustNewAddress(1, duration.Origin()).Equal(address))
 	checkPositionResult(t, result, "1/4", false, 0, "0/1")
 }
