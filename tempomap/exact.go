@@ -1,6 +1,10 @@
 package tempomap
 
-import "math/big"
+import (
+	"math/big"
+
+	"github.com/go-muse/musex/common/rounding"
+)
 
 // logTerm is one coefficient times the natural logarithm of a positive base.
 type logTerm struct {
@@ -12,6 +16,82 @@ type logTerm struct {
 type logForm struct {
 	constant *big.Rat
 	terms    []logTerm
+}
+
+type roundingAttempt struct {
+	lowerK  *big.Int
+	upperK  *big.Int
+	decided bool
+	limit   uint
+}
+
+func refinementLimit(precision, maxPrecision uint) uint {
+	var limit uint
+	for precision < maxPrecision {
+		if precision > maxPrecision/2 {
+			precision = maxPrecision
+		} else {
+			precision *= 2
+		}
+		limit++
+	}
+	return limit
+}
+
+func makeRoundingAttempt(
+	precision, maxPrecision uint,
+	lower, upper *big.Rat,
+	places int,
+	mode rounding.Mode,
+) roundingAttempt {
+	step := decimalStep(places)
+	lowerK, _, err := mode.RatMultiple(lower, step)
+	if err != nil {
+		panic(err)
+	}
+	upperK, _, err := mode.RatMultiple(upper, step)
+	if err != nil {
+		panic(err)
+	}
+	return roundingAttempt{
+		lowerK:  lowerK,
+		upperK:  upperK,
+		decided: lowerK.Cmp(upperK) == 0,
+		limit:   refinementLimit(precision, maxPrecision),
+	}
+}
+
+func roundWithLimit(
+	places int,
+	mode rounding.Mode,
+	initialPrecision, maxPrecision uint,
+	eval func(precision uint) (lower, upper *big.Rat),
+) (k *big.Int, usedPrecision, refinements uint, ok bool) {
+	precision := initialPrecision
+	for {
+		lower, upper := eval(precision)
+		attempt := makeRoundingAttempt(precision, maxPrecision, lower, upper, places, mode)
+		if attempt.decided {
+			return new(big.Int).Set(attempt.lowerK), precision, refinements, true
+		}
+		if precision >= maxPrecision {
+			return nil, maxPrecision, refinements, false
+		}
+		next := maxPrecision
+		if precision <= maxPrecision/2 {
+			next = precision * 2
+			if next > maxPrecision {
+				next = maxPrecision
+			}
+		}
+		precision = next
+		refinements++
+	}
+}
+
+func roundingNode(k *big.Int, places int) *big.Rat {
+	scale := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(places)), nil)
+	return new(big.Rat).SetFrac(new(big.Int).Set(k), scale)
 }
 
 func zeroLogForm() logForm { return logForm{constant: new(big.Rat)} }

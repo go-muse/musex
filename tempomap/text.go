@@ -104,7 +104,7 @@ func parseChange(text string) (Change, error) {
 		}
 		value, parseErr := tempo.Parse(data)
 		if parseErr != nil {
-			return Change{}, nestedTextError(text, parseErr)
+			return Change{}, nestedTextError(text, data, parseErr)
 		}
 		if kind == ChangeMain {
 			c, err = NewMain(at, value)
@@ -137,11 +137,11 @@ func parseChange(text string) (Change, error) {
 		}
 		unit, parseErr := duration.ParseWritten(unitText)
 		if parseErr != nil {
-			return Change{}, nestedTextError(text, parseErr)
+			return Change{}, nestedTextError(text, unitText, parseErr)
 		}
 		old, parseErr := duration.Parse(oldText)
 		if parseErr != nil {
-			return Change{}, nestedTextError(text, parseErr)
+			return Change{}, nestedTextError(text, oldText, parseErr)
 		}
 		c, err = NewModulation(at, unit, old)
 	}
@@ -178,7 +178,7 @@ func parseExtension(text string) (Extension, error) {
 	}
 	seconds, err := tempo.ParseSeconds(secondsText)
 	if err != nil {
-		return Extension{}, nestedTextError(text, err)
+		return Extension{}, nestedTextError(text, secondsText, err)
 	}
 	return NewExtension(at, seconds)
 }
