@@ -47,7 +47,7 @@ func TestDegreeNewWithNoteErrorPrecedenceAndZeroResults(t *testing.T) {
 			d, err := degree.NewWithNote(tt.number, tt.note)
 			assertDegreeError(t, err, tt.expected)
 			assertUnsetDegree(t, d)
-			assertMustPanic(t, err, func() { degree.MustNewWithNote(tt.number, tt.note) })
+			_ = assertMustPanic(t, tt.expected, func() { degree.MustNewWithNote(tt.number, tt.note) })
 		})
 	}
 }
@@ -73,7 +73,7 @@ func TestDegreeMutatorsRejectUnsetReceiver(t *testing.T) {
 			err := tt.call(&d)
 			assertDegreeError(t, err, degree.ErrUnset)
 			assertUnsetDegree(t, d)
-			assertMustPanic(t, err, func() { tt.must(&d) })
+			_ = assertMustPanic(t, degree.ErrUnset, func() { tt.must(&d) })
 			assertUnsetDegree(t, d)
 		})
 	}
@@ -97,7 +97,7 @@ func TestDegreeInCircleErrorsAndZeroResult(t *testing.T) {
 			got, err := tt.d.InCircle(tt.k)
 			assertDegreeError(t, err, tt.expected)
 			assert.False(t, got)
-			assertMustPanic(t, err, func() { tt.d.MustInCircle(tt.k) })
+			_ = assertMustPanic(t, tt.expected, func() { tt.d.MustInCircle(tt.k) })
 		})
 	}
 }
@@ -122,13 +122,13 @@ func TestDegreeNextAndPreviousErrorsAndZeroResults(t *testing.T) {
 			assertDegreeError(t, err, tt.expected)
 			assertUnsetDegree(t, next)
 			assert.False(t, wrapped)
-			assertMustPanic(t, err, func() { tt.d.MustNext(tt.k) })
+			_ = assertMustPanic(t, tt.expected, func() { tt.d.MustNext(tt.k) })
 
 			previous, wrapped, err := tt.d.Previous(tt.k)
 			assertDegreeError(t, err, tt.expected)
 			assertUnsetDegree(t, previous)
 			assert.False(t, wrapped)
-			assertMustPanic(t, err, func() { tt.d.MustPrevious(tt.k) })
+			_ = assertMustPanic(t, tt.expected, func() { tt.d.MustPrevious(tt.k) })
 		})
 	}
 }
@@ -153,7 +153,7 @@ func TestDegreeShiftErrorsAndZeroResults(t *testing.T) {
 			assertDegreeError(t, err, tt.expected)
 			assertUnsetDegree(t, shifted)
 			assert.Zero(t, cycles)
-			assertMustPanic(t, err, func() { tt.d.MustShift(tt.k, math.MaxInt) })
+			_ = assertMustPanic(t, tt.expected, func() { tt.d.MustShift(tt.k, math.MaxInt) })
 		})
 	}
 }
@@ -181,17 +181,17 @@ func TestDegreeDistanceErrorsAndZeroResults(t *testing.T) {
 			up, err := tt.from.DistanceUp(tt.to, tt.k)
 			assertDegreeError(t, err, tt.expected)
 			assert.Zero(t, up)
-			assertMustPanic(t, err, func() { tt.from.MustDistanceUp(tt.to, tt.k) })
+			_ = assertMustPanic(t, tt.expected, func() { tt.from.MustDistanceUp(tt.to, tt.k) })
 
 			down, err := tt.from.DistanceDown(tt.to, tt.k)
 			assertDegreeError(t, err, tt.expected)
 			assert.Zero(t, down)
-			assertMustPanic(t, err, func() { tt.from.MustDistanceDown(tt.to, tt.k) })
+			_ = assertMustPanic(t, tt.expected, func() { tt.from.MustDistanceDown(tt.to, tt.k) })
 
 			shortest, err := tt.from.ShortestDistance(tt.to, tt.k)
 			assertDegreeError(t, err, tt.expected)
 			assert.Zero(t, shortest)
-			assertMustPanic(t, err, func() { tt.from.MustShortestDistance(tt.to, tt.k) })
+			_ = assertMustPanic(t, tt.expected, func() { tt.from.MustShortestDistance(tt.to, tt.k) })
 		})
 	}
 }
@@ -215,7 +215,7 @@ func TestDegreeNormalizeErrorsAndZeroResults(t *testing.T) {
 			assertDegreeError(t, err, tt.expected)
 			assertUnsetDegree(t, normalized)
 			assert.Zero(t, cycles)
-			assertMustPanic(t, err, func() { tt.d.MustNormalize(tt.k) })
+			_ = assertMustPanic(t, tt.expected, func() { tt.d.MustNormalize(tt.k) })
 		})
 	}
 }
@@ -247,7 +247,7 @@ func TestDegreeDenormalizeErrorsAndZeroResults(t *testing.T) {
 			d, err := tt.d.Denormalize(tt.k, tt.cycles)
 			assertDegreeError(t, err, tt.expected)
 			assertUnsetDegree(t, d)
-			assertMustPanic(t, err, func() { tt.d.MustDenormalize(tt.k, tt.cycles) })
+			_ = assertMustPanic(t, tt.expected, func() { tt.d.MustDenormalize(tt.k, tt.cycles) })
 		})
 	}
 }
@@ -260,7 +260,7 @@ func TestDegreeAllRejectsInvalidCircleSize(t *testing.T) {
 			sequence, err := degree.All(k)
 			assertDegreeError(t, err, degree.ErrInvalidNumber)
 			assert.Nil(t, sequence)
-			assertMustPanic(t, err, func() { degree.MustAll(k) })
+			_ = assertMustPanic(t, degree.ErrInvalidNumber, func() { degree.MustAll(k) })
 		})
 	}
 }

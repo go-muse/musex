@@ -1,8 +1,10 @@
 package degree_test
 
 import (
-	"errors"
 	"math"
+	"math/big"
+	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/go-muse/musex/degree"
@@ -12,23 +14,89 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var degreeCanonicalRomanPattern = regexp.MustCompile(`^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$`)
+
+func degreeParseExpectation(text string) (int, error) {
+	if text == "" {
+		return 0, degree.ErrParse
+	}
+
+	decimal := true
+	for i := range len(text) {
+		if text[i] < '0' || text[i] > '9' {
+			decimal = false
+			break
+		}
+	}
+	if decimal {
+		if text == "0" {
+			return 0, degree.ErrInvalidNumber
+		}
+		if text[0] == '0' {
+			return 0, degree.ErrParse
+		}
+		number, ok := new(big.Int).SetString(text, 10)
+		if !ok {
+			return 0, degree.ErrParse
+		}
+		if number.Cmp(big.NewInt(int64(degree.MaxNumber))) > 0 {
+			return 0, degree.ErrOutOfRange
+		}
+		return int(number.Int64()), nil
+	}
+
+	if !degreeCanonicalRomanPattern.MatchString(text) {
+		return 0, degree.ErrParse
+	}
+	number := 0
+	previous := 0
+	for i := len(text) - 1; i >= 0; i-- {
+		value := 0
+		switch text[i] {
+		case 'I':
+			value = 1
+		case 'V':
+			value = 5
+		case 'X':
+			value = 10
+		case 'L':
+			value = 50
+		case 'C':
+			value = 100
+		case 'D':
+			value = 500
+		case 'M':
+			value = 1000
+		}
+		if value < previous {
+			number -= value
+		} else {
+			number += value
+		}
+		previous = value
+	}
+	return number, nil
+}
+
 func FuzzDegreeParseNeverPanics(f *testing.F) {
-	for _, text := range []string{"", "0", "4", "IV", "3999", "MMMCMXCIX", "4000", "iv", "IIII", "99999999999999999999", "Ⅳ", "\x00\xff"} {
+	oversized := strings.Repeat("9", 40)
+	for _, text := range []string{
+		"", "0", "4", "IV", "3999", "MMMCMXCIX", "4000", "iv", "IIII", "99999999999999999999", "Ⅳ", "\x00\xff",
+		oversized, oversized + "I", oversized + " ", oversized + "Ⅳ",
+	} {
 		f.Add(text)
 	}
 	f.Fuzz(func(t *testing.T, text string) {
+		expectedNumber, expectedError := degreeParseExpectation(text)
 		d, err := degree.Parse(text)
-		if err != nil {
+		if expectedError != nil {
+			assertDegreeError(t, err, expectedError)
 			assertUnsetDegree(t, d)
-			assert.True(t,
-				errors.Is(err, degree.ErrParse) || errors.Is(err, degree.ErrInvalidNumber) || errors.Is(err, degree.ErrOutOfRange),
-				"unexpected parse error category: %v", err,
-			)
 			return
 		}
-		require.True(t, d.IsValid())
-		assert.Positive(t, d.Number())
-		assert.False(t, d.HasNote())
+		require.NoError(t, err)
+		assertDegreeState(t, d, expectedNumber, false, note.Note{})
+
 		decimal, err := d.Decimal()
 		require.NoError(t, err)
 		fromDecimal, err := degree.Parse(decimal)

@@ -46,7 +46,7 @@ func TestSetNoteRejectsUnsetNoteAtomically(t *testing.T) {
 	assertDegreeError(t, err, degree.ErrUnset)
 	assertSameDegree(t, before, d)
 	assert.True(t, before.Note().SameSource(d.Note()))
-	assertMustPanic(t, err, func() { d.MustSetNote(note.Note{}) })
+	_ = assertMustPanic(t, degree.ErrUnset, func() { d.MustSetNote(note.Note{}) })
 	assertSameDegree(t, before, d)
 }
 
@@ -149,7 +149,7 @@ func TestTransformNoteInputErrorsAndPrecedence(t *testing.T) {
 			} else {
 				assert.Zero(t, calls)
 			}
-			assertMustPanic(t, err, func() { d.MustTransformNote(transform) })
+			_ = assertMustPanic(t, tt.expected, func() { d.MustTransformNote(transform) })
 			assertSameDegree(t, before, d)
 		})
 	}
@@ -172,7 +172,17 @@ func TestTransformNoteFailurePreservesCauseAndDegree(t *testing.T) {
 	assertSameDegree(t, before, d)
 	assert.True(t, before.Note().SameSource(d.Note()))
 	assert.Equal(t, 1, calls)
-	assertMustPanic(t, err, func() { d.MustTransformNote(transform) })
+
+	var mustCause error
+	recovered := assertMustPanic(t, degree.ErrTransformFailed, func() {
+		d.MustTransformNote(func(note.Note) (note.Note, error) {
+			calls++
+			mustCause = errors.New("Must transform failed")
+			return note.Note{}, mustCause
+		})
+	})
+	require.Error(t, mustCause)
+	assert.ErrorIs(t, recovered, mustCause)
 	assert.Equal(t, 2, calls)
 	assertSameDegree(t, before, d)
 }
@@ -246,7 +256,7 @@ func TestSetNumberRejectsInvalidNumbersAtomically(t *testing.T) {
 			assertDegreeError(t, err, degree.ErrInvalidNumber)
 			assertSameDegree(t, before, d)
 			assert.True(t, before.Note().SameSource(d.Note()))
-			assertMustPanic(t, err, func() { d.MustSetNumber(number) })
+			_ = assertMustPanic(t, degree.ErrInvalidNumber, func() { d.MustSetNumber(number) })
 			assertSameDegree(t, before, d)
 		})
 	}

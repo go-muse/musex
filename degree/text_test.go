@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/go-muse/musex/cents"
@@ -64,7 +65,7 @@ func TestDegreeFormattingAtIntegerAndRomanLimits(t *testing.T) {
 	roman, err := d.Roman()
 	assertDegreeError(t, err, degree.ErrRomanOutOfRange)
 	assert.Empty(t, roman)
-	assertMustPanic(t, err, func() { d.MustRoman() })
+	_ = assertMustPanic(t, degree.ErrRomanOutOfRange, func() { d.MustRoman() })
 
 	fourThousand := degree.MustNew(4000)
 	assert.Equal(t, "4000", fourThousand.MustDecimal())
@@ -79,11 +80,11 @@ func TestDegreeFormattingUnset(t *testing.T) {
 	decimal, err := d.Decimal()
 	assertDegreeError(t, err, degree.ErrUnset)
 	assert.Empty(t, decimal)
-	assertMustPanic(t, err, func() { d.MustDecimal() })
+	_ = assertMustPanic(t, degree.ErrUnset, func() { d.MustDecimal() })
 	roman, err := d.Roman()
 	assertDegreeError(t, err, degree.ErrUnset)
 	assert.Empty(t, roman)
-	assertMustPanic(t, err, func() { d.MustRoman() })
+	_ = assertMustPanic(t, degree.ErrUnset, func() { d.MustRoman() })
 }
 
 func TestDegreeParseCanonicalForms(t *testing.T) {
@@ -117,15 +118,17 @@ func TestDegreeParseCanonicalForms(t *testing.T) {
 
 func TestDegreeParseRejectsNonCanonicalText(t *testing.T) {
 	t.Parallel()
+	oversized := strings.Repeat("9", 40)
 	for _, text := range []string{
 		"", "iv", "Iv", "IIII", "IL", "VX", "MMMM", "4 ", " 4", "+4", "-4", "04", "000000000000000000000000000000000000000", "4.0", "IV4", "Ⅳ", "４", "I I", "IIV", "VV", "IC", "XD", "CMCM",
+		oversized + "I", oversized + " ", oversized + "Ⅳ",
 	} {
 		t.Run(fmt.Sprintf("%q", text), func(t *testing.T) {
 			t.Parallel()
 			d, err := degree.Parse(text)
 			assertDegreeError(t, err, degree.ErrParse)
 			assertUnsetDegree(t, d)
-			assertMustPanic(t, err, func() { degree.MustParse(text) })
+			_ = assertMustPanic(t, degree.ErrParse, func() { degree.MustParse(text) })
 		})
 	}
 }
@@ -135,12 +138,17 @@ func TestDegreeParseNumericErrorCategories(t *testing.T) {
 	d, err := degree.Parse("0")
 	assertDegreeError(t, err, degree.ErrInvalidNumber)
 	assertUnsetDegree(t, d)
-	assertMustPanic(t, err, func() { degree.MustParse("0") })
+	_ = assertMustPanic(t, degree.ErrInvalidNumber, func() { degree.MustParse("0") })
 
-	for _, text := range []string{"99999999999999999999", "9223372036854775808"} {
-		d, err = degree.Parse(text)
-		assertDegreeError(t, err, degree.ErrOutOfRange)
-		assertUnsetDegree(t, d)
+	oversized := strings.Repeat("9", 40)
+	for _, text := range []string{"99999999999999999999", "9223372036854775808", oversized} {
+		t.Run(fmt.Sprintf("%q", text), func(t *testing.T) {
+			t.Parallel()
+			d, err := degree.Parse(text)
+			assertDegreeError(t, err, degree.ErrOutOfRange)
+			assertUnsetDegree(t, d)
+			_ = assertMustPanic(t, degree.ErrOutOfRange, func() { degree.MustParse(text) })
+		})
 	}
 }
 

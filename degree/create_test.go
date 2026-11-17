@@ -37,7 +37,7 @@ func TestNewRejectsInvalidNumbers(t *testing.T) {
 			d, err := degree.New(number)
 			assertDegreeError(t, err, degree.ErrInvalidNumber)
 			assertUnsetDegree(t, d)
-			assertMustPanic(t, err, func() { degree.MustNew(number) })
+			_ = assertMustPanic(t, degree.ErrInvalidNumber, func() { degree.MustNew(number) })
 		})
 	}
 }
@@ -80,7 +80,7 @@ func TestNewWithNoteRejectsUnsetNote(t *testing.T) {
 	d, err := degree.NewWithNote(4, note.Note{})
 	assertDegreeError(t, err, degree.ErrUnset)
 	assertUnsetDegree(t, d)
-	assertMustPanic(t, err, func() { degree.MustNewWithNote(4, note.Note{}) })
+	_ = assertMustPanic(t, degree.ErrUnset, func() { degree.MustNewWithNote(4, note.Note{}) })
 }
 
 func TestPredefinedDegrees(t *testing.T) {
