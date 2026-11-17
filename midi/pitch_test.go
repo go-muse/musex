@@ -198,6 +198,7 @@ func TestPitch_LayoutValidation(t *testing.T) {
 	differentChromatic.Chromatic = 2
 	differentBoundary := system.Traditional().Definition()
 	differentBoundary.Boundary = letter.A
+	differentBoundary.Offsets = [letter.Count]int{3, 5, 7, 8, 10, 0, 2}
 
 	for _, tt := range []struct {
 		name                 string

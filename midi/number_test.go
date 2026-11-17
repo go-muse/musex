@@ -344,11 +344,13 @@ func TestNumber_EqualityAndCompare(t *testing.T) {
 	original := midi.MustNew(60)
 	copied := original
 	require.True(t, copied.Equal(original))
-	requireNumberValue(t, 61, copied.MustShift(1))
+	shifted := copied.MustShift(1)
+	requireNumberValue(t, 61, shifted)
+	requireNumberValue(t, 60, copied)
 	requireNumberValue(t, 60, original)
 
 	byNumber := map[midi.Number]string{original: "C4"}
-	require.Equal(t, "C4", byNumber[copied.MustShift(-1)])
+	require.Equal(t, "C4", byNumber[shifted.MustShift(-1)])
 }
 
 func TestNumber_FromPartsErrors(t *testing.T) {
