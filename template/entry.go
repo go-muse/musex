@@ -102,7 +102,7 @@ func (e Entry) namesByLanguage(russian bool) []string {
 	result := make([]string, 0)
 	for _, name := range e.names {
 		isRussian := strings.IndexFunc(name, func(r rune) bool {
-			return unicode.Is(unicode.Cyrillic, r)
+			return unicode.Is(unicode.Cyrillic, r) && unicode.IsLetter(r)
 		}) >= 0
 		if isRussian == russian {
 			result = append(result, name)
