@@ -444,6 +444,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/rounding$
             - github.com/go-muse/musex/common/fraction$
             - github.com/go-muse/musex/duration$
             - github.com/go-muse/musex/measure$
