@@ -89,6 +89,56 @@ func TestNotesFromNamesAndOwnership(t *testing.T) {
 	}
 }
 
+func TestReconstructModeFromNotes(t *testing.T) {
+	t.Parallel()
+	// Under architecture 3.2 (P-5/F-2), reconstruction restores the original
+	// mode when spellings preserve the intervals between consecutive notes.
+	// For closed modes, the caller also passes the original cycle.
+	for _, tt := range []struct {
+		name, original, cycle, spellings, want string
+		octaves                                []int
+		wantErr                                error
+	}{
+		{"closed compound edge", "M9 m7", "P15", "C D", "M2 m14", []int{4, 5}, nil},
+		{"open compound edge", "M9 |", "", "C D", "M2 |", []int{4, 5}, nil},
+		{"repeated spelling", "P8 P8", "P15", "C C", "", []int{4, 5}, mode.ErrInvalidStructure},
+		{"compound cycle with simple edge", "M2 m14", "P15", "C D", "M2 m14", []int{4, 4}, nil},
+		{"singleton with explicit cycle", "P4", "P4", "C", "P4", []int{4}, nil},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			original := mode.MustParse(tt.original)
+			first := noteAt(t, "C", 4, cents.Cents{}, settings.Standard())
+			produced, err := original.NotesFrom(first)
+			require.NoError(t, err)
+			require.Len(t, produced, len(tt.octaves))
+			assert.Equal(t, tt.spellings, noteNames(produced))
+			for i, n := range produced {
+				require.True(t, n.HasOctave(), "note %d", i+1)
+				assert.Equal(t, tt.octaves[i], n.MustASPN(), "note %d", i+1)
+			}
+
+			var rebuilt mode.Mode
+			if tt.cycle == "" {
+				rebuilt, err = mode.OpenFromNotes(produced)
+			} else {
+				cycle := interval.MustParse(tt.cycle)
+				originalCycle, ok := original.Cycle()
+				require.True(t, ok)
+				require.True(t, cycle.Equal(originalCycle))
+				rebuilt, err = mode.ClosedFromNotes(produced, cycle)
+			}
+			if tt.wantErr != nil {
+				checkError(t, err, tt.wantErr)
+				assert.Zero(t, rebuilt)
+				return
+			}
+			require.NoError(t, err)
+			checkMode(t, rebuilt, tt.want)
+			assert.Equal(t, tt.original == tt.want, original.Equal(rebuilt))
+		})
+	}
+}
+
 func TestBoundAndExplicitNoteSystems(t *testing.T) {
 	t.Parallel()
 	m := mode.MustFromCode("dorian")
