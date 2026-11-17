@@ -180,6 +180,9 @@ func positionFromSeconds(idx *mapIndex, seconds tempo.Seconds, places int, mode 
 	const op = "tempomap.positionFromSeconds"
 	time := ratOfSeconds(seconds)
 	if time.Sign() == 0 {
+		if unfinishedAt(idx, duration.Origin()) {
+			return PositionResult{}, simpleError(ErrUnfinished, op, "unfinished gradual segment")
+		}
 		return exactPositionResult(duration.Origin()), nil
 	}
 	lo, hi := 0, len(idx.events)
@@ -192,6 +195,9 @@ func positionFromSeconds(idx *mapIndex, seconds tempo.Seconds, places int, mode 
 		}
 	}
 	event := idx.events[lo-1]
+	if unfinishedAt(idx, event.position) {
+		return PositionResult{}, simpleError(ErrUnfinished, op, "unfinished gradual segment")
+	}
 	if compareLogForm(event.start, time) == 0 {
 		return exactPositionResult(event.position), nil
 	}
@@ -204,7 +210,7 @@ func positionFromSeconds(idx *mapIndex, seconds tempo.Seconds, places int, mode 
 		return PositionResult{}, simpleError(ErrUnfinished, op, "unfinished gradual segment")
 	}
 	startSeconds, _ := startFormAt(idx, current.position, false)
-	holdsAfterStart := new(big.Rat).Sub(extensionSumAt(idx, event.position, true), extensionSumAt(idx, current.position, true))
+	holdsAfterStart := new(big.Rat).Sub(extensionSumAt(idx, event.position, true), extensionSumAt(idx, current.position, false))
 	residual := logFormSub(rationalLogForm(time), logFormAddRat(startSeconds, holdsAfterStart))
 	approximate := current.approximateBefore
 	if current.change.kind == ChangeGradual && !current.startSpeed.Equal(idx.changes[changeIndex+1].startSpeed) {

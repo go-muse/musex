@@ -275,6 +275,14 @@ func validResultBound(bound *big.Rat, places int) bool {
 
 // ParseSecondsResult parses an exact or approximate seconds result.
 func ParseSecondsResult(text string) (SecondsResult, error) {
+	result, err := parseSecondsResult(text)
+	if err != nil {
+		return SecondsResult{}, normalizeTextError(text, err)
+	}
+	return result, nil
+}
+
+func parseSecondsResult(text string) (SecondsResult, error) {
 	if strings.HasPrefix(text, "s:") {
 		v, err := tempo.ParseSeconds(text[2:])
 		if err != nil {
@@ -318,6 +326,14 @@ func MustParseSecondsResult(text string) SecondsResult { return must(ParseSecond
 
 // ParsePositionResult parses an exact or approximate position result.
 func ParsePositionResult(text string) (PositionResult, error) {
+	result, err := parsePositionResult(text)
+	if err != nil {
+		return PositionResult{}, normalizeTextError(text, err)
+	}
+	return result, nil
+}
+
+func parsePositionResult(text string) (PositionResult, error) {
 	if strings.HasPrefix(text, "p:") {
 		v, err := duration.ParsePosition(text[2:])
 		if err != nil {

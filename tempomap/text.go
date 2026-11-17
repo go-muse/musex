@@ -67,6 +67,14 @@ func splitAddressText(text string) (address, rest string, ok bool) {
 
 // ParseChange parses one complete change record.
 func ParseChange(text string) (Change, error) {
+	change, err := parseChange(text)
+	if err != nil {
+		return Change{}, normalizeTextError(text, err)
+	}
+	return change, nil
+}
+
+func parseChange(text string) (Change, error) {
 	slotText, rest, ok := strings.Cut(text, "@")
 	if !ok {
 		return Change{}, invalidTextError(text)
@@ -148,6 +156,14 @@ func MustParseChange(text string) Change { return must(ParseChange(text)) }
 
 // ParseExtension parses one complete hold record.
 func ParseExtension(text string) (Extension, error) {
+	extension, err := parseExtension(text)
+	if err != nil {
+		return Extension{}, normalizeTextError(text, err)
+	}
+	return extension, nil
+}
+
+func parseExtension(text string) (Extension, error) {
 	rest, ok := strings.CutPrefix(text, "hold@")
 	if !ok {
 		return Extension{}, invalidTextError(text)
@@ -180,6 +196,26 @@ func Parse(text string, grid ...measure.Grid) (Map, error) {
 	if len(grid) == 1 && !grid[0].IsSet() {
 		return Map{}, dependencyArgumentError(op, measure.ErrUnset)
 	}
+	m, err := parseRecords(text)
+	if err != nil {
+		return Map{}, normalizeTextError(text, err)
+	}
+	if m.addressing == PositionAddressing {
+		if len(grid) != 0 {
+			return Map{}, simpleError(ErrInvalidArgument, op, "positional map takes no grid")
+		}
+		return m, nil
+	}
+	if len(grid) == 1 {
+		if _, err = m.buildIndex(grid); err != nil {
+			return Map{}, normalizeTextError(text, err)
+		}
+	}
+	return m, nil
+}
+
+func parseRecords(text string) (Map, error) {
+	const op = "Parse"
 	body, ok := strings.CutPrefix(text, "tempomap[")
 	if !ok || !strings.HasSuffix(body, "]") {
 		return Map{}, invalidTextError(text)
@@ -215,11 +251,8 @@ func Parse(text string, grid ...measure.Grid) (Map, error) {
 		return Map{}, simpleError(ErrNoInitialTempo, op, "map has no initial change")
 	}
 	addressing := changes[0].at.addressing
-	if addressing == PositionAddressing && len(grid) != 0 {
-		return Map{}, simpleError(ErrInvalidArgument, op, "positional map takes no grid")
-	}
 	m := Map{addressing: addressing, changes: changes, extensions: extensions}
-	idx, err := m.buildIndex(grid)
+	idx, err := m.buildIndex(nil)
 	if err != nil {
 		return Map{}, err
 	}

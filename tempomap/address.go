@@ -196,6 +196,14 @@ func MustAtBar(address measure.Address) Address { return must(AtBar(address)) }
 
 // ParseAddress parses p:position or m:bar:offset.
 func ParseAddress(text string) (Address, error) {
+	address, err := parseAddress(text)
+	if err != nil {
+		return Address{}, normalizeTextError(text, err)
+	}
+	return address, nil
+}
+
+func parseAddress(text string) (Address, error) {
 	if strings.HasPrefix(text, "p:") {
 		p, err := duration.ParsePosition(text[2:])
 		if err != nil {
