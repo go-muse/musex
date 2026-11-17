@@ -1,6 +1,7 @@
 package tempomap
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/go-muse/musex/duration"
@@ -87,9 +88,17 @@ func parseChange(text string) (Change, error) {
 	if !ok {
 		return Change{}, invalidTextError(text)
 	}
-	at, err := ParseAddress(addressText)
-	if err != nil {
-		return Change{}, err
+	var rangeErr, semanticErr error
+	at, addressErr := ParseAddress(addressText)
+	if addressErr != nil {
+		switch {
+		case errors.Is(addressErr, ErrInvalidText):
+			return Change{}, addressErr
+		case errors.Is(addressErr, ErrOutOfRange):
+			rangeErr = addressErr
+		default:
+			semanticErr = addressErr
+		}
 	}
 	kindText, data, hasData := strings.Cut(rest, ":")
 	kind, ok := parseChangeKind(kindText)
@@ -97,6 +106,8 @@ func parseChange(text string) (Change, error) {
 		return Change{}, invalidTextError(text)
 	}
 	var c Change
+	var constructErr error
+	canConstruct := func() bool { return rangeErr == nil && semanticErr == nil }
 	switch kind {
 	case ChangeMain, ChangeJump:
 		if !hasData {
@@ -104,12 +115,20 @@ func parseChange(text string) (Change, error) {
 		}
 		value, parseErr := tempo.Parse(data)
 		if parseErr != nil {
-			return Change{}, nestedTextError(text, data, parseErr)
-		}
-		if kind == ChangeMain {
-			c, err = NewMain(at, value)
-		} else {
-			c, err = NewJump(at, value)
+			nestedErr := nestedTextError(text, data, parseErr)
+			if errors.Is(nestedErr, ErrOutOfRange) {
+				if rangeErr == nil {
+					rangeErr = nestedErr
+				}
+			} else {
+				return Change{}, nestedErr
+			}
+		} else if canConstruct() {
+			if kind == ChangeMain {
+				c, constructErr = NewMain(at, value)
+			} else {
+				c, constructErr = NewJump(at, value)
+			}
 		}
 	case ChangeGradual:
 		if !hasData {
@@ -119,34 +138,62 @@ func parseChange(text string) (Change, error) {
 		if parseErr != nil {
 			return Change{}, invalidTextError(text)
 		}
-		c, err = NewGradual(at, law)
+		if canConstruct() {
+			c, constructErr = NewGradual(at, law)
+		}
 	case ChangeATempo:
 		if hasData {
 			return Change{}, invalidTextError(text)
 		}
-		c, err = NewATempo(at)
+		if canConstruct() {
+			c, constructErr = NewATempo(at)
+		}
 	case ChangeTempoI:
 		if hasData {
 			return Change{}, invalidTextError(text)
 		}
-		c, err = NewTempoI(at)
+		if canConstruct() {
+			c, constructErr = NewTempoI(at)
+		}
 	case ChangeModulation:
 		unitText, oldText, found := strings.Cut(data, "@")
 		if !hasData || !found {
 			return Change{}, invalidTextError(text)
 		}
-		unit, parseErr := duration.ParseWritten(unitText)
-		if parseErr != nil {
-			return Change{}, nestedTextError(text, unitText, parseErr)
+		unit, unitErr := duration.ParseWritten(unitText)
+		if unitErr != nil {
+			nestedErr := nestedTextError(text, unitText, unitErr)
+			if errors.Is(nestedErr, ErrOutOfRange) {
+				if rangeErr == nil {
+					rangeErr = nestedErr
+				}
+			} else {
+				return Change{}, nestedErr
+			}
 		}
-		old, parseErr := duration.Parse(oldText)
-		if parseErr != nil {
-			return Change{}, nestedTextError(text, oldText, parseErr)
+		old, oldErr := duration.Parse(oldText)
+		if oldErr != nil {
+			nestedErr := nestedTextError(text, oldText, oldErr)
+			if errors.Is(nestedErr, ErrOutOfRange) {
+				if rangeErr == nil {
+					rangeErr = nestedErr
+				}
+			} else {
+				return Change{}, nestedErr
+			}
 		}
-		c, err = NewModulation(at, unit, old)
+		if canConstruct() && unitErr == nil && oldErr == nil {
+			c, constructErr = NewModulation(at, unit, old)
+		}
 	}
-	if err != nil {
-		return Change{}, err
+	if rangeErr != nil {
+		return Change{}, rangeErr
+	}
+	if semanticErr != nil {
+		return Change{}, semanticErr
+	}
+	if constructErr != nil {
+		return Change{}, constructErr
 	}
 	return c.WithSlot(slot)
 }
@@ -172,13 +219,34 @@ func parseExtension(text string) (Extension, error) {
 	if !ok {
 		return Extension{}, invalidTextError(text)
 	}
-	at, err := ParseAddress(addressText)
-	if err != nil {
-		return Extension{}, err
+	var rangeErr, semanticErr error
+	at, addressErr := ParseAddress(addressText)
+	if addressErr != nil {
+		switch {
+		case errors.Is(addressErr, ErrInvalidText):
+			return Extension{}, addressErr
+		case errors.Is(addressErr, ErrOutOfRange):
+			rangeErr = addressErr
+		default:
+			semanticErr = addressErr
+		}
 	}
-	seconds, err := tempo.ParseSeconds(secondsText)
-	if err != nil {
-		return Extension{}, nestedTextError(text, secondsText, err)
+	seconds, secondsErr := tempo.ParseSeconds(secondsText)
+	if secondsErr != nil {
+		nestedErr := nestedTextError(text, secondsText, secondsErr)
+		if errors.Is(nestedErr, ErrOutOfRange) {
+			if rangeErr == nil {
+				rangeErr = nestedErr
+			}
+		} else {
+			return Extension{}, nestedErr
+		}
+	}
+	if rangeErr != nil {
+		return Extension{}, rangeErr
+	}
+	if semanticErr != nil {
+		return Extension{}, semanticErr
 	}
 	return NewExtension(at, seconds)
 }
@@ -228,12 +296,25 @@ func parseRecords(text string) (Map, error) {
 	changes := make([]Change, 0, len(items))
 	extensions := make([]Extension, 0)
 	seenExtension := false
+	var rangeErr, semanticErr error
 	for _, item := range items {
 		if strings.HasPrefix(item, "hold@") {
 			seenExtension = true
 			extension, err := ParseExtension(item)
 			if err != nil {
-				return Map{}, err
+				switch {
+				case errors.Is(err, ErrInvalidText):
+					return Map{}, err
+				case errors.Is(err, ErrOutOfRange):
+					if rangeErr == nil {
+						rangeErr = err
+					}
+				default:
+					if semanticErr == nil {
+						semanticErr = err
+					}
+				}
+				continue
 			}
 			extensions = append(extensions, extension)
 			continue
@@ -243,9 +324,27 @@ func parseRecords(text string) (Map, error) {
 		}
 		change, err := ParseChange(item)
 		if err != nil {
-			return Map{}, err
+			switch {
+			case errors.Is(err, ErrInvalidText):
+				return Map{}, err
+			case errors.Is(err, ErrOutOfRange):
+				if rangeErr == nil {
+					rangeErr = err
+				}
+			default:
+				if semanticErr == nil {
+					semanticErr = err
+				}
+			}
+			continue
 		}
 		changes = append(changes, change)
+	}
+	if rangeErr != nil {
+		return Map{}, rangeErr
+	}
+	if semanticErr != nil {
+		return Map{}, semanticErr
 	}
 	if len(changes) == 0 {
 		return Map{}, simpleError(ErrNoInitialTempo, op, "map has no initial change")

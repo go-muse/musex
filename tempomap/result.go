@@ -1,6 +1,7 @@
 package tempomap
 
 import (
+	"errors"
 	"math/big"
 	"strconv"
 	"strings"
@@ -301,17 +302,33 @@ func parseSecondsResult(text string) (SecondsResult, error) {
 	if !ok || strings.Contains(boundText, ":") {
 		return SecondsResult{}, invalidTextError(text)
 	}
-	places, err := parsePlaces(placesText, text)
-	if err != nil {
-		return SecondsResult{}, err
+	places, placesErr := parsePlaces(placesText, text)
+	var rangeErr error
+	value, valueErr := tempo.ParseSeconds(valueText)
+	if valueErr != nil {
+		nestedErr := nestedTextError(text, valueText, valueErr)
+		if errors.Is(nestedErr, ErrOutOfRange) {
+			rangeErr = nestedErr
+		} else {
+			return SecondsResult{}, nestedErr
+		}
 	}
-	value, err := tempo.ParseSeconds(valueText)
-	if err != nil {
-		return SecondsResult{}, nestedTextError(text, valueText, err)
+	bound, boundErr := tempo.ParseSeconds(boundText)
+	if boundErr != nil {
+		nestedErr := nestedTextError(text, boundText, boundErr)
+		if errors.Is(nestedErr, ErrOutOfRange) {
+			if rangeErr == nil {
+				rangeErr = nestedErr
+			}
+		} else {
+			return SecondsResult{}, nestedErr
+		}
 	}
-	bound, err := tempo.ParseSeconds(boundText)
-	if err != nil {
-		return SecondsResult{}, nestedTextError(text, boundText, err)
+	if placesErr != nil {
+		return SecondsResult{}, placesErr
+	}
+	if rangeErr != nil {
+		return SecondsResult{}, rangeErr
 	}
 	valueRat, _ := value.MustFraction().BigRat()
 	boundRat, _ := bound.MustFraction().BigRat()
@@ -352,17 +369,33 @@ func parsePositionResult(text string) (PositionResult, error) {
 	if !ok || strings.Contains(boundText, ":") {
 		return PositionResult{}, invalidTextError(text)
 	}
-	places, err := parsePlaces(placesText, text)
-	if err != nil {
-		return PositionResult{}, err
+	places, placesErr := parsePlaces(placesText, text)
+	var rangeErr error
+	value, valueErr := duration.ParsePosition(valueText)
+	if valueErr != nil {
+		nestedErr := nestedTextError(text, valueText, valueErr)
+		if errors.Is(nestedErr, ErrOutOfRange) {
+			rangeErr = nestedErr
+		} else {
+			return PositionResult{}, nestedErr
+		}
 	}
-	value, err := duration.ParsePosition(valueText)
-	if err != nil {
-		return PositionResult{}, nestedTextError(text, valueText, err)
+	bound, boundErr := duration.ParsePosition(boundText)
+	if boundErr != nil {
+		nestedErr := nestedTextError(text, boundText, boundErr)
+		if errors.Is(nestedErr, ErrOutOfRange) {
+			if rangeErr == nil {
+				rangeErr = nestedErr
+			}
+		} else {
+			return PositionResult{}, nestedErr
+		}
 	}
-	bound, err := duration.ParsePosition(boundText)
-	if err != nil {
-		return PositionResult{}, nestedTextError(text, boundText, err)
+	if placesErr != nil {
+		return PositionResult{}, placesErr
+	}
+	if rangeErr != nil {
+		return PositionResult{}, rangeErr
 	}
 	valueRat, _ := value.MustFraction().BigRat()
 	boundRat, _ := bound.MustFraction().BigRat()
