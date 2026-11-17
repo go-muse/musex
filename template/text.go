@@ -63,8 +63,14 @@ func (t Template) MustRussian() (text string, ok bool) {
 
 // Parse reads short interval notation or Russian interval abbreviations
 // separated by exactly one ASCII space. A final " |" selects an open template;
-// otherwise the result is closed.
+// otherwise the result is closed. Every returned error is at most 512 bytes and
+// preserves its complete unwrap tree.
 func Parse(text string) (Template, error) {
+	result, err := parse(text)
+	return result, boundTextError("Parse", err)
+}
+
+func parse(text string) (Template, error) {
 	if text == "" {
 		return Template{}, opError("Parse", ErrParse)
 	}
@@ -133,14 +139,15 @@ func (t Template) AppendText(b []byte) ([]byte, error) {
 }
 
 // UnmarshalText replaces t with the parsed template only on success. A nil
-// receiver returns ErrUnset.
+// receiver returns ErrUnset. Every returned error, including its operation
+// context, is at most 512 bytes and preserves its complete unwrap tree.
 func (t *Template) UnmarshalText(text []byte) error {
 	if t == nil {
 		return opError("UnmarshalText", ErrUnset)
 	}
 	result, err := Parse(string(text))
 	if err != nil {
-		return fmt.Errorf("template: UnmarshalText: %w", err)
+		return boundTextError("UnmarshalText", fmt.Errorf("template: UnmarshalText: %w", err))
 	}
 	*t = result
 	return nil

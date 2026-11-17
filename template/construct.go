@@ -6,7 +6,9 @@ import (
 )
 
 // ClosedFromIntervals creates a closed template from its adjacent intervals.
-// The last interval closes the cycle. The input slice is copied.
+// The last interval closes the cycle. Only the complete cycle must be
+// representable; an unrepresentable intermediate place interval is reported
+// when that place is read. The input slice is copied.
 func ClosedFromIntervals(intervals []interval.Interval) (Template, error) {
 	return templateFromIntervals(intervals, false, "ClosedFromIntervals")
 }
@@ -151,8 +153,10 @@ func templateFromPlaceIntervals(places []interval.Interval, cycle interval.Inter
 }
 
 // ClosedFromSpellings creates a closed template from note names read upward in
-// order and an explicit cycle. The cycle need not be an octave. Names are not
-// retained, and no musical system is consulted.
+// order and an explicit cycle. The cycle need not be an octave. Only the
+// complete cycle must be representable; an unrepresentable intermediate place
+// interval is reported when that place is read. Names are not retained, and no
+// musical system is consulted.
 func ClosedFromSpellings(names []spelling.Spelling, cycle interval.Interval) (Template, error) {
 	return templateFromSpellings(names, cycle, false, "ClosedFromSpellings")
 }
