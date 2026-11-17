@@ -261,3 +261,39 @@ func TestEventEqualityDistinguishesTheWrittenRecord(t *testing.T) {
 		})
 	}
 }
+
+func TestEventEqualityWithGroupedDurations(t *testing.T) {
+	t.Parallel()
+
+	content := event.MustNoteContent(pitchNote("C4"))
+	marks := event.Marks{Ties: []int{0}, Fermata: true}
+	for _, tt := range []struct {
+		name       string
+		first      string
+		second     string
+		length     fraction.Fraction
+		sameRecord bool
+	}{
+		{"same group chain", "2[3:2,5:4]", "2[3:2,5:4]", fraction.MustNew(4, 15), true},
+		{"different group order", "2[3:2,5:4]", "2[5:4,3:2]", fraction.MustNew(4, 15), false},
+		{"equivalent group ratio", "2[3:2]", "2[6:4]", fraction.MustNew(1, 3), false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			a := event.MustNew(content, event.MustWrittenDuration(duration.MustParseWritten(tt.first)), marks)
+			b := event.MustNew(content, event.MustWrittenDuration(duration.MustParseWritten(tt.second)), marks)
+			assert.Equal(t, tt.sameRecord, a.Equal(b))
+			assert.Equal(t, tt.sameRecord, b.Equal(a))
+			assertFraction(t, tt.length, a.MustLength())
+			assertFraction(t, tt.length, b.MustLength())
+
+			sameLength, err := a.EqualLength(b)
+			require.NoError(t, err)
+			assert.True(t, sameLength)
+			order, err := a.CompareLength(b)
+			require.NoError(t, err)
+			assert.Zero(t, order)
+		})
+	}
+}
