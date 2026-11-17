@@ -224,17 +224,19 @@ func TestNumber_ShiftsAndDifference(t *testing.T) {
 			requirePanicError(t, err, func() { number.MustShift(k) })
 		}
 
-		octaveIndex := value / 12
-		for k := -octaveIndex; k <= 10-octaveIndex; k++ {
+		q := value / 12
+		r := value % 12
+		maxOctaveShift := (127-r)/12 - q
+		for k := -q; k <= maxOctaveShift; k++ {
 			shifted, err := number.ShiftOctaves(k)
 			require.NoError(t, err, "MIDI %d ShiftOctaves(%d)", value, k)
 			requireNumberValue(t, value+12*k, shifted)
 			requireNumberValue(t, value+12*k, number.MustShiftOctaves(k))
 			_, class, _, err := shifted.Parts()
 			require.NoError(t, err)
-			require.Equal(t, value%12, class.Number())
+			require.Equal(t, r, class.Number())
 		}
-		for _, k := range []int{-octaveIndex - 1, 11 - octaveIndex} {
+		for _, k := range []int{-q - 1, maxOctaveShift + 1} {
 			shifted, err := number.ShiftOctaves(k)
 			assertMidiError(t, err, midi.ErrOutOfRange)
 			require.Equal(t, midi.Number{}, shifted, "MIDI %d ShiftOctaves(%d)", value, k)
