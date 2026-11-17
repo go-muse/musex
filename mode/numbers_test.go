@@ -98,6 +98,52 @@ func TestNumbersUseEachSuccessiveName(t *testing.T) {
 	assert.Zero(t, got)
 }
 
+func TestCycleFitsWhenIntermediatePositionOverflows(t *testing.T) {
+	t.Parallel()
+
+	// The second degree is 12*q+8 steps away (MaxInt+1). The last edge
+	// contributes -10 steps, so the cycle still fits at 12*q-2.
+	q := math.MaxInt / 12
+	m := mode.MustClosedFromIntervals([]interval.Interval{
+		interval.MustFromDeviation(7*q+1, alteration.MustFromInt(8)),
+		interval.MustFromDeviation(2, alteration.MustFromInt(-12)),
+	})
+	sys := system.Traditional()
+	start := spelling.MustParse("C")
+	want := mode.CycleInfo{Comparison: 1, Cycles: 6, Octaves: (12*q - 2) / 2}
+
+	// From C, the internal degree is C+8 and the closing name is D-4.
+	// Both boundary names are admissible in this system.
+	restricted := system.MustNewRegular(2, 1, letter.C, system.MustIntegerRange(-4, 4), "Limited accidentals")
+	for _, tt := range []struct {
+		name  string
+		cycle func() (mode.CycleInfo, error)
+	}{
+		{"cycle without a start", func() (mode.CycleInfo, error) { return m.CycleIn(sys) }},
+		{"cycle from C", func() (mode.CycleInfo, error) { return m.CycleInFrom(sys, start) }},
+		{"cycle without a start in a restricted system", func() (mode.CycleInfo, error) { return m.CycleIn(restricted) }},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.cycle()
+			require.NoError(t, err)
+			assert.Equal(t, want, got)
+		})
+	}
+	t.Run("cycle from C checks the intermediate spelling", func(t *testing.T) {
+		got, err := m.CycleInFrom(restricted, start)
+		assert.ErrorIs(t, err, system.ErrInadmissible)
+		assert.Zero(t, got)
+	})
+	t.Run("numbers reject the unrepresentable degree", func(t *testing.T) {
+		got, err := m.Numbers(sys)
+		checkError(t, err, mode.ErrOutOfRange)
+		assert.Zero(t, got)
+		got, err = m.NumbersFrom(sys, start)
+		checkError(t, err, mode.ErrOutOfRange)
+		assert.Zero(t, got)
+	})
+}
+
 func TestNumericErrorsAndPrecedence(t *testing.T) {
 	t.Parallel()
 	sys := system.Traditional()
