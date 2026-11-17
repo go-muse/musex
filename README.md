@@ -89,8 +89,34 @@ Definitions may differ from conventional ones.
 
 **Chord** is a group of notes that sound together. It keeps the notes in their order of record, repeats included, and has no duration and no harmonic name.
 
+**[Event](guide/packages/event.md)** is one written element of a voice. It combines a note, chord, or rest with a duration and any ties, fermata, arpeggio, or grace sign.
+
 **Degree** is an ordinal number with an optional note. It is not tied to a tonic or mode: its number can be formatted and parsed, and circular operations count positions with an explicit cycle count.
 
 ## Use Cases
 
 - **Track positions in a caller-defined cycle.** Create numbered degrees with or without notes, move to neighboring positions or by an arbitrary shift, measure directed and shortest distances, and convert between continuous and normalized numbers while keeping cycle counts explicit.
+
+### Build a voice event
+
+Given two `note.Note` values `c4` and `e4`, mark the second note of a chord for a tie into the next event. Copy the marks to add a fermata to a new event.
+
+```go
+content := event.MustChordContent(chord.MustNew(c4, e4))
+written := event.MustWrittenDuration(duration.MustNewWritten(duration.Quarter, 1))
+entry := event.MustNew(content, written, event.Marks{Ties: []int{1}})
+marks := entry.MustMarks()
+marks.Fermata = true
+held := entry.MustWithMarks(marks) // entry retains its original marks.
+fmt.Println(held.MustMarks().Fermata) // true
+```
+
+To represent a three-measure rest, store the measure count. The caller uses its measure grid to find the corresponding length.
+
+```go
+rest := event.MustNew(event.RestContent(), event.MustMeasureDuration(3), event.Marks{})
+_, err := rest.Length()
+if errors.Is(err, event.ErrNeedsMeasureContext) {
+    fmt.Println(rest.MustDuration().MustMeasureCount()) // 3
+}
+```

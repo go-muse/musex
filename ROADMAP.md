@@ -51,7 +51,7 @@
 - [ ] **28d. `tempomap`** — tempo changes and fermata holds over time, and conversion between seconds, positions, and measures.
 - [ ] **28e. `ticks`** — MusicXML divisions, MIDI ticks, and MIDI tempo for durations, positions, and tempo maps.
 - [x] **29. [`chord`](guide/packages/chord.md)** — chords as groups of notes that sound together, without durations or harmony: notes in their order of record with repeats, membership and equality by record, changes of the notes in place with independent copies, joining, intersecting, and subtracting chords, sorting, and moving all the notes by octaves.
-- [ ] **29a. `event`** — voice elements: a note, chord, or rest with its duration, ties, fermatas, arpeggios, and grace notes.
+- [x] **29a. [`event`](guide/packages/event.md)** — voice elements with a note, chord, or rest, written or exact duration, rests in measures, and ties, fermatas, arpeggios, and grace notes.
 - [ ] **29b. `voice`** — sequences of events with positions, ties, grace notes, and sounding notes in time.
 - [ ] **30. `track`** — parts as sequences of measures holding the events of each voice.
 - [ ] **31. `score`** — tracks with a common start and one shared tempo map.
