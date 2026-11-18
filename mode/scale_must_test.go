@@ -1,10 +1,12 @@
 package mode_test
 
 import (
+	"errors"
 	"math"
 	"reflect"
 	"testing"
 
+	"github.com/go-muse/musex/interval"
 	"github.com/go-muse/musex/mode"
 	"github.com/go-muse/musex/note"
 	"github.com/go-muse/musex/octave"
@@ -206,7 +208,21 @@ func TestScaleBuilderMustPreservesAllErrorCauses(t *testing.T) {
 	high := scalePitch("C", math.MaxInt, nil)
 	got, err = m.FromTonicCountIn(system.Traditional(), high, 2, options)
 	assert.Nil(t, got)
-	assert.ErrorIs(t, err, mode.ErrCannotBuildNote)
-	assert.ErrorIs(t, err, octave.ErrOutOfRange)
-	builderPanicCauses(t, func() { m.MustFromTonicCountIn(system.Traditional(), high, 2, options) }, mode.ErrCannotBuildNote, octave.ErrOutOfRange)
+	causes := buildOverflowCauses(t, err)
+	builderPanicCauses(t, func() { m.MustFromTonicCountIn(system.Traditional(), high, 2, options) }, causes...)
+}
+
+// The system contract does not promise octave.ErrOutOfRange beneath its own error.
+// Retain whichever normative dependency path the ordinary builder returned.
+func buildOverflowCauses(t *testing.T, err error) []error {
+	t.Helper()
+	require.ErrorIs(t, err, mode.ErrCannotBuildNote)
+	require.True(t, errors.Is(err, system.ErrOutOfRange) || errors.Is(err, octave.ErrOutOfRange), "final octave overflow must retain its dependency category")
+	causes := []error{mode.ErrCannotBuildNote}
+	for _, cause := range []error{interval.ErrOutOfRange, system.ErrOutOfRange, octave.ErrOutOfRange} {
+		if errors.Is(err, cause) {
+			causes = append(causes, cause)
+		}
+	}
+	return causes
 }

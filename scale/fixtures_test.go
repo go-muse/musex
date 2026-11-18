@@ -33,7 +33,7 @@ func checkNotes(t *testing.T, want, got []note.Note) {
 	require.Len(t, got, len(want))
 	for i := range want {
 		assert.True(t, want[i].Equal(got[i]), "note %d: want %s, got %s", i, want[i], got[i])
-		assert.True(t, settings.SameSource(want[i].Source(), got[i].Source()), "source %d", i)
+		checkSource(t, want[i].Source(), got[i].Source())
 	}
 }
 func checkScale(t *testing.T, want []note.Note, got *scale.Scale) {
@@ -76,4 +76,13 @@ func panicError(t *testing.T, target error, f func()) {
 	}()
 	f()
 	t.Fatal("expected panic")
+}
+
+func checkSource(t *testing.T, want, got settings.Source) {
+	t.Helper()
+	if want == nil {
+		assert.Nil(t, got, "an unbound note must remain unbound")
+		return
+	}
+	assert.True(t, settings.SameSource(want, got), "the borrowed source must be preserved")
 }

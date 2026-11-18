@@ -103,7 +103,7 @@ func TestOctavesAndTransposition(t *testing.T) {
 		assert.False(t, n.HasOctave())
 		assert.True(t, n.Spelling().Equal(original[i].Spelling()))
 		assert.True(t, n.Cents().Equal(original[i].Cents()))
-		assert.True(t, settings.SameSource(n.Source(), original[i].Source()))
+		checkSource(t, original[i].Source(), n.Source())
 	}
 	got, err = scale.MustNew(at("G", 4, cents.Zero(), nil), at("G", 5, cents.Zero(), nil)).WithoutOctaves()
 	require.NoError(t, err)
@@ -114,7 +114,7 @@ func TestOctavesAndTransposition(t *testing.T) {
 	for i, n := range got.Notes() {
 		assert.Equal(t, original[i].MustASPN()+2, n.MustASPN())
 		assert.True(t, n.Cents().Equal(original[i].Cents()))
-		assert.True(t, settings.SameSource(n.Source(), original[i].Source()))
+		checkSource(t, original[i].Source(), n.Source())
 	}
 	for _, tt := range []struct {
 		name  string
@@ -196,9 +196,16 @@ func TestEnharmonicAlternativesAndReplacement(t *testing.T) {
 	got, err = unbound.WithEnharmonicIn(src, 0, spelling.MustParse("C"))
 	require.NoError(t, err)
 	checkScale(t, names("C"), got)
-	// Octave is retained; B-sharp4 and C4 occupy different traditional positions.
-	got, err = scale.MustNew(at("B+1", 4, cents.Zero(), nil)).WithEnharmonicIn(src, 0, spelling.MustParse("C"))
-	assert.Nil(t, got)
-	assert.ErrorIs(t, err, scale.ErrNotEquivalent)
+	// Numeric Octave differs from written register: B-sharp at numeric Octave4 is C4.
+	boundary := at("B+1", 4, cents.Zero(), nil)
+	require.True(t, system.Traditional().MustEquivalent(boundary.MustPitch(), at("C", 4, cents.Zero(), nil).MustPitch()))
+	got, err = scale.MustNew(boundary).WithEnharmonicIn(src, 0, spelling.MustParse("C"))
+	require.NoError(t, err)
+	checkScale(t, []note.Note{at("C", 4, cents.Zero(), nil)}, got)
+	written := note.MustFromWrittenASPN(src, spelling.MustParse("B+1"), 4, cents.Zero())
+	require.Equal(t, 5, written.MustASPN())
+	got, err = scale.MustNew(written).WithEnharmonicIn(src, 0, spelling.MustParse("C"))
+	require.NoError(t, err)
+	checkScale(t, []note.Note{at("C", 5, cents.Zero(), src)}, got)
 	checkScale(t, []note.Note{original, at("G", 4, cents.Zero(), nil)}, s)
 }

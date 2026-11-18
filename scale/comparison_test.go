@@ -11,6 +11,7 @@ import (
 	"github.com/go-muse/musex/settings"
 	"github.com/go-muse/musex/system"
 	"github.com/go-muse/musex/tuning"
+	"github.com/go-muse/musex/tuning/temperament"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -216,7 +217,8 @@ func TestContextPreflightAndNoSourceReads(t *testing.T) {
 	assert.ErrorIs(t, err, note.ErrNoOctave)
 	_, err = mixed.Contains(g, scale.MustBySoundIn(tuning.Standard()))
 	assert.ErrorIs(t, err, note.ErrNoOctave)
-	other := settings.Standard().MustWithSystem(system.Positions19())
+	otherTuning := tuning.MustNew(system.Positions19(), temperament.Equal19(), tuning.RootFromName(names("C")[0].Spelling()), tuning.A4At440())
+	other := settings.Standard().MustWithTuning(otherTuning)
 	nineteen := at("G", 4, cents.Zero(), other)
 	_, err = scale.MustNew(g, nineteen).Contains(g, scale.ByPosition())
 	assert.ErrorIs(t, err, note.ErrDifferentSystems)
@@ -275,7 +277,7 @@ func TestContextEdgesAndEmptyMelody(t *testing.T) {
 	t.Parallel()
 	sys := system.Traditional()
 	high := at("C", math.MaxInt, cents.Zero(), nil)
-	enharmonic := at("B+1", math.MaxInt-1, cents.Zero(), nil)
+	enharmonic := at("B+1", math.MaxInt, cents.Zero(), nil)
 	got, err := scale.MustNew(high).Find(enharmonic, scale.MustByPositionIn(sys))
 	require.NoError(t, err)
 	assert.Equal(t, []int{0}, got)
