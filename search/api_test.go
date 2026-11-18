@@ -66,10 +66,10 @@ func TestSearcherConstructionAndEmptyScope(t *testing.T) {
 
 	_, err = search.New(nil)
 	requireError(t, err, search.ErrUnset)
-	requireMustPanic(t, err, func() { search.MustNew(nil) })
+	requireMustPanic(t, err, func() { search.MustNew(nil) }, search.ErrUnset)
 	_, err = search.NewFromRepository(mode.Repository{})
 	requireError(t, err, search.ErrUnset, mode.ErrUnset)
-	requireMustPanic(t, err, func() { search.MustNewFromRepository(mode.Repository{}) })
+	requireMustPanic(t, err, func() { search.MustNewFromRepository(mode.Repository{}) }, search.ErrUnset, mode.ErrUnset)
 }
 
 func TestZeroResults(t *testing.T) {
@@ -99,7 +99,7 @@ func TestZeroResults(t *testing.T) {
 	seq, err := family.Spellings(alteration.Natural())
 	requireError(t, err, search.ErrUnset)
 	assert.Nil(t, seq)
-	requireMustPanic(t, err, func() { family.MustSpellings(alteration.Natural()) })
+	requireMustPanic(t, err, func() { family.MustSpellings(alteration.Natural()) }, search.ErrUnset)
 }
 
 func TestSearchErrorPrecedence(t *testing.T) {
@@ -195,9 +195,10 @@ func TestSearchMustWrappers(t *testing.T) {
 	searcher := builtInSearcher(t, "ionian")
 	validNotes := notes("C")
 	tests := []struct {
-		name string
-		call func() error
-		must func()
+		name   string
+		call   func() error
+		must   func()
+		causes []error
 	}{
 		{
 			name: "by spelling",
@@ -205,7 +206,8 @@ func TestSearchMustWrappers(t *testing.T) {
 				_, err := searcher.BySpelling(unsetNotesForTest(), search.Containment)
 				return err
 			},
-			must: func() { searcher.MustBySpelling(unsetNotesForTest(), search.Containment) },
+			must:   func() { searcher.MustBySpelling(unsetNotesForTest(), search.Containment) },
+			causes: []error{search.ErrUnset, note.ErrUnset},
 		},
 		{
 			name: "by position",
@@ -213,7 +215,8 @@ func TestSearchMustWrappers(t *testing.T) {
 				_, err := searcher.ByPosition(system.Traditional(), validNotes, search.Condition(8))
 				return err
 			},
-			must: func() { searcher.MustByPosition(system.Traditional(), validNotes, search.Condition(8)) },
+			must:   func() { searcher.MustByPosition(system.Traditional(), validNotes, search.Condition(8)) },
+			causes: []error{search.ErrInvalidArgument},
 		},
 		{
 			name: "by position from context",
@@ -221,13 +224,14 @@ func TestSearchMustWrappers(t *testing.T) {
 				_, err := searcher.ByPositionFromContext(validNotes, search.Containment)
 				return err
 			},
-			must: func() { searcher.MustByPositionFromContext(validNotes, search.Containment) },
+			must:   func() { searcher.MustByPositionFromContext(validNotes, search.Containment) },
+			causes: []error{search.ErrNoSystem, note.ErrNoSource},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			requireMustPanic(t, tt.call(), tt.must)
+			requireMustPanic(t, tt.call(), tt.must, tt.causes...)
 		})
 	}
 }
@@ -291,7 +295,7 @@ func TestNegativeSpellingsLimit(t *testing.T) {
 	seq, err := matches[0].Family().Spellings(alt(-1))
 	assert.Nil(t, seq)
 	requireError(t, err, search.ErrInvalidArgument, system.ErrLimit)
-	requireMustPanic(t, err, func() { matches[0].Family().MustSpellings(alt(-1)) })
+	requireMustPanic(t, err, func() { matches[0].Family().MustSpellings(alt(-1)) }, search.ErrInvalidArgument, system.ErrLimit)
 }
 
 func TestResultCopiesAreReadable(t *testing.T) {
