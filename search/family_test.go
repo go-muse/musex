@@ -168,12 +168,12 @@ func TestAddressedLargeParameters(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, []positionPair{
 			{Code: "one", Class: 0, Letter: "C", Tonic: "C"},
-			{Code: "one", Class: 2, Letter: "D", Tonic: "D"},
-			{Code: "one", Class: 4, Letter: "E", Tonic: "E"},
-			{Code: "one", Class: 5, Letter: "F", Tonic: "F"},
-			{Code: "one", Class: 7, Letter: "G", Tonic: "G"},
-			{Code: "one", Class: 9, Letter: "A", Tonic: "A"},
-			{Code: "one", Class: 11, Letter: "B", Tonic: "B"},
+			{Code: "one", Class: 0, Letter: "D", Tonic: "D-1/32768"},
+			{Code: "one", Class: 0, Letter: "E", Tonic: "E-1/16384"},
+			{Code: "one", Class: 0, Letter: "F", Tonic: "F-5/65536"},
+			{Code: "one", Class: 0, Letter: "G", Tonic: "G-7/65536"},
+			{Code: "one", Class: 0, Letter: "A", Tonic: "A-9/65536"},
+			{Code: "one", Class: 0, Letter: "B", Tonic: "B-11/65536"},
 		}, positionPairs(matches))
 		for _, match := range matches {
 			assert.Equal(t, alteration.MaxDenominator, match.Family().Class().Modulus())
