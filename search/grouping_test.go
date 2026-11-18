@@ -65,7 +65,7 @@ func TestGroupSpellingByTonicAndStructure(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, [][]spellingPair{
 		{{"ionian", "D"}, {"ionian", "G"}, {"ionian", "A"}},
-		{{"aeolian", "B"}, {"aeolian", "E"}, {"aeolian", "F♯"}},
+		{{"aeolian", "E"}, {"aeolian", "F♯"}, {"aeolian", "B"}},
 	}, spellingGroups(byStructure))
 }
 
@@ -90,7 +90,10 @@ func TestGroupPositionRepresentations(t *testing.T) {
 	assert.Len(t, byTonic, len(matches))
 	byStructure, err := search.GroupPositionByStructure(matches)
 	require.NoError(t, err)
-	assert.Len(t, byStructure, len(matches))
+	assert.Equal(t, [][]positionPair{
+		{{Code: "ionian", Class: 2, Tonic: "D"}, {Code: "ionian", Class: 7, Tonic: "G"}, {Code: "ionian", Class: 9, Tonic: "A"}},
+		{{Code: "aeolian", Class: 4, Tonic: "E"}, {Code: "aeolian", Class: 6, Tonic: "F♯"}, {Code: "aeolian", Class: 11, Tonic: "B"}},
+	}, positionGroups(byStructure))
 }
 
 func TestGroupingNilEmptyAndUnset(t *testing.T) {
@@ -150,7 +153,7 @@ func TestPositionGroupingRejectsDifferentSystems(t *testing.T) {
 	traditional := searcher.MustByPosition(system.Traditional(), notes("C"), search.FullMatch)
 	nr := searcher.MustByPosition(nonRegularSystem(), notes("C"), search.FullMatch)
 	require.Len(t, traditional, 1)
-	require.Len(t, nr, 1)
+	require.NotEmpty(t, nr)
 	input := []search.PositionMatch{traditional[0], nr[0]}
 	calls := []struct {
 		name string

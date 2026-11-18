@@ -47,7 +47,7 @@ func TestByPositionControlExample3(t *testing.T) {
 		values := collectSpellings(spellings, -1)
 		assert.Len(t, values, 2)
 		assert.Contains(t, spellingStrings(values), alternatives[i])
-		assert.Contains(t, spellingStrings(values), match.Tonic().String())
+		assert.Contains(t, spellingStrings(values), spellingText(match.Tonic()))
 	}
 	full, err := searcher.ByPosition(system.Traditional(), input, search.FullMatch)
 	requireNonNilEmpty(t, full, err)
@@ -70,7 +70,7 @@ func TestByPositionNonRegularControlExample4(t *testing.T) {
 		assert.Equal(t, 12, match.Family().Class().Modulus())
 		if l.Equal(letter.D) && match.Family().Class().Number() == 3 {
 			found = true
-			assert.Equal(t, "D", match.Tonic().String())
+			assert.Equal(t, "D", spellingText(match.Tonic()))
 		}
 		assertPositionMatch(t, match)
 		assert.LessOrEqual(t, len(matches), 7*match.Mode().Len())
@@ -179,7 +179,7 @@ func TestByPositionRejectsUninterpretableInput(t *testing.T) {
 	matches, err := searcher.ByPosition(system.Traditional(), input, search.Containment)
 	assert.Nil(t, matches)
 	requireError(t, err, search.ErrUninterpretableName, system.ErrInadmissible)
-	fractionalSource := newCountedSource(settingsWithSystem(onePlaceSystem("fractional-context", 24, 2, system.MustMultiples(2))))
+	fractionalSource := newCountedSource(settingsWithSystem(onePlaceSystem("fractional-context", 12, 2, system.MustMultiples(2))))
 	contextInput := notesIn(fractionalSource, "C", "D+1/2")
 	fractionalSource.current.Store(settings.Standard())
 	fractionalSource.resetReads()
@@ -301,7 +301,7 @@ func TestByPositionResultOwnership(t *testing.T) {
 	changed := match.Mode()
 	require.NoError(t, changed.Rotate(2))
 	assert.False(t, changed.Equal(match.Mode()))
-	assert.Equal(t, "C", match.Tonic().String())
+	assert.Equal(t, "C", spellingText(match.Tonic()))
 }
 
 func TestConcurrentPositionSearches(t *testing.T) {
