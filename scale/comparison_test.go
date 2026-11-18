@@ -332,3 +332,124 @@ func TestLateInadmissibleComparisonAndMelodyAtomicity(t *testing.T) {
 	assert.ErrorIs(t, err, scale.ErrUnset)
 	checkScale(t, []note.Note{good, bad}, s)
 }
+
+// Every binary operation must use the selected equivalence, not merely preflight it.
+func TestBinaryOperationsHonorComparison(t *testing.T) {
+	t.Parallel()
+	firstSource, secondSource := settings.Standard(), &source{set: settings.Standard()}
+	g := at("G", 4, cents.MustFromInt(30), firstSource)
+	a := at("A", 4, cents.MustFromInt(10), firstSource)
+	left := scale.MustNew(g, a, g)
+	for _, tt := range []struct {
+		name       string
+		right      *scale.Scale
+		by         scale.Comparison
+		equivalent bool
+	}{
+		{"ByNote distinguishes cents", scale.MustNew(at("G", 4, cents.Zero(), secondSource), at("A", 4, cents.Zero(), secondSource), at("G", 4, cents.Zero(), secondSource)), scale.ByNote(), false},
+		{"ByRecord ignores cents and source", scale.MustNew(at("G", 4, cents.Zero(), secondSource), at("A", 4, cents.Zero(), secondSource), at("G", 4, cents.Zero(), secondSource)), scale.ByRecord(), true},
+		{"ByRecord distinguishes octaves", scale.MustNew(at("G", 5, cents.Zero(), secondSource), at("A", 5, cents.Zero(), secondSource), at("G", 5, cents.Zero(), secondSource)), scale.ByRecord(), false},
+		{"ByName ignores octaves cents and source", scale.MustNew(at("G", 5, cents.Zero(), secondSource), at("A", 5, cents.Zero(), secondSource), at("G", 5, cents.Zero(), secondSource)), scale.ByName(), true},
+		{"ByPosition own ignores spelling and cents", scale.MustNew(at("F+2", 4, cents.Zero(), secondSource), at("G+2", 4, cents.Zero(), secondSource), at("F+2", 4, cents.Zero(), secondSource)), scale.ByPosition(), true},
+		{"ByPositionIn ignores spelling and cents", scale.MustNew(at("F+2", 4, cents.Zero(), secondSource), at("G+2", 4, cents.Zero(), secondSource), at("F+2", 4, cents.Zero(), secondSource)), scale.MustByPositionIn(system.Traditional()), true},
+		{"BySoundIn exact spelling alternatives", scale.MustNew(at("F+2", 4, cents.MustFromInt(30), secondSource), at("G+2", 4, cents.MustFromInt(10), secondSource), at("F+2", 4, cents.MustFromInt(30), secondSource)), scale.MustBySoundIn(tuning.Standard()), true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			right := tt.right
+			equal, err := left.EqualBy(right, tt.by)
+			require.NoError(t, err)
+			assert.Equal(t, tt.equivalent, equal)
+			same, err := left.SameSet(right, tt.by)
+			require.NoError(t, err)
+			assert.Equal(t, tt.equivalent, same)
+			multi, err := left.SameMultiset(right, tt.by)
+			require.NoError(t, err)
+			assert.Equal(t, tt.equivalent, multi)
+			subset, err := left.IsSubsetOf(right, tt.by)
+			require.NoError(t, err)
+			assert.Equal(t, tt.equivalent, subset)
+			intersection, err := left.Intersection(right, tt.by)
+			require.NoError(t, err)
+			difference, err := left.Difference(right, tt.by)
+			require.NoError(t, err)
+			union, err := left.Union(right, tt.by)
+			require.NoError(t, err)
+			if tt.equivalent {
+				checkScale(t, []note.Note{g, a}, intersection)
+				checkScale(t, names(""), difference)
+				checkScale(t, []note.Note{g, a}, union)
+			} else {
+				checkScale(t, names(""), intersection)
+				checkScale(t, []note.Note{g, a}, difference)
+				checkScale(t, []note.Note{g, a, right.Notes()[0], right.Notes()[1]}, union)
+			}
+			starts, err := left.RotationStarts(right, tt.by)
+			require.NoError(t, err)
+			rotation, err := left.IsRotationOf(right, tt.by)
+			require.NoError(t, err)
+			assert.Equal(t, tt.equivalent, rotation)
+			if tt.equivalent {
+				assert.Equal(t, []int{0}, starts)
+			} else {
+				assert.Equal(t, []int{}, starts)
+			}
+			rotated := scale.MustNew(right.Notes()[1], right.Notes()[2], right.Notes()[0])
+			starts, err = left.RotationStarts(rotated, tt.by)
+			require.NoError(t, err)
+			if tt.equivalent {
+				assert.Equal(t, []int{1}, starts)
+			} else {
+				assert.Equal(t, []int{}, starts)
+			}
+		})
+	}
+}
+
+func TestBinarySoundComparisonRetainsExactTinyDifference(t *testing.T) {
+	t.Parallel()
+	src := settings.Standard()
+	a := at("A", 4, cents.Zero(), src)
+	tiny := at("A", 4, cents.MustFromFraction(1, 1_000_000_000_000_000), src)
+	require.Equal(t, a.MustFrequency(), tiny.MustFrequency())
+	left, right := scale.MustNew(a), scale.MustNew(tiny)
+	by := scale.MustBySoundIn(tuning.Standard())
+	equal, err := left.EqualBy(right, by)
+	require.NoError(t, err)
+	assert.False(t, equal)
+	same, err := left.SameSet(right, by)
+	require.NoError(t, err)
+	assert.False(t, same)
+	multi, err := left.SameMultiset(right, by)
+	require.NoError(t, err)
+	assert.False(t, multi)
+	subset, err := left.IsSubsetOf(right, by)
+	require.NoError(t, err)
+	assert.False(t, subset)
+	intersection, err := left.Intersection(right, by)
+	require.NoError(t, err)
+	checkScale(t, names(""), intersection)
+	difference, err := left.Difference(right, by)
+	require.NoError(t, err)
+	checkScale(t, []note.Note{a}, difference)
+	union, err := left.Union(right, by)
+	require.NoError(t, err)
+	checkScale(t, []note.Note{a, tiny}, union)
+	starts, err := left.RotationStarts(right, by)
+	require.NoError(t, err)
+	assert.Equal(t, []int{}, starts)
+	rotation, err := left.IsRotationOf(right, by)
+	require.NoError(t, err)
+	assert.False(t, rotation)
+	// Equal heights with different spellings are positively equal in the same tuning.
+	cs, db := at("C+1", 4, cents.Zero(), nil), at("D-1", 4, cents.Zero(), nil)
+	positiveA, positiveB := scale.MustNew(cs, a), scale.MustNew(db, a)
+	equal, err = positiveA.EqualBy(positiveB, by)
+	require.NoError(t, err)
+	assert.True(t, equal)
+	same, err = positiveA.SameMultiset(positiveB, by)
+	require.NoError(t, err)
+	assert.True(t, same)
+	intersection, err = positiveA.Intersection(positiveB, by)
+	require.NoError(t, err)
+	checkScale(t, []note.Note{cs, a}, intersection)
+}

@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-muse/musex/mode"
 	"github.com/go-muse/musex/note"
+	"github.com/go-muse/musex/octave"
 	"github.com/go-muse/musex/pitch"
 	"github.com/go-muse/musex/scale"
 	"github.com/go-muse/musex/settings"
@@ -133,3 +134,79 @@ var (
 	_ func(mode.Mode, note.Note, int, mode.BuildOptions) *scale.Scale                                  = mode.Mode.MustFromTonicOctaves
 	_ func(mode.Mode, *system.System, note.Note, int, mode.BuildOptions) *scale.Scale                  = mode.Mode.MustFromTonicOctavesIn
 )
+
+func builderPanicCauses(t *testing.T, run func(), causes ...error) {
+	t.Helper()
+	defer func() {
+		p := recover()
+		err, ok := p.(error)
+		require.True(t, ok, "panic must retain the original error, got %v", p)
+		for _, cause := range causes {
+			assert.ErrorIs(t, err, cause)
+		}
+	}()
+	run()
+	t.Fatal("expected panic")
+}
+
+func TestScaleBuilderMustPreservesAllErrorCauses(t *testing.T) {
+	t.Parallel()
+	m := mode.MustParse("P8")
+	tonic := scalePitch("C", 4, settings.Standard())
+	end := scalePitch("C", 5, nil).MustPitch()
+	options := mode.BuildOptions{Direction: scale.Forward}
+	for _, systemCase := range []struct {
+		name string
+		sys  *system.System
+	}{{"nil system", nil}, {"zero system", new(system.System)}} {
+		t.Run(systemCase.name, func(t *testing.T) {
+			for _, tt := range []struct {
+				name     string
+				ordinary func() (*scale.Scale, error)
+				must     func()
+			}{
+				{"FromTonicIn", func() (*scale.Scale, error) { return m.FromTonicIn(systemCase.sys, tonic) }, func() { m.MustFromTonicIn(systemCase.sys, tonic) }},
+				{"FromTonicCountIn", func() (*scale.Scale, error) { return m.FromTonicCountIn(systemCase.sys, tonic, 1, options) }, func() { m.MustFromTonicCountIn(systemCase.sys, tonic, 1, options) }},
+				{"FromTonicToIn", func() (*scale.Scale, error) { return m.FromTonicToIn(systemCase.sys, tonic, end, options) }, func() { m.MustFromTonicToIn(systemCase.sys, tonic, end, options) }},
+				{"FromTonicOctavesIn", func() (*scale.Scale, error) { return m.FromTonicOctavesIn(systemCase.sys, tonic, 1, options) }, func() { m.MustFromTonicOctavesIn(systemCase.sys, tonic, 1, options) }},
+			} {
+				t.Run(tt.name, func(t *testing.T) {
+					got, err := tt.ordinary()
+					assert.Nil(t, got)
+					assert.ErrorIs(t, err, mode.ErrUnset)
+					assert.ErrorIs(t, err, system.ErrInvalid)
+					builderPanicCauses(t, tt.must, mode.ErrUnset, system.ErrInvalid)
+				})
+			}
+		})
+	}
+	for _, tt := range []struct {
+		name     string
+		ordinary func() (*scale.Scale, error)
+		must     func()
+	}{
+		{"unset end own", func() (*scale.Scale, error) { return m.FromTonicTo(tonic, pitch.Pitch{}, options) }, func() { m.MustFromTonicTo(tonic, pitch.Pitch{}, options) }},
+		{"unset end explicit", func() (*scale.Scale, error) {
+			return m.FromTonicToIn(system.Traditional(), tonic, pitch.Pitch{}, options)
+		}, func() { m.MustFromTonicToIn(system.Traditional(), tonic, pitch.Pitch{}, options) }},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.ordinary()
+			assert.Nil(t, got)
+			assert.ErrorIs(t, err, mode.ErrUnset)
+			assert.ErrorIs(t, err, pitch.ErrInvalid)
+			builderPanicCauses(t, tt.must, mode.ErrUnset, pitch.ErrInvalid)
+		})
+	}
+	invalidStart := mode.BuildOptions{Start: mode.Start{Index: 1}, Direction: scale.Forward}
+	got, err := m.FromTonicCount(tonic, 1, invalidStart)
+	assert.Nil(t, got)
+	assert.ErrorIs(t, err, mode.ErrIndex)
+	builderPanicCauses(t, func() { m.MustFromTonicCount(tonic, 1, invalidStart) }, mode.ErrIndex)
+	high := scalePitch("C", math.MaxInt, nil)
+	got, err = m.FromTonicCountIn(system.Traditional(), high, 2, options)
+	assert.Nil(t, got)
+	assert.ErrorIs(t, err, mode.ErrCannotBuildNote)
+	assert.ErrorIs(t, err, octave.ErrOutOfRange)
+	builderPanicCauses(t, func() { m.MustFromTonicCountIn(system.Traditional(), high, 2, options) }, mode.ErrCannotBuildNote, octave.ErrOutOfRange)
+}

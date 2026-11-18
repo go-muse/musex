@@ -158,3 +158,28 @@ func TestLargeListAndConcurrentIndependentCopies(t *testing.T) {
 	assert.True(t, a.MustAt(0).Equal(names("C")[0]))
 	assert.True(t, b.MustAt(0).Equal(names("D")[0]))
 }
+
+func TestMutationInputsAreCopied(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name, initial, want string
+		mutate              func(*scale.Scale, []note.Note) error
+	}{
+		{"replace", "G A B", "C D", func(s *scale.Scale, ns []note.Note) error { return s.Replace(ns...) }},
+		{"insert", "G A B", "G C D A B", func(s *scale.Scale, ns []note.Note) error { return s.Insert(1, ns...) }},
+		{"append", "G A B", "G A B C D", func(s *scale.Scale, ns []note.Note) error { return s.Append(ns...) }},
+		{"insert into empty", "", "C D", func(s *scale.Scale, ns []note.Note) error { return s.Insert(0, ns...) }},
+		{"append into empty", "", "C D", func(s *scale.Scale, ns []note.Note) error { return s.Append(ns...) }},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			s := list(tt.initial)
+			saved := *s
+			input := names("C D")
+			require.NoError(t, tt.mutate(s, input))
+			input[0] = names("F")[0]
+			input[1].MustSetCents(cents.MustFromInt(40))
+			checkScale(t, names(tt.want), s)
+			checkScale(t, names(tt.initial), &saved)
+		})
+	}
+}

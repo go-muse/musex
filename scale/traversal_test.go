@@ -42,6 +42,9 @@ func TestCircularMovement(t *testing.T) {
 			assert.Equal(t, (i-j+3)%3, b)
 			reflected, err := s.MirrorIndex(i, j)
 			require.NoError(t, err)
+			wantIndex := (2*j - i + 3) % 3
+			assert.Equal(t, wantIndex, reflected.Index)
+			checkNotes(t, []note.Note{ns[wantIndex]}, []note.Note{reflected.Note})
 			again, err := s.MirrorIndex(reflected.Index, j)
 			require.NoError(t, err)
 			assert.Equal(t, i, again.Index)
