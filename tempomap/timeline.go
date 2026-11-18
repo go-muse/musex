@@ -46,22 +46,22 @@ func secondsFromRat(op string, value *big.Rat) (tempo.Seconds, error) {
 	return s, nil
 }
 
-func constantSegmentForm(start, end duration.Position, speed fraction.Fraction) logForm {
+func constantSegmentForm(start, end duration.Position, speed *big.Rat) logForm {
 	length := new(big.Rat).Sub(ratOfPosition(end), ratOfPosition(start))
 	seconds := new(big.Rat).Mul(big.NewRat(60, 1), length)
-	seconds.Quo(seconds, ratOfFraction(speed))
+	seconds.Quo(seconds, speed)
 	return rationalLogForm(seconds)
 }
 
-func gradualSegmentForm(start, end duration.Position, startSpeed, endSpeed fraction.Fraction) logForm {
-	if startSpeed.Equal(endSpeed) {
+func gradualSegmentForm(start, end duration.Position, startSpeed, endSpeed *big.Rat) logForm {
+	if startSpeed.Cmp(endSpeed) == 0 {
 		return constantSegmentForm(start, end, startSpeed)
 	}
 	length := new(big.Rat).Sub(ratOfPosition(end), ratOfPosition(start))
 	coefficient := new(big.Rat).Mul(big.NewRat(60, 1), length)
-	delta := new(big.Rat).Sub(ratOfFraction(endSpeed), ratOfFraction(startSpeed))
+	delta := new(big.Rat).Sub(endSpeed, startSpeed)
 	coefficient.Quo(coefficient, delta)
-	base := new(big.Rat).Quo(ratOfFraction(endSpeed), ratOfFraction(startSpeed))
+	base := new(big.Rat).Quo(endSpeed, startSpeed)
 	return logForm{constant: new(big.Rat), terms: []logTerm{{coefficient: coefficient, base: base}}}
 }
 
@@ -85,11 +85,12 @@ func prepareTimeline(idx *mapIndex) {
 		if end.Compare(start) <= 0 {
 			continue
 		}
-		startSpeed, endSpeed := idx.changes[i].startSpeed, idx.changes[i+1].startSpeed
+		startSpeed := ratOfFraction(idx.changes[i].startSpeed)
+		endSpeed := ratOfFraction(idx.changes[i+1].startSpeed)
 		var elapsed logForm
 		if idx.changes[i].change.kind == ChangeGradual {
 			elapsed = gradualSegmentForm(start, end, startSpeed, endSpeed)
-			if !startSpeed.Equal(endSpeed) {
+			if startSpeed.Cmp(endSpeed) != 0 {
 				approximate = true
 			}
 		} else {
@@ -117,23 +118,29 @@ func unfinishedAt(idx *mapIndex, position duration.Position) bool {
 	return last.change.kind == ChangeGradual && position.Compare(last.position) >= 0
 }
 
-func speedAtIndex(idx *mapIndex, position duration.Position) (fraction.Fraction, error) {
-	i := changeAtPosition(idx, position)
+func speedRatAtIndex(idx *mapIndex, position *big.Rat) *big.Rat {
+	i := sort.Search(len(idx.changes), func(i int) bool {
+		return ratOfPosition(idx.changes[i].position).Cmp(position) > 0
+	}) - 1
 	current := idx.changes[i]
 	if current.change.kind != ChangeGradual {
-		return current.startSpeed, nil
-	}
-	if i+1 >= len(idx.changes) {
-		return fraction.Fraction{}, simpleError(ErrUnfinished, "tempomap.speedAtIndex", "unfinished gradual segment")
+		return ratOfFraction(current.startSpeed)
 	}
 	next := idx.changes[i+1]
 	length := new(big.Rat).Sub(ratOfPosition(next.position), ratOfPosition(current.position))
-	offset := new(big.Rat).Sub(ratOfPosition(position), ratOfPosition(current.position))
+	offset := new(big.Rat).Sub(position, ratOfPosition(current.position))
 	delta := new(big.Rat).Sub(ratOfFraction(next.startSpeed), ratOfFraction(current.startSpeed))
 	speed := new(big.Rat).Mul(delta, offset)
 	speed.Quo(speed, length)
-	speed.Add(speed, ratOfFraction(current.startSpeed))
-	result, err := fraction.FromBigRat(speed)
+	return speed.Add(speed, ratOfFraction(current.startSpeed))
+}
+
+func speedAtIndex(idx *mapIndex, position duration.Position) (fraction.Fraction, error) {
+	i := changeAtPosition(idx, position)
+	if idx.changes[i].change.kind == ChangeGradual && i+1 >= len(idx.changes) {
+		return fraction.Fraction{}, simpleError(ErrUnfinished, "tempomap.speedAtIndex", "unfinished gradual segment")
+	}
+	result, err := fraction.FromBigRat(speedRatAtIndex(idx, ratOfPosition(position)))
 	if err != nil {
 		return fraction.Fraction{}, rangeError("tempomap.speedAtIndex")
 	}
@@ -148,23 +155,23 @@ func segmentStartForm(idx *mapIndex, i int, position duration.Position) (logForm
 		return form, approximate
 	}
 	end := position
-	endSpeed := current.startSpeed
+	endSpeed := ratOfFraction(current.startSpeed)
 	if i+1 < len(idx.changes) {
 		next := idx.changes[i+1]
 		if position.Compare(next.position) == 0 {
-			endSpeed = next.startSpeed
+			endSpeed = ratOfFraction(next.startSpeed)
 		} else {
-			endSpeed, _ = speedAtIndex(idx, position)
+			endSpeed = speedRatAtIndex(idx, ratOfPosition(position))
 		}
 	}
 	var elapsed logForm
 	if current.change.kind == ChangeGradual {
-		elapsed = gradualSegmentForm(current.position, end, current.startSpeed, endSpeed)
-		if !current.startSpeed.Equal(endSpeed) {
+		elapsed = gradualSegmentForm(current.position, end, ratOfFraction(current.startSpeed), endSpeed)
+		if endSpeed.Cmp(ratOfFraction(current.startSpeed)) != 0 {
 			approximate = true
 		}
 	} else {
-		elapsed = constantSegmentForm(current.position, end, current.startSpeed)
+		elapsed = constantSegmentForm(current.position, end, ratOfFraction(current.startSpeed))
 	}
 	return logFormAdd(form, elapsed), approximate
 }

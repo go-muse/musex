@@ -102,14 +102,17 @@ func (s Segment) Seconds(places int, mode rounding.Mode) (SecondsResult, bool, e
 		return SecondsResult{}, false, nil
 	}
 	start, end := s.startPosition, s.endPosition
-	form := constantSegmentForm(start, end, s.startSpeed)
+	form := constantSegmentForm(start, end, ratOfFraction(s.startSpeed))
 	approximate := false
 	if s.change.kind == ChangeGradual {
-		form = gradualSegmentForm(start, end, s.startSpeed, s.endSpeed)
+		form = gradualSegmentForm(start, end, ratOfFraction(s.startSpeed), ratOfFraction(s.endSpeed))
 		approximate = !s.startSpeed.Equal(s.endSpeed)
 	}
 	result, err := secondsResultFromLogForm(op, form, approximate, places, mode)
-	return result, true, err
+	if err != nil {
+		return SecondsResult{}, false, err
+	}
+	return result, true, nil
 }
 
 // MustSeconds is like Seconds but panics with its error.
