@@ -336,6 +336,13 @@ func TestGenericExactExtremesAndSkippedCandidates(t *testing.T) {
 		got, err := g.Resolve(interval.MustNewChromatic(sys, steps), spelling.C(), dir)
 		require.NoError(t, err)
 		want := basicSize(math.MaxInt).MustWithDirection(dir)
+		if dir == interval.Down {
+			// MaxInt has simple size seven. From C downward, the natural
+			// endpoint D is q+1 written octaves below, so H=-(q+1).
+			// The observed -q therefore raises D by one chromatic unit:
+			// the resulting descending seventh is diminished (deviation -2).
+			want = interval.MustFromDeviation(math.MaxInt, ai(-2)).MustDown()
+		}
 		assert.True(t, want.Equal(got))
 	}
 	// Fractional mathematical deviation can exist, but the final spelling may
@@ -352,8 +359,9 @@ func TestGenericExactExtremesAndSkippedCandidates(t *testing.T) {
 	require.Len(t, got, 1, "unrepresentable raised endings are filtered")
 	assert.True(t, iv("P1").Equal(got[0].Interval))
 	assert.True(t, start.Equal(got[0].Pitch))
-	// Search at +6 in a traditional system uses the selected palette, while
-	// irregular and quarter-tone searches preserve their own exact distances.
+	// At D in the irregular layout, E is +1, F is +2, C is -3,
+	// and B in the preceding octave is -4. Through(0) therefore keeps
+	// the major second and minor third at distinct signed shifts.
 	for _, tc := range []struct {
 		sys   *system.System
 		steps int
@@ -363,8 +371,10 @@ func TestGenericExactExtremesAndSkippedCandidates(t *testing.T) {
 		want  []interval.Interval
 	}{
 		{qt24(), 7, spelling.C(), interval.Up, interval.Deviations(alt(-1, 2)), ivs("n3")},
-		{irregular(), 1, spelling.D(), interval.Up, interval.MustThrough(0), ivs("M2", "m3")},
-		{irregular(), -3, spelling.D(), interval.Down, interval.MustThrough(0), ivs("↓M2", "↓m3")},
+		{irregular(), 1, spelling.D(), interval.Up, interval.MustThrough(0), ivs("M2")},
+		{irregular(), 2, spelling.D(), interval.Up, interval.MustThrough(0), ivs("m3")},
+		{irregular(), -3, spelling.D(), interval.Down, interval.MustThrough(0), ivs("↓M2")},
+		{irregular(), -4, spelling.D(), interval.Down, interval.MustThrough(0), ivs("↓m3")},
 	} {
 		seq, err := interval.ForShift(interval.MustNewChromatic(tc.sys, tc.steps), tc.start, tc.dir, tc.p)
 		require.NoError(t, err)
