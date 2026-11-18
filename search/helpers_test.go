@@ -388,3 +388,27 @@ func assertPositionOrder(t *testing.T, matches []search.PositionMatch) {
 		}
 	}
 }
+
+func assertNotesUnchanged(t *testing.T, expected, actual []note.Note) {
+	t.Helper()
+	require.Len(t, actual, len(expected))
+	for i := range expected {
+		want := expected[i]
+		got := actual[i]
+		require.True(t, got.IsValid())
+		assert.True(t, got.Spelling().Equal(want.Spelling()), "note %d spelling", i)
+		assert.Equal(t, want.HasOctave(), got.HasOctave(), "note %d octave presence", i)
+		if want.HasOctave() {
+			wantASPN, err := want.ASPN()
+			require.NoError(t, err)
+			gotASPN, err := got.ASPN()
+			require.NoError(t, err)
+			assert.Equal(t, wantASPN, gotASPN, "note %d octave", i)
+		}
+		assert.True(t, got.Cents().Equal(want.Cents()), "note %d cents", i)
+		assert.Equal(t, want.IsBound(), got.IsBound(), "note %d source presence", i)
+		if want.IsBound() {
+			assert.True(t, got.SameSource(want), "note %d source identity", i)
+		}
+	}
+}
