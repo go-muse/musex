@@ -91,6 +91,8 @@ Definitions may differ from conventional ones.
 
 **[Scale](guide/packages/scale.md)** keeps a finite ordered list of complete notes. It supports circular traversal and snapshot iterators, exact comparisons and set operations, melody shifts and reflections, editing, transposition, enharmonic spellings, and key signatures.
 
+**[Search](guide/packages/search.md)** finds mode-and-tonic hypotheses whose actual degree notes contain or exactly match a set of input notes. It supports exact-spelling and positional matching in a chosen or context-derived system, tonic-family spellings, and stable grouping without ranking musical likelihood.
+
 **Chord** is a group of notes that sound together. It keeps the notes in their order of record, repeats included, and has no duration and no harmonic name.
 
 **Tempo map** is an immutable timeline of tempo changes and explicit fermata holds at positions or measure addresses. It distinguishes main and current tempo, supports jumps, gradual changes, a tempo, Tempo I, and metric modulation, and converts seconds to and from positions and measures, with one explicitly selected rounding for the complete result.
@@ -105,6 +107,7 @@ Definitions may differ from conventional ones.
 
 - **Convert between the written model and MIDI note numbers.** Create any of the 128 numbers, inspect its positional octave and class, shift it without overflow, and convert written pitches and notes in a traditional C-layout system. Choose the return spelling explicitly with sharps, flats, or a custom rule, attach zero or a specific correction, and handle missing inputs, unsupported layouts, and out-of-range results as distinct errors.
 - **Track positions in a caller-defined cycle.** Create numbered degrees with or without notes, move to neighboring positions or by an arbitrary shift, measure directed and shortest distances, and convert between continuous and normalized numbers while keeping cycle counts explicit.
+- **Find modes from a set of notes.** Search an immutable built-in or custom catalog by exact spelling or pitch class, choose containment or full match, inspect every matching degree and compatible tonic spelling, and group hypotheses without treating them as musical recognition or ranking.
 
 ### Build a voice event
 
