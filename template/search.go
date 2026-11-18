@@ -25,13 +25,14 @@ func (r Relation) Count() int {
 
 // Identify returns all entries whose template equals tmpl, in catalog order.
 func (c Catalog) Identify(tmpl Template) ([]Entry, error) {
-	relations, err := c.Related(tmpl, 0, Adjacent, false)
-	if err != nil {
-		return nil, err
+	if !tmpl.IsValid() {
+		return nil, opError("Identify", ErrUnset)
 	}
-	result := make([]Entry, len(relations))
-	for i, relation := range relations {
-		result[i] = relation.Entry
+	result := make([]Entry, 0)
+	for _, entry := range c.entries {
+		if entry.tmpl.Equal(tmpl) {
+			result = append(result, entry)
+		}
 	}
 	return result, nil
 }
@@ -45,13 +46,15 @@ func (c Catalog) MustIdentify(tmpl Template) []Entry {
 // IdentifyRotations returns entries for which tmpl is a rotation of the entry
 // template. Each entry occurs once with the smallest matching place.
 func (c Catalog) IdentifyRotations(tmpl Template) ([]Rotation, error) {
-	relations, err := c.Related(tmpl, 0, Adjacent, true)
-	if err != nil {
-		return nil, err
+	if !tmpl.IsValid() {
+		return nil, opError("IdentifyRotations", ErrUnset)
 	}
-	result := make([]Rotation, len(relations))
-	for i, relation := range relations {
-		result[i] = Rotation{Entry: relation.Entry, Place: relation.Place}
+	result := make([]Rotation, 0)
+	for _, entry := range c.entries {
+		place, ok := tmpl.RotationOf(entry.tmpl)
+		if ok {
+			result = append(result, Rotation{Entry: entry, Place: place})
+		}
 	}
 	return result, nil
 }
