@@ -294,6 +294,14 @@ linters:
             - github.com/go-muse/musex/pitch$
             - github.com/go-muse/musex/system$
             - github.com/go-muse/musex/note$
+        interval-naming:
+          list-mode: strict
+          files:
+            - "**/interval/naming/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/interval$
         degree:
           list-mode: strict
           files:

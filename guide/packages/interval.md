@@ -56,11 +56,83 @@ In a regular system the size of an interval is the same from any starting name. 
 
 From a size the way back is possible too: the interval of a given letter size that spans a given number of steps, every interval that spans a number of steps, intervals enharmonically equal to a given one, and all spellings of a pair of pitches at the same positions with their intervals.
 
+## Measure and reuse a chromatic shift
+
+`Chromatic` records a signed number of system positions and the immutable
+musical system used to measure it. It preserves register and ignores cents.
+An unset value differs from a constructed zero shift.
+
+```go
+sys := system.Traditional()
+c4 := note.MustFromPitch(pitch.MustFromASPN(spelling.C(), 4), cents.Zero(), nil)
+eb4 := note.MustFromPitch(pitch.MustFromASPN(spelling.EFlat(), 4), cents.Zero(), nil)
+shift := interval.MustChromaticBetweenNotesIn(sys, c4, eb4)
+fmt.Println(shift.Steps()) // 3
+```
+
+`ChromaticBetweenNotes` instead reads the bound notes' settings. Each distinct
+source is read once. Both forms require octaves. Compare measurements with
+`SameShift`, which checks musical system equality; an equal step count in a
+different system is not an equal shift. `TransposeNote` takes an explicit
+`system.SpellingRule`, preserves cents and the settings source, and chooses a
+spelling even when moving by zero steps. A bound note must use an equal system.
+To measure a named interval, use `i.Chromatic(sys, start)`.
+
+## Choose quality or recover spelling
+
+`Generic` retains the complete letter size without choosing quality. Its
+`Variants` iterator lists unique qualities from narrow to wide. A zero
+`Palette` is `DefaultPalette`: basic qualities, single augmentation/diminution
+for the major-minor group, and double augmentation/diminution for the perfect
+group. Unisons exclude negative deviations. `Through(k)` chooses a common
+multiplicity limit; `Through(0)` keeps only basic qualities. `Deviations` selects
+an exact finite set, including fractions; no arguments selects none.
+`WithDeviations` adds values without changing the original palette.
+
+```go
+third := interval.MustNewGeneric(3)
+for candidate := range third.MustVariants(interval.Up, interval.DefaultPalette()) {
+    fmt.Println(candidate) // d3, m3, M3, A3
+}
+written := third.MustResolve(shift, spelling.C(), interval.Up) // m3
+endpoint := interval.MustTransposePitch(sys, c4.MustPitch(), written) // E-flat 4
+```
+
+`FromPitch` returns interval/endpoint pairs and skips individual impossible
+endpoints. Invalid starting inputs still return errors for an empty palette.
+`Resolve` recovers the quality from a signed shift, complete letter size, and
+written direction. For +3 from C, a second gives A2 and a third gives m3.
+`ForShift` finds all matching sizes in the chosen palette; it bounds its search
+by reachable octaves. These finite iterators support repeated and concurrent
+reads and early stopping. In irregular systems, recovery requires the actual
+starting spelling. Written direction and the sign of the positional shift are
+independent: an ascending doubly diminished second may move down one position.
+
 ## Short notation and names
 
 Every interval has a short notation for storage and exchange: an optional minus for a descending interval, a sign of quality, and the size in digits. P is perfect, M major, m minor, n neutral; A and d, written once, twice, or three times, are augmented and diminished of that multiplicity. So a minor sixth down is "-m6" and a doubly diminished fifth "dd5". Larger multiplicities and fractional qualities write the exact deviation in braces: "{+1/4}3" is a third a quarter of a unit wider than major. Reading also accepts other common signs, such as "maj3", "+4", and "°5". "TT" is not read: the word tritone names two different intervals.
 
-Intervals also have names in English and Russian and a Russian abbreviation: "major third", «большая терция», «б.3». Only names established in the sources are given: sizes up to the fifteenth, multiplicities up to triple, and the neutral intervals that have traditional names. Other intervals exist and have a short notation, but have no name.
+Use explicit collections from `interval/naming` for user-facing names:
+
+```go
+entry := naming.Russian().Specific(interval.MinorThird().MustDown())
+short, _ := entry.MustName()     // "м.3"
+full, _ := entry.MustNameFull()  // "малая терция"
+english, _ := naming.English().Specific(interval.MinorThird()).MustName() // "m3"
+size, _ := naming.English().Generic(interval.MustNewGeneric(3)).MustName() // "third"
+```
+
+`Name` is short and `NameFull` is full; both return `(string, bool, error)`.
+A valid but unavailable form returns `"", false, nil`. `ParseGeneric` and
+`ParseInterval` accept only their selected language, with no direction sign.
+English short forms preserve the M/m distinction. Russian neutral thirds have
+only a full name; English neutral 2, 3, 6, 7, and 9 have both forms. Other
+fractional qualities have neither form. Sizes above 15 have no dictionary name.
+Use `interval.Parse` for directed canonical notation such as `-m3`.
+
+The historical `Interval.Name` still returns the full English name;
+`RussianName`, `RussianAbbreviation`, and `ParseName` also retain their released
+behavior. Legacy forms include: "major third", «большая терция», «б.3». Only names established in the sources are given: sizes up to the fifteenth, multiplicities up to triple, and the neutral intervals that have traditional names. Other intervals exist and have a short notation, but have no name.
 
 Intervals are values: they never change, and they are safe for concurrent use.
 
