@@ -1,30 +1,27 @@
 # Scale
 
-> Draft API for review. The `scale` package is planned for
-> `github.com/go-muse/musex/scale`.
-
 A scale is a finite, ordered list of [notes](note.md). Build one directly
-with `scale.New` or derive its notes from a [mode](mode.md) and a reference
-note. A scale keeps each note's spelling, optional octave, cents correction,
-and settings source. It also keeps the order and any repeated notes. Once
+with `scale.New` or ask a [mode](mode.md) to build it from a reference
+note with `m.FromTonic(note)`. A scale keeps each note's spelling, optional
+octave, cents correction, and settings source. It also keeps the order and any repeated notes. Once
 built, the scale holds only the notes, so it can be edited independently of
 the mode.
 
 ## Build notes from a mode
 
-`FromMode` gives one note per degree, in mode order. For a seven-degree
+`Mode.FromTonic` gives one note per degree, in mode order. For a seven-degree
 octave-based mode, the result has seven notes. To include the first degree
 in the next cycle, request a longer result with one of the expansion
 functions.
 
 | Function | What it builds |
 | --- | --- |
-| `FromModeCount` | Exactly the requested number of notes, including the selected start. A closed mode continues through its cycle intervals. An open mode reports `ErrInsufficientNotes` if it runs out of notes. |
-| `FromModeTo` | The notes from the selected start up to an inclusive pitch boundary in the chosen direction. The endpoint appears only if a generated note reaches its position. |
-| `FromModeOctaves` | The same bounded expansion, with the end set a positive number of octaves above or below the selected start. A cycle of the mode can span a different interval. |
+| `Mode.FromTonicCount` | Exactly the requested number of notes, including the selected start. A closed mode continues through its cycle intervals. An open mode reports `ErrInsufficientNotes` if it runs out of notes. |
+| `Mode.FromTonicTo` | The notes from the selected start up to an inclusive pitch boundary in the chosen direction. The endpoint appears only if a generated note reaches its position. |
+| `Mode.FromTonicOctaves` | The same bounded expansion, with the end set a positive number of octaves above or below the selected start. A cycle of the mode can span a different interval. |
 
-Set `BuildOptions.Direction` to `Forward` or `Backward`. `BuildOptions.Start`
-defaults to the first degree of cycle zero. Its `Index` is zero-based,
+Set `mode.BuildOptions.Direction` to `scale.Forward` or `scale.Backward`.
+`mode.BuildOptions.Start` defaults to the first degree of cycle zero. Its `Index` is zero-based,
 and its `Cycle` can be negative for a closed mode. The reference note
 always anchors the first degree of cycle zero. A different start is
 computed from that anchor.
@@ -96,4 +93,6 @@ note's spelling while preserving its position or class. A scale can also
 report its [pitch-class set](pcset.md) in a supplied system and its
 standard key signature when its spellings determine one.
 
-[Roadmap](../../ROADMAP.md)
+First released in v0.36.0.
+
+[Package reference](https://pkg.go.dev/github.com/go-muse/musex/scale) · [Roadmap](../../ROADMAP.md)

@@ -87,7 +87,9 @@ Definitions may differ from conventional ones.
 
 **Mode template** is an ordered record of the intervals between neighboring places of a mode. A closed template repeats after an arbitrary cycle; an open template ends after its last place. Templates can be rotated, compared, serialized, and stored in immutable catalogs with codes and English and Russian names. A template is not a mode and has no tonic, degrees, or musical system.
 
-**[Mode](guide/packages/mode.md)** is a sequence of numbered degrees described by written intervals. It can be open or repeat after an arbitrary cycle. A caller supplies a starting note to build notes or a musical system to compare positional sizes.
+**[Mode](guide/packages/mode.md)** is a sequence of numbered degrees described by written intervals. It can be open or repeat after an arbitrary cycle. A caller supplies a starting note to build notes or a musical system to compare positional sizes. Its `FromTonic` methods build an independent scale, with optional count, pitch, or octave bounds.
+
+**[Scale](guide/packages/scale.md)** keeps a finite ordered list of complete notes. It supports circular traversal and snapshot iterators, exact comparisons and set operations, melody shifts and reflections, editing, transposition, enharmonic spellings, and key signatures.
 
 **Chord** is a group of notes that sound together. It keeps the notes in their order of record, repeats included, and has no duration and no harmonic name.
 
