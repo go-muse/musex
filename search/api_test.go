@@ -51,6 +51,12 @@ func TestSearcherConstructionAndEmptyScope(t *testing.T) {
 	requireNonNilEmpty(t, emptySpelling, err)
 	emptyPosition, err := empty.ByPosition(system.Traditional(), notes("C"), search.FullMatch)
 	requireNonNilEmpty(t, emptyPosition, err)
+	source := newCountedSource(settings.Standard())
+	contextInput := notesIn(source, "C")
+	source.resetReads()
+	emptyContext, err := empty.ByPositionFromContext(contextInput, search.Containment)
+	requireNonNilEmpty(t, emptyContext, err)
+	assert.Equal(t, 1, source.readCount())
 
 	repository := mode.MustNewRepository(&emptyCatalog)
 	fromRepository := search.MustNewFromRepository(repository)

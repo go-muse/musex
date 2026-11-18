@@ -6,7 +6,9 @@ import (
 	"testing"
 
 	"github.com/go-muse/musex/alteration"
+	"github.com/go-muse/musex/cents"
 	"github.com/go-muse/musex/interval"
+	"github.com/go-muse/musex/note"
 	"github.com/go-muse/musex/search"
 	"github.com/go-muse/musex/spelling"
 	"github.com/go-muse/musex/system"
@@ -37,10 +39,34 @@ func TestRepresentativeUsesMinimumAbsoluteAlterationBeforeExactMatch(t *testing.
 
 func TestRepresentativeUsesExactInputMatchOnAlterationTie(t *testing.T) {
 	t.Parallel()
-	sys := onePlaceSystem("fractional-exact-match", 1, 2, system.MustMultiples(2))
-	match := onePlaceMatch(t, sys, "C+1/2")
-	assert.Equal(t, "C+1/2", match.Tonic().String())
-	assert.True(t, match.Tonic().Alteration().Equal(fractional(1, 2)))
+	// The +2 and -2 deviations reject a natural tonic. Alterations +1 and -1
+	// both fit, leaving C♯ and D♭ at the same minimum in the class-1 family.
+	rule := system.MustUnion(
+		system.Single(alt(-3)),
+		system.Single(alt(-1)),
+		system.Single(alteration.Natural()),
+		system.Single(alt(1)),
+		system.Single(alt(3)),
+	)
+	sys := traditionalWithRule("exact-match-tie", rule)
+	tmpl := template.MustOpenFromPlaceIntervals([]interval.Interval{
+		interval.PerfectUnison(),
+		interval.MustParse("AA2"),
+		interval.MustParse("dd5"),
+	})
+	searcher := searcherFor(t, entry("exact-match-tie", tmpl))
+	matches, err := searcher.ByPosition(sys, notes("C♯"), search.Containment)
+	require.NoError(t, err)
+	index := slices.IndexFunc(matches, func(match search.PositionMatch) bool {
+		return match.Family().Class().Number() == 1
+	})
+	if !assert.NotEqual(t, -1, index) {
+		return
+	}
+	match := matches[index]
+	assert.Equal(t, "C♯", match.Tonic().String())
+	assertPositionMatch(t, match)
+	assert.Equal(t, []string{"C♯", "D♭"}, spellingStrings(collectSpellings(match.Family().MustSpellings(alt(1)), -1)))
 }
 
 func TestRepresentativeUsesSpellingOrderAfterOtherTies(t *testing.T) {
@@ -85,10 +111,11 @@ func TestSpellingsZeroAndFractionalLimits(t *testing.T) {
 	t.Parallel()
 	sys := onePlaceSystem("fractional", 1, 2, system.MustMultiples(2))
 	match := onePlaceMatch(t, sys, "C+1/2")
+	assert.Equal(t, "C", match.Tonic().String())
 
 	zero := collectSpellings(match.Family().MustSpellings(alteration.Natural()), -1)
 	assert.Equal(t, []string{"C", "D", "E", "F", "G", "A", "B"}, spellingStrings(zero))
-	assert.NotContains(t, spellingStrings(zero), match.Tonic().String())
+	assert.Contains(t, spellingStrings(zero), match.Tonic().String())
 
 	fractionalValues := collectSpellings(match.Family().MustSpellings(fractional(1, 2)), -1)
 	require.Len(t, fractionalValues, 21)
@@ -155,6 +182,36 @@ func TestAddressedLargeParameters(t *testing.T) {
 		assert.Equal(t, 256, matches[0].Mode().Len())
 		assertPositionMatch(t, matches[0])
 	})
+}
+
+func TestRepresentableResultWithUnrepresentableIntermediate(t *testing.T) {
+	t.Parallel()
+	// From E, a size-2 interval has natural deviation -1. With d=A_max,
+	// δ=d-d0=A_max+1 is unrepresentable, but tonic alteration -1 yields
+	// the representable final alteration A_max on F.
+	extremeInterval := interval.MustFromDeviation(2, alt(alteration.MaxMagnitude))
+	tmpl := template.MustOpenFromIntervals([]interval.Interval{extremeInterval})
+	rule := system.MustUnion(
+		system.Single(alt(-1)),
+		system.Single(alteration.Natural()),
+		system.Single(alt(alteration.MaxMagnitude)),
+	)
+	sys := traditionalWithRule("extended-intermediate", rule)
+	inputName := spelling.MustNew(sp("F").Letter(), alt(alteration.MaxMagnitude))
+	input := []note.Note{note.MustFromSpelling(inputName, cents.Zero(), nil)}
+	searcher := searcherFor(t, entry("extended-intermediate", tmpl))
+	matches, err := searcher.ByPosition(sys, input, search.Containment)
+	require.NoError(t, err)
+	index := slices.IndexFunc(matches, func(match search.PositionMatch) bool {
+		return match.Family().Class().Number() == 3
+	})
+	if !assert.NotEqual(t, -1, index, "missing E-flat family") {
+		return
+	}
+	match := matches[index]
+	assert.Equal(t, "E♭", match.Tonic().String())
+	assert.Equal(t, []int{2}, match.DegreesForClass(sys.MustClass(inputName)))
+	assertPositionMatch(t, match)
 }
 
 func TestSpellingsSequenceEarlyStopAndRepeatedTraversal(t *testing.T) {

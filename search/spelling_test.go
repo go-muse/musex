@@ -216,12 +216,18 @@ func TestBySpellingUnrepresentableCandidateControlExample14(t *testing.T) {
 	input[0] = note.MustFromSpelling(spelling.MustNew(input[0].Letter(), alt(alteration.MaxMagnitude)), cents.Zero(), nil)
 	matches, err := searcher.BySpelling(input, search.Containment)
 	require.NoError(t, err)
-	require.NotEmpty(t, matches)
-	tonics := make([]spelling.Spelling, len(matches))
-	for i, match := range matches {
-		tonics[i] = match.Tonic()
+	maximum := alt(alteration.MaxMagnitude)
+	expectedTonics := []spelling.Spelling{
+		spelling.MustNew(sp("C").Letter(), maximum),
+		input[0].Spelling(),
+		spelling.MustNew(sp("A").Letter(), maximum),
+		spelling.MustNew(sp("B").Letter(), maximum),
 	}
-	assert.True(t, slicesContainsSpelling(tonics, input[0].Spelling()))
+	expected := make([]spellingPair, len(expectedTonics))
+	for i, tonic := range expectedTonics {
+		expected[i] = spellingPair{Code: "phrygian", Tonic: tonic.String()}
+	}
+	assert.Equal(t, expected, spellingPairs(matches))
 	for _, match := range matches {
 		assert.LessOrEqual(t, len(matches), match.Mode().Len())
 		assertSpellingMatch(t, match)
@@ -236,6 +242,7 @@ func TestBySpellingInputAndScopeOwnership(t *testing.T) {
 	fromRepository := search.MustNewFromRepository(repository)
 	input := notes("C")
 	before := append([]note.Note(nil), input...)
+	expectedNotes := append([]note.Note(nil), before...)
 	catalog = template.Catalog{}
 	repository = mode.Repository{}
 	input[0] = note.MustFromSpelling(sp("D"), cents.Zero(), nil)
@@ -246,6 +253,7 @@ func TestBySpellingInputAndScopeOwnership(t *testing.T) {
 			require.NoError(t, err)
 			assert.NotEmpty(t, matches)
 			assert.Equal(t, "C", matches[0].InputNames()[0].String())
+			assertNotesUnchanged(t, expectedNotes, before)
 		})
 	}
 }

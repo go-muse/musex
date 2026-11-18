@@ -253,11 +253,13 @@ func TestByPositionFromContextReadsEachSourceOnce(t *testing.T) {
 	second := newCountedSource(settings.Standard())
 	input := notesIn(first, "D", "E", "D")
 	input = append(input, notesIn(second, "F♯", "A", "B")...)
+	expectedNotes := append([]note.Note(nil), input...)
 	first.resetReads()
 	second.resetReads()
 
 	matches, err := searcher.ByPositionFromContext(input, search.Containment)
 	require.NoError(t, err)
+	assertNotesUnchanged(t, expectedNotes, input)
 	explicit := searcher.MustByPosition(system.Traditional(), input, search.Containment)
 	assert.Equal(t, positionPairs(explicit), positionPairs(matches))
 	assert.Equal(t, 1, first.readCount())
@@ -277,9 +279,14 @@ func TestByPositionFromContextReadsEachSourceOnce(t *testing.T) {
 func TestByPositionResultOwnership(t *testing.T) {
 	t.Parallel()
 	searcher := builtInSearcher(t, "ionian")
-	input := notes("C")
+	source := newCountedSource(settings.Standard())
+	input := []note.Note{note.MustFromASPN(sp("C"), 4, cents.MustFromInt(30), source)}
+	expectedNotes := append([]note.Note(nil), input...)
+	source.resetReads()
 	matches := searcher.MustByPosition(system.Traditional(), input, search.Containment)
 	require.NotEmpty(t, matches)
+	assertNotesUnchanged(t, expectedNotes, input)
+	assert.Equal(t, 0, source.readCount())
 	match := matches[0]
 	expectedInputs := classNumbers(match.InputClasses())
 	inputClasses := match.InputClasses()
