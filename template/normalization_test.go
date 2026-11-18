@@ -21,6 +21,23 @@ func TestNameNormalization(t *testing.T) {
 		{name: "Unicode case fold", original: "ΣΊΣΥΦΟΣ", query: "σίσυφος", match: true},
 		{name: "Cyrillic case", original: "ДОРИЙСКИЙ", query: "дорийский", match: true},
 		{name: "yo", original: "Ёлка", query: "елка", match: true},
+		{name: "yo composed record decomposed query", original: "Ёлка", query: "е\u0308лка", match: true},
+		{name: "yo composed record lowercase composed query", original: "Ёлка", query: "ёлка", match: true},
+		{name: "yo decomposed record composed query", original: "Е\u0308лка", query: "Ёлка", match: true},
+		{name: "yo decomposed record lowercase composed query", original: "Е\u0308лка", query: "ёлка", match: true},
+		{name: "yo decomposed record without diaeresis query", original: "Е\u0308лка", query: "елка", match: true},
+		{name: "yo uppercase composed record decomposed uppercase query", original: "ЁЛКА", query: "Е\u0308ЛКА", match: true},
+		{name: "yo uppercase decomposed record composed uppercase query", original: "Е\u0308ЛКА", query: "ЁЛКА", match: true},
+		{name: "yo uppercase composed record decomposed lowercase query", original: "ЁЛКА", query: "е\u0308лка", match: true},
+		{name: "yo uppercase decomposed record composed lowercase query", original: "Е\u0308ЛКА", query: "ёлка", match: true},
+		{name: "yo uppercase composed record lowercase composed query", original: "ЁЛКА", query: "ёлка", match: true},
+		{name: "yo uppercase decomposed record lowercase decomposed query", original: "Е\u0308ЛКА", query: "е\u0308лка", match: true},
+		{name: "yo lowercase composed record decomposed uppercase query", original: "ёлка", query: "Е\u0308ЛКА", match: true},
+		{name: "yo lowercase decomposed record composed uppercase query", original: "е\u0308лка", query: "ЁЛКА", match: true},
+		{name: "yo lowercase composed record decomposed lowercase query", original: "ёлка", query: "е\u0308лка", match: true},
+		{name: "yo lowercase decomposed record composed lowercase query", original: "е\u0308лка", query: "ёлка", match: true},
+		{name: "yo lowercase composed record uppercase composed query", original: "ёлка", query: "ЁЛКА", match: true},
+		{name: "yo lowercase decomposed record uppercase decomposed query", original: "е\u0308лка", query: "Е\u0308ЛКА", match: true},
 		{name: "flat", original: "Dorian ♭2", query: "dorian b2", match: true},
 		{name: "sharp", original: "Locrian ♯2", query: "locrian #2", match: true},
 		{name: "double flat", original: "Super-Locrian 𝄫7", query: "super-locrian bb7", match: true},
@@ -33,6 +50,8 @@ func TestNameNormalization(t *testing.T) {
 		{name: "minus sign", original: "Hira−Choshi", query: "hira-choshi", match: true},
 		{name: "composed macron", original: "Hirajōshi", query: "hirajoshi", match: true},
 		{name: "decomposed macron", original: "Hirajōshi", query: "hirajoshi", match: true},
+		{name: "composed macron record decomposed query", original: "Hirajōshi", query: "Hirajo\u0304shi", match: true},
+		{name: "decomposed macron record composed query", original: "Hirajo\u0304shi", query: "Hirajōshi", match: true},
 		{name: "composed acute", original: "Jué", query: "jue", match: true},
 		{name: "decomposed acute", original: "Jué", query: "jue", match: true},
 		{name: "edge Unicode spaces", original: "Mode", query: "\u2003mode\u00a0", match: true},
@@ -40,6 +59,12 @@ func TestNameNormalization(t *testing.T) {
 		{name: "tabs and newlines", original: "My mode", query: "my\t\nmode", match: true},
 		{name: "non Latin mark retained", original: "кириллица́", query: "кириллица", match: false},
 		{name: "Greek mark retained", original: "λάδά", query: "λάδα", match: false},
+		{name: "short i is not i", original: "Йод", query: "Иод", match: false},
+		{name: "i is not short i", original: "Иод", query: "Йод", match: false},
+		{name: "composed short i record decomposed query", original: "Йод", query: "И\u0306од", match: true},
+		{name: "decomposed short i record composed query", original: "И\u0306од", query: "Йод", match: true},
+		{name: "decomposed short i is not i", original: "И\u0306од", query: "Иод", match: false},
+		{name: "i is not decomposed short i", original: "Иод", query: "И\u0306од", match: false},
 		{name: "not a substring", original: "Dorian", query: "dori", match: false},
 		{name: "empty query", original: "Dorian", query: "", match: false},
 	}
@@ -57,6 +82,78 @@ func TestNameNormalization(t *testing.T) {
 			} else {
 				assert.Empty(t, got)
 			}
+		})
+	}
+}
+
+func TestCyrillicYoDuplicateNames(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name  string
+		names []string
+	}{
+		{name: "composed then decomposed", names: []string{"Ёлка", "Е\u0308лка"}},
+		{name: "decomposed then composed", names: []string{"Е\u0308лка", "Ёлка"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := template.NewEntry("entry", tc.names, template.Ionian())
+			require.ErrorIs(t, err, template.ErrInvalidArgument)
+			assert.False(t, got.IsValid())
+		})
+	}
+}
+
+func TestCyrillicShortINamesAreDistinct(t *testing.T) {
+	t.Parallel()
+	names := []string{"Йод", "Иод"}
+	entry, err := template.NewEntry("short-i", names, template.Ionian())
+	require.NoError(t, err)
+	assert.True(t, entry.IsValid())
+	assert.Equal(t, names, entry.Names())
+}
+
+func TestCyrillicYoOriginalNames(t *testing.T) {
+	t.Parallel()
+	names := []string{"Первый", "Е\u0308лка", "Third"}
+	entry := template.MustNewEntry("entry", names, template.Ionian())
+	assert.Equal(t, []string{"Первый", "Е\u0308лка", "Third"}, entry.Names())
+}
+
+func TestCyrillicYoEntryEquality(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name       string
+		leftNames  []string
+		rightNames []string
+		want       bool
+	}{
+		{
+			name:       "composed and decomposed originals differ",
+			leftNames:  []string{"Первый", "Ёлка", "Third"},
+			rightNames: []string{"Первый", "Е\u0308лка", "Third"},
+			want:       false,
+		},
+		{
+			name:       "decomposed and composed originals differ",
+			leftNames:  []string{"Первый", "Е\u0308лка", "Third"},
+			rightNames: []string{"Первый", "Ёлка", "Third"},
+			want:       false,
+		},
+		{
+			name:       "identical decomposed originals match",
+			leftNames:  []string{"Первый", "Е\u0308лка", "Third"},
+			rightNames: []string{"Первый", "Е\u0308лка", "Third"},
+			want:       true,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			left := template.MustNewEntry("entry", tc.leftNames, template.Ionian())
+			right := template.MustNewEntry("entry", tc.rightNames, template.Ionian())
+			assert.Equal(t, tc.want, left.Equal(right))
 		})
 	}
 }
