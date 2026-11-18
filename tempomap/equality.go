@@ -95,16 +95,8 @@ func timelineConversion(m Map, grid *measure.Grid) (Map, error) {
 	return m.ToPositions(*grid)
 }
 
-func timelineSpeedsEqual(a, b *mapIndex, position duration.Position) (bool, error) {
-	aSpeed, err := speedAtIndex(a, position)
-	if err != nil {
-		return false, err
-	}
-	bSpeed, err := speedAtIndex(b, position)
-	if err != nil {
-		return false, err
-	}
-	return aSpeed.Equal(bSpeed), nil
+func timelineSpeedsEqual(a, b *mapIndex, position *big.Rat) bool {
+	return speedRatAtIndex(a, position).Cmp(speedRatAtIndex(b, position)) == 0
 }
 
 func uniqueChangePositions(maps ...*mapIndex) []duration.Position {
@@ -181,40 +173,27 @@ func (m Map) EqualTimeline(other Map, grid ...measure.Grid) (bool, error) {
 	}
 	positions := uniqueChangePositions(left.index, right.index)
 	for i, position := range positions {
-		equal, speedErr := timelineSpeedsEqual(left.index, right.index, position)
-		if speedErr != nil || !equal {
-			return false, speedErr
+		start := ratOfPosition(position)
+		if !timelineSpeedsEqual(left.index, right.index, start) {
+			return false, nil
 		}
-		var next duration.Position
+		var next *big.Rat
 		if i+1 < len(positions) {
-			next = positions[i+1]
+			next = ratOfPosition(positions[i+1])
 		} else {
-			maxPosition, rangeErr := positionFromRat(op, new(big.Rat).SetInt(fraction.MaxComponentBig()))
-			if rangeErr != nil {
-				return false, rangeErr
-			}
-			next = maxPosition
-			one := ratOfPosition(position)
-			one.Add(one, big.NewRat(1, 1))
-			if one.Cmp(ratOfPosition(next)) < 0 {
-				next, rangeErr = positionFromRat(op, one)
-				if rangeErr != nil {
-					return false, rangeErr
-				}
+			next = new(big.Rat).SetInt(fraction.MaxComponentBig())
+			one := new(big.Rat).Add(start, big.NewRat(1, 1))
+			if one.Cmp(next) < 0 {
+				next = one
 			}
 		}
-		midpoint := new(big.Rat).Add(ratOfPosition(position), ratOfPosition(next))
+		midpoint := new(big.Rat).Add(start, next)
 		midpoint.Quo(midpoint, big.NewRat(2, 1))
-		if midpoint.Cmp(ratOfPosition(position)) == 0 {
+		if midpoint.Cmp(start) == 0 {
 			continue
 		}
-		mid, rangeErr := positionFromRat(op, midpoint)
-		if rangeErr != nil {
-			return false, rangeErr
-		}
-		equal, speedErr = timelineSpeedsEqual(left.index, right.index, mid)
-		if speedErr != nil || !equal {
-			return false, speedErr
+		if !timelineSpeedsEqual(left.index, right.index, midpoint) {
+			return false, nil
 		}
 	}
 	var extensionPositions []duration.Position
