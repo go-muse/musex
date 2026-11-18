@@ -711,6 +711,37 @@ func TestExactArithmeticRegressions(t *testing.T) {
 		_, err = tmpl.BetweenPlaces(1, math.MaxInt)
 		require.ErrorIs(t, err, template.ErrOutOfRange)
 	})
+
+	t.Run("between places with unrepresentable absolute intervals", func(t *testing.T) {
+		t.Parallel()
+		tmpl := template.MustParse("P8")
+		cases := []struct {
+			name string
+			i, j int
+			want string
+		}{
+			{name: "forward", i: math.MaxInt - 1, j: math.MaxInt, want: "P8"},
+			{name: "reverse", i: math.MaxInt, j: math.MaxInt - 1, want: "-P8"},
+			{name: "equal", i: math.MaxInt, j: math.MaxInt, want: "P1"},
+		}
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+				places := []int{tc.i}
+				if tc.j != tc.i {
+					places = append(places, tc.j)
+				}
+				for _, place := range places {
+					_, err := tmpl.PlaceInterval(place)
+					require.ErrorIs(t, err, template.ErrOutOfRange)
+					assert.ErrorIs(t, err, interval.ErrOutOfRange)
+				}
+				got, err := tmpl.BetweenPlaces(tc.i, tc.j)
+				require.NoError(t, err)
+				requireInterval(t, tc.want, got)
+			})
+		}
+	})
 }
 
 func TestRotationEqualityAndCompare(t *testing.T) {
