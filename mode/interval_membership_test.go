@@ -1,6 +1,7 @@
 package mode_test
 
 import (
+	"math"
 	"testing"
 
 	"github.com/go-muse/musex/alteration"
@@ -162,5 +163,34 @@ func TestMatchPitches(t *testing.T) {
 		got, err := tc.m.MatchPitches(tc.sys, tc.tonic, tc.a, tc.b, tc.by, tc.window)
 		assert.ErrorIs(t, err, tc.want)
 		assert.Equal(t, mode.PitchMembership{}, got)
+	}
+}
+
+// The cycle window limits which degrees are built, including at register
+// boundaries. Unrequested cycles must not create an overflow error.
+func TestMatchPitchesOnlyBuildsRequestedExtremeCycle(t *testing.T) {
+	t.Parallel()
+	major := mode.MustFromCode("ionian")
+	sys := system.Traditional()
+	tonic := pitch.MustFromASPN(spelling.B(), math.MaxInt)
+	a := pitch.MustFromASPN(spelling.CSharp(), math.MaxInt)
+	b := pitch.MustFromASPN(spelling.DSharp(), math.MaxInt)
+	// B major in cycle -1 is B/(MaxInt-1), C-sharp, D-sharp, E,
+	// F-sharp, G-sharp, A-sharp in MaxInt. Every requested degree fits.
+	window := mode.CycleWindow{First: -1, Last: -1}
+	for _, tc := range []struct {
+		name string
+		by   mode.PitchComparison
+	}{
+		{"written", mode.WrittenPitch},
+		{"positional", mode.PositionalPitch},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := major.MatchPitches(sys, tonic, a, b, tc.by, window)
+			require.NoError(t, err)
+			assert.Equal(t, []mode.DegreePlace{{Number: 2, Cycle: -1}}, got.First)
+			assert.Equal(t, []mode.DegreePlace{{Number: 3, Cycle: -1}}, got.Second)
+		})
 	}
 }
