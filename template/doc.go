@@ -23,8 +23,10 @@
 // ClosedFromPlaceIntervals and OpenFromPlaceIntervals construct from intervals
 // measured from the first place. ClosedFromSpellings, OpenFromSpellings, and
 // FromSpellingsInOctave construct from names read upward in order. The kind is
-// explicit in every constructor name; a closed constructor always requires an
-// explicit cycle.
+// explicit in every constructor name. ClosedFromPlaceIntervals and
+// ClosedFromSpellings require an explicit cycle. ClosedFromIntervals derives
+// its cycle by summing all adjacent intervals, including the closing interval.
+// FromSpellingsInOctave supplies a perfect octave as its cycle.
 //
 // MaxPlaces limits the number of actual places to 65536. Virtual place numbers
 // of closed templates are limited only by int. Arithmetic uses exact extended
