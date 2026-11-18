@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-muse/musex/common/fraction"
 	"github.com/go-muse/musex/duration"
 	"github.com/go-muse/musex/tempo"
 )
@@ -274,6 +275,26 @@ func validResultBound(bound *big.Rat, places int) bool {
 	return bound.Cmp(directed) == 0 || bound.Cmp(nearest) == 0
 }
 
+func reducedResultFraction(text string) (fraction.Fraction, bool) {
+	numeratorText, denominatorText, ok := strings.Cut(text, "/")
+	if !ok {
+		return fraction.Fraction{}, false
+	}
+	numerator, ok := new(big.Int).SetString(numeratorText, 10)
+	if !ok {
+		return fraction.Fraction{}, false
+	}
+	denominator, ok := new(big.Int).SetString(denominatorText, 10)
+	if !ok {
+		return fraction.Fraction{}, false
+	}
+	value, err := fraction.FromBigIntReduced(numerator, denominator)
+	if err != nil {
+		return fraction.Fraction{}, false
+	}
+	return value, true
+}
+
 // ParseSecondsResult parses an exact or approximate seconds result.
 func ParseSecondsResult(text string) (SecondsResult, error) {
 	result, err := parseSecondsResult(text)
@@ -303,12 +324,12 @@ func parseSecondsResult(text string) (SecondsResult, error) {
 		return SecondsResult{}, invalidTextError(text)
 	}
 	places, placesErr := parsePlaces(placesText, text)
-	var rangeErr error
+	var valueRangeErr, boundRangeErr error
 	value, valueErr := tempo.ParseSeconds(valueText)
 	if valueErr != nil {
 		nestedErr := nestedTextError(text, valueText, valueErr)
 		if errors.Is(nestedErr, ErrOutOfRange) {
-			rangeErr = nestedErr
+			valueRangeErr = nestedErr
 		} else {
 			return SecondsResult{}, nestedErr
 		}
@@ -317,9 +338,7 @@ func parseSecondsResult(text string) (SecondsResult, error) {
 	if boundErr != nil {
 		nestedErr := nestedTextError(text, boundText, boundErr)
 		if errors.Is(nestedErr, ErrOutOfRange) {
-			if rangeErr == nil {
-				rangeErr = nestedErr
-			}
+			boundRangeErr = nestedErr
 		} else {
 			return SecondsResult{}, nestedErr
 		}
@@ -327,8 +346,27 @@ func parseSecondsResult(text string) (SecondsResult, error) {
 	if placesErr != nil {
 		return SecondsResult{}, placesErr
 	}
-	if rangeErr != nil {
-		return SecondsResult{}, rangeErr
+	if valueRangeErr != nil {
+		valueFraction, ok := reducedResultFraction(valueText)
+		if !ok {
+			return SecondsResult{}, valueRangeErr
+		}
+		recoveredValue, err := tempo.SecondsFromFraction(valueFraction)
+		if err != nil {
+			return SecondsResult{}, nestedTextError(text, valueText, err)
+		}
+		value = recoveredValue
+	}
+	if boundRangeErr != nil {
+		boundFraction, ok := reducedResultFraction(boundText)
+		if !ok {
+			return SecondsResult{}, boundRangeErr
+		}
+		recoveredBound, err := tempo.SecondsFromFraction(boundFraction)
+		if err != nil {
+			return SecondsResult{}, nestedTextError(text, boundText, err)
+		}
+		bound = recoveredBound
 	}
 	valueRat, _ := value.MustFraction().BigRat()
 	boundRat, _ := bound.MustFraction().BigRat()
@@ -370,12 +408,12 @@ func parsePositionResult(text string) (PositionResult, error) {
 		return PositionResult{}, invalidTextError(text)
 	}
 	places, placesErr := parsePlaces(placesText, text)
-	var rangeErr error
+	var valueRangeErr, boundRangeErr error
 	value, valueErr := duration.ParsePosition(valueText)
 	if valueErr != nil {
 		nestedErr := nestedTextError(text, valueText, valueErr)
 		if errors.Is(nestedErr, ErrOutOfRange) {
-			rangeErr = nestedErr
+			valueRangeErr = nestedErr
 		} else {
 			return PositionResult{}, nestedErr
 		}
@@ -384,9 +422,7 @@ func parsePositionResult(text string) (PositionResult, error) {
 	if boundErr != nil {
 		nestedErr := nestedTextError(text, boundText, boundErr)
 		if errors.Is(nestedErr, ErrOutOfRange) {
-			if rangeErr == nil {
-				rangeErr = nestedErr
-			}
+			boundRangeErr = nestedErr
 		} else {
 			return PositionResult{}, nestedErr
 		}
@@ -394,8 +430,27 @@ func parsePositionResult(text string) (PositionResult, error) {
 	if placesErr != nil {
 		return PositionResult{}, placesErr
 	}
-	if rangeErr != nil {
-		return PositionResult{}, rangeErr
+	if valueRangeErr != nil {
+		valueFraction, ok := reducedResultFraction(valueText)
+		if !ok {
+			return PositionResult{}, valueRangeErr
+		}
+		recoveredValue, err := duration.PositionFromFraction(valueFraction)
+		if err != nil {
+			return PositionResult{}, nestedTextError(text, valueText, err)
+		}
+		value = recoveredValue
+	}
+	if boundRangeErr != nil {
+		boundFraction, ok := reducedResultFraction(boundText)
+		if !ok {
+			return PositionResult{}, boundRangeErr
+		}
+		recoveredBound, err := duration.PositionFromFraction(boundFraction)
+		if err != nil {
+			return PositionResult{}, nestedTextError(text, boundText, err)
+		}
+		bound = recoveredBound
 	}
 	valueRat, _ := value.MustFraction().BigRat()
 	boundRat, _ := bound.MustFraction().BigRat()
