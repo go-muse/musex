@@ -135,3 +135,46 @@ func TestFactoryMustAndSentinelTexts(t *testing.T) {
 	checkScale(t, names("G"), scale.MustNew(names("G")...))
 	assert.False(t, reflect.TypeFor[scale.Comparison]().Comparable())
 }
+
+func panicWithCauses(t *testing.T, run func(), causes ...error) {
+	t.Helper()
+	defer func() {
+		p := recover()
+		err, ok := p.(error)
+		require.True(t, ok, "panic must retain the original error, got %v", p)
+		for _, cause := range causes {
+			assert.ErrorIs(t, err, cause)
+		}
+	}()
+	run()
+	t.Fatal("expected panic")
+}
+
+func TestMustPreservesLocalAndDependencyCauses(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name string
+		sys  *system.System
+	}{{"nil", nil}, {"zero system", new(system.System)}} {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := scale.ByPositionIn(tt.sys)
+			assert.ErrorIs(t, err, scale.ErrUnset)
+			assert.ErrorIs(t, err, system.ErrInvalid)
+			panicWithCauses(t, func() { scale.MustByPositionIn(tt.sys) }, scale.ErrUnset, system.ErrInvalid)
+			s := list("G")
+			_, err = s.PitchClasses(tt.sys)
+			assert.ErrorIs(t, err, scale.ErrUnset)
+			assert.ErrorIs(t, err, system.ErrInvalid)
+			panicWithCauses(t, func() { s.MustPitchClasses(tt.sys) }, scale.ErrUnset, system.ErrInvalid)
+		})
+	}
+	s := list("G A")
+	_, err := s.At(2)
+	assert.ErrorIs(t, err, scale.ErrIndex)
+	panicWithCauses(t, func() { s.MustAt(2) }, scale.ErrIndex)
+	err = s.Set(0, note.Note{})
+	assert.ErrorIs(t, err, scale.ErrUnset)
+	assert.ErrorIs(t, err, note.ErrUnset)
+	panicWithCauses(t, func() { s.MustSet(0, note.Note{}) }, scale.ErrUnset, note.ErrUnset)
+	checkScale(t, names("G A"), s)
+}
