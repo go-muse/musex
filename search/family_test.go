@@ -33,7 +33,7 @@ func TestRepresentativeUsesMinimumAbsoluteAlterationBeforeExactMatch(t *testing.
 	rule := system.MustUnion(system.Integers(), system.Single(alt(2)))
 	sys := onePlaceSystem("minimum-first", 1, 1, rule)
 	match := onePlaceMatch(t, sys, "C𝄪")
-	assert.Equal(t, "C", match.Tonic().String())
+	assert.Equal(t, "C", spellingText(match.Tonic()))
 	assert.True(t, match.Tonic().Alteration().IsNatural())
 }
 
@@ -64,7 +64,7 @@ func TestRepresentativeUsesExactInputMatchOnAlterationTie(t *testing.T) {
 		return
 	}
 	match := matches[index]
-	assert.Equal(t, "C♯", match.Tonic().String())
+	assert.Equal(t, "C♯", spellingText(match.Tonic()))
 	assertPositionMatch(t, match)
 	assert.Equal(t, []string{"C♯", "D♭"}, spellingStrings(collectSpellings(match.Family().MustSpellings(alt(1)), -1)))
 }
@@ -73,11 +73,11 @@ func TestRepresentativeUsesSpellingOrderAfterOtherTies(t *testing.T) {
 	t.Parallel()
 	sys := onePlaceSystem("spelling-tie", 1, 1, system.Integers())
 	match := onePlaceMatch(t, sys, "D")
-	assert.Equal(t, "D", match.Tonic().String())
+	assert.Equal(t, "D", spellingText(match.Tonic()))
 
 	// With no compatible exact spelling, canonical letter order resolves the tie.
 	match = onePlaceMatch(t, sys, "C♯")
-	assert.Equal(t, "C", match.Tonic().String())
+	assert.Equal(t, "C", spellingText(match.Tonic()))
 }
 
 func TestRepresentativeWithNonZeroMinimum(t *testing.T) {
@@ -95,7 +95,7 @@ func TestRepresentativeWithNonZeroMinimum(t *testing.T) {
 		return
 	}
 	match := matches[index]
-	assert.Equal(t, "C♯", match.Tonic().String())
+	assert.Equal(t, "C♯", spellingText(match.Tonic()))
 	assert.True(t, match.Tonic().Alteration().Equal(alt(1)))
 	assertPositionMatch(t, match)
 
@@ -111,11 +111,11 @@ func TestSpellingsZeroAndFractionalLimits(t *testing.T) {
 	t.Parallel()
 	sys := onePlaceSystem("fractional", 1, 2, system.MustMultiples(2))
 	match := onePlaceMatch(t, sys, "C+1/2")
-	assert.Equal(t, "C", match.Tonic().String())
+	assert.Equal(t, "C", spellingText(match.Tonic()))
 
 	zero := collectSpellings(match.Family().MustSpellings(alteration.Natural()), -1)
 	assert.Equal(t, []string{"C", "D", "E", "F", "G", "A", "B"}, spellingStrings(zero))
-	assert.Contains(t, spellingStrings(zero), match.Tonic().String())
+	assert.Contains(t, spellingStrings(zero), spellingText(match.Tonic()))
 
 	fractionalValues := collectSpellings(match.Family().MustSpellings(fractional(1, 2)), -1)
 	require.Len(t, fractionalValues, 21)
@@ -132,7 +132,7 @@ func TestSpellingsBoundedOverlappingAndSingleProgressions(t *testing.T) {
 	rule := system.MustNewRule(bounded, single)
 	sys := onePlaceSystem("bounded-overlap", 1, 1, rule)
 	match := onePlaceMatch(t, sys, "C")
-	assert.Equal(t, "C", match.Tonic().String())
+	assert.Equal(t, "C", spellingText(match.Tonic()))
 
 	values := collectSpellings(match.Family().MustSpellings(alt(1)), -1)
 	require.Len(t, values, 21)
@@ -147,7 +147,7 @@ func TestLargeFractionalRuleRepresentative(t *testing.T) {
 	t.Parallel()
 	sys := onePlaceSystem("large-fractional", 1, alteration.MaxDenominator, system.MustMultiples(alteration.MaxDenominator))
 	match := onePlaceMatch(t, sys, "C")
-	assert.Equal(t, "C", match.Tonic().String())
+	assert.Equal(t, "C", spellingText(match.Tonic()))
 	assert.True(t, match.Tonic().Alteration().IsNatural())
 	assert.Equal(t, 0, match.Family().Class().Number())
 
@@ -163,9 +163,22 @@ func TestAddressedLargeParameters(t *testing.T) {
 	t.Run("large classes chromatic unit and denominator", func(t *testing.T) {
 		t.Parallel()
 		sys := onePlaceSystem("large-parameters", alteration.MaxDenominator, alteration.MaxDenominator, system.MustMultiples(alteration.MaxDenominator))
-		match := onePlaceMatch(t, sys, "C")
-		assert.Equal(t, alteration.MaxDenominator, match.Family().Class().Modulus())
-		assert.Equal(t, "C", match.Tonic().String())
+		searcher := searcherFor(t, onePlaceEntry("one"))
+		matches, err := searcher.ByPosition(sys, notes("C"), search.FullMatch)
+		require.NoError(t, err)
+		assert.Equal(t, []positionPair{
+			{Code: "one", Class: 0, Letter: "C", Tonic: "C"},
+			{Code: "one", Class: 2, Letter: "D", Tonic: "D"},
+			{Code: "one", Class: 4, Letter: "E", Tonic: "E"},
+			{Code: "one", Class: 5, Letter: "F", Tonic: "F"},
+			{Code: "one", Class: 7, Letter: "G", Tonic: "G"},
+			{Code: "one", Class: 9, Letter: "A", Tonic: "A"},
+			{Code: "one", Class: 11, Letter: "B", Tonic: "B"},
+		}, positionPairs(matches))
+		for _, match := range matches {
+			assert.Equal(t, alteration.MaxDenominator, match.Family().Class().Modulus())
+			assertPositionMatch(t, match)
+		}
 	})
 	t.Run("many degrees", func(t *testing.T) {
 		t.Parallel()
@@ -209,7 +222,7 @@ func TestRepresentableResultWithUnrepresentableIntermediate(t *testing.T) {
 		return
 	}
 	match := matches[index]
-	assert.Equal(t, "E♭", match.Tonic().String())
+	assert.Equal(t, "E♭", spellingText(match.Tonic()))
 	assert.Equal(t, []int{2}, match.DegreesForClass(sys.MustClass(inputName)))
 	assertPositionMatch(t, match)
 }

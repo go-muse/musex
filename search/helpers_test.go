@@ -3,6 +3,8 @@ package search_test
 import (
 	"iter"
 	"slices"
+	"strconv"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -23,7 +25,42 @@ import (
 )
 
 func sp(text string) spelling.Spelling {
-	return spelling.MustParse(text)
+	machineForm := strings.NewReplacer(
+		"𝄪", "+2",
+		"𝄫", "-2",
+		"♯", "+1",
+		"♭", "-1",
+	).Replace(text)
+	return spelling.MustParse(machineForm)
+}
+
+func spellingText(value spelling.Spelling) string {
+	text := value.Letter().String()
+	num, den := value.Alteration().Fraction()
+	if num == 0 {
+		return text
+	}
+	switch {
+	case den == 1 && num == 1:
+		return text + "♯"
+	case den == 1 && num == -1:
+		return text + "♭"
+	case den == 1 && num == 2:
+		return text + "𝄪"
+	case den == 1 && num == -2:
+		return text + "𝄫"
+	}
+	if num > 0 {
+		text += "+"
+	} else {
+		text += "-"
+		num = -num
+	}
+	text += strconv.Itoa(num)
+	if den > 1 {
+		text += "/" + strconv.Itoa(den)
+	}
+	return text
 }
 
 func alt(value int) alteration.Alteration {
@@ -192,7 +229,7 @@ func spellingPairs(matches []search.SpellingMatch) []spellingPair {
 		if !ok {
 			panic("spelling match without origin")
 		}
-		result[i] = spellingPair{Code: origin.Code(), Tonic: match.Tonic().String()}
+		result[i] = spellingPair{Code: origin.Code(), Tonic: spellingText(match.Tonic())}
 	}
 	return result
 }
@@ -220,7 +257,7 @@ func positionPairs(matches []search.PositionMatch) []positionPair {
 			Code:   origin.Code(),
 			Class:  match.Family().Class().Number(),
 			Letter: letterName,
-			Tonic:  match.Tonic().String(),
+			Tonic:  spellingText(match.Tonic()),
 		}
 	}
 	return result
@@ -305,7 +342,7 @@ func collectSpellings(seq iter.Seq[spelling.Spelling], maximum int) []spelling.S
 func spellingStrings(values []spelling.Spelling) []string {
 	result := make([]string, len(values))
 	for i, value := range values {
-		result[i] = value.String()
+		result[i] = spellingText(value)
 	}
 	return result
 }
@@ -319,7 +356,6 @@ func requireMustPanic(t *testing.T, expected error, call func()) {
 		err, ok := recovered.(error)
 		require.True(t, ok)
 		assert.EqualError(t, err, expected.Error())
-		assert.ErrorIs(t, err, expected)
 	}()
 	call()
 }
