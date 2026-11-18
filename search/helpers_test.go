@@ -347,15 +347,19 @@ func spellingStrings(values []spelling.Spelling) []string {
 	return result
 }
 
-func requireMustPanic(t *testing.T, expected error, call func()) {
+func requireMustPanic(t *testing.T, expected error, call func(), causes ...error) {
 	t.Helper()
 	require.NotNil(t, expected)
+	require.NotEmpty(t, causes)
 	defer func() {
 		recovered := recover()
 		require.NotNil(t, recovered)
 		err, ok := recovered.(error)
 		require.True(t, ok)
 		assert.EqualError(t, err, expected.Error())
+		for _, cause := range causes {
+			assert.ErrorIs(t, err, cause)
+		}
 	}()
 	call()
 }

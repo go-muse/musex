@@ -113,7 +113,7 @@ func TestGroupingNilEmptyAndUnset(t *testing.T) {
 			groups, err := tt.call(nil)
 			assert.Nil(t, groups)
 			requireError(t, err, search.ErrUnset)
-			requireMustPanic(t, err, func() { tt.must(nil) })
+			requireMustPanic(t, err, func() { tt.must(nil) }, search.ErrUnset)
 			groups, err = tt.call([]search.SpellingMatch{})
 			requireNonNilEmpty(t, groups, err)
 			groups, err = tt.call([]search.SpellingMatch{{}})
@@ -137,7 +137,7 @@ func TestGroupingNilEmptyAndUnset(t *testing.T) {
 			groups, err := tt.call(nil)
 			assert.Nil(t, groups)
 			requireError(t, err, search.ErrUnset)
-			requireMustPanic(t, err, func() { tt.must(nil) })
+			requireMustPanic(t, err, func() { tt.must(nil) }, search.ErrUnset)
 			groups, err = tt.call([]search.PositionMatch{})
 			requireNonNilEmpty(t, groups, err)
 			groups, err = tt.call([]search.PositionMatch{{}})
@@ -170,7 +170,7 @@ func TestPositionGroupingRejectsDifferentSystems(t *testing.T) {
 			groups, err := tt.call(input)
 			assert.Nil(t, groups)
 			requireError(t, err, search.ErrDifferentSystems)
-			requireMustPanic(t, err, func() { tt.must(input) })
+			requireMustPanic(t, err, func() { tt.must(input) }, search.ErrDifferentSystems)
 		})
 	}
 }
