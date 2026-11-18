@@ -199,14 +199,19 @@ func (m Mode) MatchPitches(sys *system.System, tonic, a, b pitch.Pitch, by Pitch
 			}
 		}
 	}
+	// Anchor the arithmetic inside the validated window: cycle zero may
+	// require an unrepresentable pitch even when every requested place fits.
+	// Keep the displacement and the resulting cycle exact until the final
+	// range check, since their individual terms need not fit in an int.
 	candidates := make([]int, 0, 2*m.Len())
 	for j := range m.Len() {
-		base, err := m.placePitch(sys, tonic, DegreePlace{j + 1, 0})
+		base, err := m.placePitch(sys, tonic, DegreePlace{j + 1, cycles.First})
 		if err != nil {
 			return PitchMembership{}, err
 		}
 		for _, target := range []pitch.Pitch{a, b} {
 			diff := new(big.Int).Sub(big.NewInt(int64(target.MustASPN())), big.NewInt(int64(base.MustASPN())))
+			diff.Add(diff, big.NewInt(int64(cycles.First)))
 			if diff.IsInt64() {
 				c := int(diff.Int64())
 				if cycles.contains(c) {
