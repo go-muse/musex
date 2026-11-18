@@ -12,7 +12,6 @@ import (
 	"github.com/go-muse/musex/letter"
 	"github.com/go-muse/musex/mode"
 	"github.com/go-muse/musex/note"
-	"github.com/go-muse/musex/octave"
 	"github.com/go-muse/musex/pitch"
 	"github.com/go-muse/musex/scale"
 	"github.com/go-muse/musex/settings"
@@ -257,7 +256,7 @@ func TestBuilderRepresentabilityAndErrorOrder(t *testing.T) {
 		}, mode.ErrInvalidArgument, nil},
 		{"end octave overflow", func() (*scale.Scale, error) {
 			return m.FromTonicOctavesIn(system.Traditional(), scalePitch("C", math.MaxInt, nil), 1, forward)
-		}, mode.ErrCannotBuildNote, octave.ErrOutOfRange},
+		}, mode.ErrCannotBuildNote, nil},
 		{"inside note overflow", func() (*scale.Scale, error) {
 			return m.FromTonicCountIn(system.Traditional(), scalePitch("C", math.MaxInt, nil), 2, forward)
 		}, mode.ErrCannotBuildNote, nil},
@@ -274,6 +273,9 @@ func TestBuilderRepresentabilityAndErrorOrder(t *testing.T) {
 			}
 			if tt.cause != nil {
 				assert.ErrorIs(t, err, tt.cause)
+			}
+			if tt.name == "end octave overflow" || tt.name == "inside note overflow" {
+				buildOverflowCauses(t, err)
 			}
 		})
 	}
