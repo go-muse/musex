@@ -154,6 +154,7 @@ func (e Entry) String() string {
 // normalizeName computes the comparison key without changing the stored name.
 func normalizeName(name string) string {
 	folded := nameFolder.String(name)
+	folded = norm.NFC.String(folded)
 	folded = nameSigns.Replace(folded)
 	folded = strings.Map(func(r rune) rune {
 		if unicode.Is(unicode.Pd, r) || r == '\u2212' {

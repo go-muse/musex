@@ -59,9 +59,11 @@
 // an immutable snapshot.
 //
 // Catalog.ByCode uses exact code matching. Catalog.ByName compares names after
-// Unicode case folding, replacement of musical accidental signs, normalization
-// of dashes, removal of Latin combining marks, special handling of Russian ё,
-// and whitespace trimming and collapsing. Original names remain unchanged.
+// Unicode case folding, canonical composition (NFC), replacement of musical
+// accidental signs and Russian ё, normalization of dashes, removal of Latin
+// combining marks, and whitespace trimming and collapsing. Canonical composition
+// occurs before the special replacements, so precomposed ё and decomposed
+// е + U+0308 compare equal. Original names remain unchanged.
 // Names containing Cyrillic are reported as Russian; all others are reported as
 // English for catalog purposes.
 //
