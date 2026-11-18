@@ -35,7 +35,7 @@
 - [x] **20. [`template`](guide/packages/template.md)** — closed and open mode templates with arbitrary cycles, virtual places, rotations, comparison, text notation, and immutable built-in and custom catalogs with name lookup, identification, and related-entry search.
 - [x] **21. [`mode`](guide/packages/mode.md)** — closed and open modes with numbered degrees, notes and scales from a starting note, key signatures, structural comparison and editing, system positions, and catalog search.
 - [x] **22. [`scale`](guide/packages/scale.md)** — finite note lists with circular traversal, snapshot iterators, comparisons, melody transformations, editing, and multi-octave expansion through modes.
-- [ ] **23. `search`** — finding modes from sets of notes.
+- [x] **23. [`search`](guide/packages/search.md)** — finding mode-and-tonic hypotheses from sets of notes by exact spelling or pitch class, with containment and full match, tonic families, matching degrees, and stable groupings.
 - [ ] **24. `modal`** — relative and absolute modal positions.
 - [ ] **25. `tendency`** — tendencies and resolutions under rule sets.
 
