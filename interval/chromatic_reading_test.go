@@ -287,7 +287,7 @@ func TestChromaticDistinctSourcesAndSystemParameters(t *testing.T) {
 
 func TestChromaticOverflowAndSpellingErrors(t *testing.T) {
 	t.Parallel()
-	// The pitch registers are representable; their positional difference is not.
+	// Large representable registers can still have a representable distance.
 	low := noteAt(t, pt(spelling.C(), -math.MaxInt/24), 0, nil)
 	high := noteAt(t, pt(spelling.C(), math.MaxInt/24), 0, nil)
 	c, err := interval.ChromaticBetweenNotesIn(trad(), low, high)
