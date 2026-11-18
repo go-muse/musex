@@ -10,6 +10,7 @@ import (
 	"github.com/go-muse/musex/degree"
 	"github.com/go-muse/musex/interval"
 	"github.com/go-muse/musex/note"
+	"github.com/go-muse/musex/scale"
 	"github.com/go-muse/musex/spelling"
 	"github.com/go-muse/musex/system"
 )
@@ -154,10 +155,7 @@ func noteCarry(sys *system.System, name spelling.Spelling, explicit bool) (int, 
 }
 
 // Signature contains the index on the line of fifths and the signed names.
-type Signature struct {
-	Index int
-	Signs []spelling.Spelling
-}
+type Signature = scale.Signature
 
 // KeySignatureFrom recognizes a standard key signature among the names
 // generated from first. The interval of the cycle does not affect the result.

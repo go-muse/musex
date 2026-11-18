@@ -10,6 +10,16 @@ Read the interval from the first degree, the interval between two degrees, or th
 
 Supply a starting note to derive the notes of the actual degrees or of one degree at a signed cycle offset. The notes preserve its correction and source. When the starting note has an octave, either its settings source or an explicitly supplied system determines the result's octave.
 
+## Build a scale from a tonic
+
+`m.FromTonic(tonic)` returns a [scale](scale.md) containing one complete note
+per degree. The tonic anchors the first degree of cycle zero. To choose a
+starting degree and cycle, direction, and extent, use `FromTonicCount`,
+`FromTonicTo`, or `FromTonicOctaves` with `mode.BuildOptions`.
+Their `In` forms take an explicit musical system. The resulting scale owns
+its finite list and can be edited independently of the mode. Circular
+traversal of that list preserves the octaves of its stored notes.
+
 ## Comparison and editing
 
 Compare modes by structure, examine the intervals in which they differ, or locate an equal rotation. The package also describes diatonic properties, key signatures, and the numerical structure in a given system. A repository searches a catalog for exact, rotated, related, and numerical matches.

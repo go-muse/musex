@@ -328,6 +328,10 @@ linters:
             - github.com/go-muse/musex/interval$
             - github.com/go-muse/musex/degree$
             - github.com/go-muse/musex/template$
+            - github.com/go-muse/musex/scale$
+            - github.com/go-muse/musex/pitch$
+            - github.com/go-muse/musex/settings$
+            - github.com/go-muse/musex/letter$
         scale:
           list-mode: strict
           files:
@@ -335,9 +339,18 @@ linters:
             - "!$test"
           allow:
             - $gostd
-            - github.com/go-muse/musex/system$
+            - github.com/go-muse/musex/alteration$
+            - github.com/go-muse/musex/cents$
+            - github.com/go-muse/musex/frequency$
+            - github.com/go-muse/musex/interval$
+            - github.com/go-muse/musex/letter$
             - github.com/go-muse/musex/note$
-            - github.com/go-muse/musex/mode$
+            - github.com/go-muse/musex/pcset$
+            - github.com/go-muse/musex/pitch$
+            - github.com/go-muse/musex/settings$
+            - github.com/go-muse/musex/spelling$
+            - github.com/go-muse/musex/system$
+            - github.com/go-muse/musex/tuning$
         search:
           list-mode: strict
           files:
