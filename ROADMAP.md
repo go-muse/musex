@@ -1,6 +1,6 @@
 # Roadmap
 
-`musex` is planned as a set of focused Go packages across three areas. This roadmap shows the intended package order and scope. Checked packages are implemented; the others are **planned**. Open a checked package to read about its musical model or follow its links to the Go API and working examples. Mark a package complete when its agreed API and behavior have been implemented, reviewed, and accepted.
+`musex` is planned as a set of focused Go packages across four areas. This roadmap shows the intended package order and scope. Checked packages are implemented; the others are **planned**. Open a checked package to read about its musical model or follow its links to the Go API and working examples. Mark a package complete when its agreed API and behavior have been implemented, reviewed, and accepted.
 
 <!-- When a package is implemented, link its checked item to guide/packages/<package path>.md. Keep its musical model and release status in that chapter, and its technical examples in the package's example tests. -->
 
@@ -55,5 +55,9 @@
 - [ ] **29b. `voice`** — sequences of events with positions, ties, grace notes, and sounding notes in time.
 - [ ] **30. `track`** — parts as sequences of measures holding the events of each voice.
 - [ ] **31. `score`** — tracks with a common start and one shared tempo map.
+
+## 4. Problem Solving
+
+- [x] **32. [`problemsolving/scalechoice`](guide/packages/problemsolving/scalechoice.md)** — choosing pitch collections and modal readings from notes, distinguishing alternatives with added notes, and comparing a replacement throughout a set or at one phrase position, including local written and chromatic motions.
 
 Package order and scope are derived from the local research in `docs/package-roadmap.md`. That detailed source is excluded from Git; this file is the project-facing overview.
