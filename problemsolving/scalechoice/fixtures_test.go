@@ -19,6 +19,8 @@ import (
 	"github.com/go-muse/musex/spelling"
 	"github.com/go-muse/musex/system"
 	"github.com/go-muse/musex/template"
+	"github.com/go-muse/musex/tuning"
+	"github.com/go-muse/musex/tuning/temperament"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -133,7 +135,11 @@ type countedSource struct {
 
 func source(sys *system.System) *countedSource {
 	s := &countedSource{}
-	s.current.Store(settings.Standard().MustWithSystem(sys))
+	// Replacing only the system would retain the standard 12-class
+	// temperament. Build a matching N-EDO tuning for every requested system.
+	t := tuning.MustNew(sys, temperament.MustEDO(sys.Classes()),
+		tuning.RootFromName(spelling.C()), tuning.A4At440())
+	s.current.Store(settings.Standard().MustWithTuning(t))
 	return s
 }
 func (s *countedSource) Settings() *settings.Settings { s.reads.Add(1); return s.current.Load() }
@@ -179,11 +185,6 @@ func checkPartition(t *testing.T, p scalechoice.Partition, kept, dropped []int) 
 	t.Helper()
 	assert.Equal(t, kept, slices.Collect(slices.Values(p.Kept)))
 	assert.Equal(t, dropped, slices.Collect(slices.Values(p.Dropped)))
-}
-func sortedNames(text string) string {
-	ns := names(text)
-	slices.SortFunc(ns, spelling.Spelling.Compare)
-	return nameText(ns)
 }
 func profileCodes(c template.Catalog) []string {
 	out := make([]string, 0)
