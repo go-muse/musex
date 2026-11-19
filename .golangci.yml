@@ -377,6 +377,21 @@ linters:
             - github.com/go-muse/musex/interval$
             - github.com/go-muse/musex/template$
             - github.com/go-muse/musex/mode$
+        problemsolving-scalechoice:
+          list-mode: strict
+          files:
+            - "**/problemsolving/scalechoice/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/interval$
+            - github.com/go-muse/musex/mode$
+            - github.com/go-muse/musex/note$
+            - github.com/go-muse/musex/pitchclass$
+            - github.com/go-muse/musex/search$
+            - github.com/go-muse/musex/spelling$
+            - github.com/go-muse/musex/system$
+            - github.com/go-muse/musex/template$
         modal:
           list-mode: strict
           files:

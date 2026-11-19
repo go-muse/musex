@@ -95,6 +95,8 @@ Definitions may differ from conventional ones.
 
 **[Modal positions](guide/packages/modal.md)** describe degrees through their specific intervals. Relative analysis returns high, neutral, or low categories together with the full interval from the first degree. Absolute analysis of a closed perfect-octave mode counts five quality families from each degree and orders equal-score groups from brightest to darkest. Integral augmentations and diminutions count once regardless of multiplicity; fractional qualities are unsupported. This package is unreleased.
 
+**[Scale choice](guide/packages/problemsolving/scalechoice.md)** supports a composer's choice of pitch collection: inspect compatible modal readings, common and missing notes, possible continuations, and the consequences of one trial replacement in a set or a phrase. The caller chooses the scope, comparison, condition, and optional center.
+
 **Chord** is a group of notes that sound together. It keeps the notes in their order of record, repeats included, and has no duration and no harmonic name.
 
 **Tempo map** is an immutable timeline of tempo changes and explicit fermata holds at positions or measure addresses. It distinguishes main and current tempo, supports jumps, gradual changes, a tempo, Tempo I, and metric modulation, and converts seconds to and from positions and measures, with one explicitly selected rounding for the complete result.
@@ -111,6 +113,8 @@ Definitions may differ from conventional ones.
 - **Track positions in a caller-defined cycle.** Create numbered degrees with or without notes, move to neighboring positions or by an arbitrary shift, measure directed and shortest distances, and convert between continuous and normalized numbers while keeping cycle counts explicit.
 - **Find modes from a set of notes.** Search an immutable built-in or custom catalog by exact spelling or pitch class, choose containment or full match, inspect every matching degree and compatible tonic spelling, and group hypotheses without treating them as musical recognition or ranking.
 - **Analyze modal positions.** Pass a mode directly to `modal.Relative` or `modal.GroupRelative` to inspect its degrees. Use `modal.AnalyzeAbsolute` for quality counts, scores, and dense ranks in one complete analysis; equal scores share a rank. Relative analysis also supports open modes and arbitrary cycles.
+
+- **Choose a collection and try a change.** Use `problemsolving/scalechoice` to compare collection groups and readings, filter them by added notes, or branch into a replacement trial with observed-set differences and local written/chromatic motions. Analyses snapshot source contexts and preserve the original material.
 
 ### Build a voice event
 
