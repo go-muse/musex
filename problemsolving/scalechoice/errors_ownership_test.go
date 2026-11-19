@@ -45,6 +45,8 @@ func TestAnalysisInputErrorsBeforeMusicalAbsence(t *testing.T) {
 	noSystem.System = nil
 	invalidSystem := opts()
 	invalidSystem.System = new(system.System)
+	invalidPositionSystem := positionOptions()
+	invalidPositionSystem.System = new(system.System)
 	invalidComparison := opts()
 	invalidComparison.Comparison = 99
 	noComparison := opts()
@@ -69,6 +71,7 @@ func TestAnalysisInputErrorsBeforeMusicalAbsence(t *testing.T) {
 		{"non octave", notes("C"), nonOctave, opts(), scalechoice.ErrInvalidArgument, nil},
 		{"unrepresentable mode", notes("C"), unrepresentable, opts(), scalechoice.ErrInvalidArgument, nil},
 		{"invalid explicit system", notes("C"), template.Catalog{}, invalidSystem, scalechoice.ErrUnset, system.ErrInvalid},
+		{"invalid positional explicit system", notes("C"), template.Catalog{}, invalidPositionSystem, scalechoice.ErrUnset, system.ErrInvalid},
 		{"comparison unset", notes("C"), template.Catalog{}, noComparison, scalechoice.ErrInvalidArgument, nil},
 		{"comparison unknown", notes("C"), template.Catalog{}, invalidComparison, scalechoice.ErrInvalidArgument, nil},
 		{"condition unset", notes("C"), template.Catalog{}, noCondition, scalechoice.ErrInvalidArgument, nil},
@@ -199,6 +202,26 @@ func TestIndependentResultsOwnEveryNestedSlice(t *testing.T) {
 	assert.Equal(t, "C D E F G A B", nameText(r.Degrees()))
 	assert.Equal(t, []int{1}, r.MustDegreesOf(spelling.C()))
 	checkPartition(t, a.MustAfterAdding(spelling.F()), []int{0, 1}, []int{2})
+	freshGroups := a.Groups()
+	require.Len(t, freshGroups, 3)
+	assert.Equal(t, "F B", toneText(freshGroups[0].Missing))
+	assert.Equal(t, "F B-1", toneText(freshGroups[1].Missing))
+	assert.Equal(t, "F+1 B", toneText(freshGroups[2].Missing))
+	freshContinuations := a.Continuations()
+	require.Len(t, freshContinuations, 4)
+	for index, expected := range []struct {
+		name          string
+		kept, dropped []int
+	}{
+		{"F", []int{0, 1}, []int{2}},
+		{"F+1", []int{2}, []int{0, 1}},
+		{"B-1", []int{1}, []int{0, 2}},
+		{"B", []int{0, 2}, []int{1}},
+	} {
+		assert.Equal(t, expected.name, nameText(freshContinuations[index].Tone.Names))
+		checkPartition(t, freshContinuations[index].Groups, expected.kept, expected.dropped)
+	}
+	assert.Equal(t, []string{"ionian", "dorian", "phrygian", "lydian", "mixolydian", "aeolian", "locrian"}, profileCodes(a.Scope()))
 	// Change result slices also belong to that one returned value.
 	o := full()
 	o.System = system.Traditional()
@@ -215,9 +238,26 @@ func TestIndependentResultsOwnEveryNestedSlice(t *testing.T) {
 	ch.Neighbors[0].From = 999
 	assert.Equal(t, afterBaseline, describe(ch.After))
 	again := line.MustReplaceAll(spelling.F(), spelling.FSharp())
+	assert.Equal(t, []int{3}, again.Matched)
 	assert.Equal(t, []int{3}, again.Changed)
+	assert.Equal(t, "C D E G A B", toneText(again.Tones.Kept))
+	assert.Equal(t, "F", toneText(again.Tones.Removed))
+	assert.Equal(t, "F+1", toneText(again.Tones.Added))
+	assert.Empty(t, again.Groups.Kept)
 	assert.Equal(t, []int{0}, again.Groups.Removed)
+	assert.Equal(t, []int{0}, again.Groups.Added)
+	assert.Empty(t, again.Readings.Kept)
+	assert.Equal(t, []string{"ionian/C"}, readingKeys(again.Readings.Removed))
 	assert.Equal(t, []string{"lydian/C"}, readingKeys(again.Readings.Added))
+	require.Len(t, again.Neighbors, 2)
+	assert.Equal(t, 2, again.Neighbors[0].From)
+	assert.Equal(t, 3, again.Neighbors[0].To)
+	assert.Equal(t, 3, again.Neighbors[1].From)
+	assert.Equal(t, 4, again.Neighbors[1].To)
+	checkMotion(t, again.Neighbors[0].Before, "m2", 1, o.System)
+	checkMotion(t, again.Neighbors[0].After, "M2", 2, o.System)
+	checkMotion(t, again.Neighbors[1].Before, "M2", 2, o.System)
+	checkMotion(t, again.Neighbors[1].After, "m2", 1, o.System)
 }
 
 func TestConcurrentReadsAndIndependentTrialBranches(t *testing.T) {

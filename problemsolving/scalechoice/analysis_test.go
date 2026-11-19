@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-muse/musex/interval"
 	"github.com/go-muse/musex/problemsolving/scalechoice"
+	"github.com/go-muse/musex/search"
 	"github.com/go-muse/musex/spelling"
 	"github.com/go-muse/musex/system"
 	"github.com/go-muse/musex/template"
@@ -213,4 +214,64 @@ func TestSetAndPhraseHaveTheSameSearchWithoutMetadata(t *testing.T) {
 	assert.Equal(t, notesText(input), notesText(b.Notes()))
 	checkNotes(t, input, a.Notes())
 	checkNotes(t, input, b.Notes())
+}
+
+func TestPositionalContinuationsMergeNamesAndFilterByClass(t *testing.T) {
+	t.Parallel()
+	// All profiles have tonic class C. The first and third describe the same
+	// collection {0,2} using C-D and C-C-double-sharp; the other is {0,3}.
+	scope := template.MustNewCatalog(
+		customCatalog("second", []interval.Interval{interval.PerfectUnison(), interval.MajorSecond()}, interval.PerfectOctave()).Entries()[0],
+		customCatalog("third", []interval.Interval{interval.PerfectUnison(), interval.MinorThird()}, interval.PerfectOctave()).Entries()[0],
+		customCatalog("augmented-unison", []interval.Interval{interval.PerfectUnison(), interval.MustParse("AA1")}, interval.PerfectOctave()).Entries()[0],
+	)
+	o := positionOptions()
+	o.Condition = search.Containment
+	o.Center = spelling.C()
+	// B-sharp is a second observed spelling of class zero, not a second tone.
+	a, err := scalechoice.AnalyzeSet(notes("C B+1"), scope, o)
+	require.NoError(t, err)
+	groups := a.Groups()
+	require.Len(t, groups, 2)
+	assert.Equal(t, []int{0, 2}, classes(groups[0].Tones))
+	assert.Equal(t, []int{0, 3}, classes(groups[1].Tones))
+	assert.Equal(t, []string{"second/C", "augmented-unison/C"}, readingKeys(groups[0].Readings))
+	assert.Equal(t, []string{"third/C"}, readingKeys(groups[1].Readings))
+	for _, group := range groups {
+		assert.Equal(t, "C B+1", nameText(group.Tones[0].Names))
+	}
+	assert.Equal(t, []int{2}, classes(groups[0].Missing))
+	assert.Equal(t, "C+2 D", nameText(groups[0].Missing[0].Names))
+	assert.Equal(t, []int{3}, classes(groups[1].Missing))
+	assert.Equal(t, "E-1", nameText(groups[1].Missing[0].Names))
+	common := a.Common()
+	require.Len(t, common, 1)
+	assert.Equal(t, []int{0}, classes(common))
+	assert.Equal(t, "C B+1", nameText(common[0].Names))
+	continuations := a.Continuations()
+	require.Len(t, continuations, 2, "enharmonic names share one continuation")
+	assert.Equal(t, 2, continuations[0].Tone.Class.Number())
+	assert.Equal(t, "C+2 D", nameText(continuations[0].Tone.Names))
+	checkPartition(t, continuations[0].Groups, []int{0}, []int{1})
+	assert.Equal(t, 3, continuations[1].Tone.Class.Number())
+	assert.Equal(t, "E-1", nameText(continuations[1].Tone.Names))
+	checkPartition(t, continuations[1].Groups, []int{1}, []int{0})
+	// E-double-flat is absent from the displayed class-2 names, and D-sharp
+	// is absent from the class-3 names. Their classes still select the groups.
+	for _, tc := range []struct {
+		added         string
+		kept, dropped []int
+	}{
+		{"E-2", []int{0}, []int{1}},
+		{"D C+2 E-2", []int{0}, []int{1}},
+		{"D+1", []int{1}, []int{0}},
+		{"D+1 E-1", []int{1}, []int{0}},
+		{"E-2 D+1", nil, []int{0, 1}},
+		{"B+1 C", []int{0, 1}, nil},
+	} {
+		partition, err := a.AfterAdding(names(tc.added)...)
+		require.NoError(t, err)
+		checkPartition(t, partition, tc.kept, tc.dropped)
+	}
+	assert.Len(t, a.Continuations(), 2, "filtering must not expand or mutate the choices")
 }
