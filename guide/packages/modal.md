@@ -3,7 +3,7 @@
 The `modal` package analyzes the numbered degrees of a [mode](mode.md) through
 their specific [intervals](interval.md). Pass the mode directly to a query;
 the analysis uses its written structure and needs no tonic note or musical
-system. This package is unreleased.
+system.
 
 ## Relative positions
 
