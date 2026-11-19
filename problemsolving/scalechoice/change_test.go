@@ -113,7 +113,11 @@ func TestNoOpAbsentAndCentsOnlyReplacement(t *testing.T) {
 	}{{spelling.F(), spelling.F(), []int{3, 7}}, {spelling.CSharp(), spelling.DFlat(), nil}} {
 		ch, err := a.ReplaceAll(tc.old, tc.new)
 		require.NoError(t, err)
-		assert.Equal(t, tc.matched, ch.Matched)
+		if len(tc.matched) == 0 {
+			assert.Empty(t, ch.Matched)
+		} else {
+			assert.Equal(t, tc.matched, ch.Matched)
+		}
 		assert.Empty(t, ch.Changed)
 		assert.Empty(t, ch.Neighbors)
 		assert.Empty(t, ch.Tones.Removed)
