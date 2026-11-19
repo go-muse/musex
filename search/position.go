@@ -178,7 +178,7 @@ func (s Searcher) ByPositionFromContext(notes []note.Note, condition Condition) 
 
 	var (
 		sys     *system.System
-		read    []note.Note
+		read    note.Notes
 		systems []*system.System
 	)
 	for _, n := range notes {
@@ -231,7 +231,7 @@ type positionInput struct {
 	names   map[spelling.Spelling]struct{}
 }
 
-func readPositionInput(sys *system.System, notes []note.Note) (positionInput, error) {
+func readPositionInput(sys *system.System, notes note.Notes) (positionInput, error) {
 	classes := make(map[pitchclass.Class]struct{}, len(notes))
 	names := make(map[spelling.Spelling]struct{}, len(notes))
 	for i, n := range notes {

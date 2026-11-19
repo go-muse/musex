@@ -137,7 +137,7 @@ func (c Content) Notes() ([]note.Note, error) {
 		return nil, ErrUnsetContent
 	}
 	if c.kind == KindNote {
-		return []note.Note{c.note}, nil
+		return note.Notes{c.note}, nil
 	}
 	return c.chord.Notes(), nil
 }

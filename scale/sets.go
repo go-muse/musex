@@ -3,8 +3,8 @@ package scale
 import "github.com/go-muse/musex/note"
 
 // partition assigns each occurrence to its first representative.
-func partition(p prepared, ns []note.Note) ([]note.Note, []int, error) {
-	representatives := make([]note.Note, 0)
+func partition(p prepared, ns note.Notes) (note.Notes, []int, error) {
+	representatives := make(note.Notes, 0)
 	classes := make([]int, len(ns))
 	for i, n := range ns {
 		found := -1
@@ -26,7 +26,7 @@ func partition(p prepared, ns []note.Note) ([]note.Note, []int, error) {
 	}
 	return representatives, classes, nil
 }
-func (s *Scale) contents(other *Scale, by []Comparison) ([]note.Note, []int, []int, error) {
+func (s *Scale) contents(other *Scale, by []Comparison) (note.Notes, []int, []int, error) {
 	if s == nil || other == nil {
 		return nil, nil, nil, ErrUnset
 	}
@@ -95,7 +95,7 @@ func (s *Scale) combine(other *Scale, kind uint8, by []Comparison) (*Scale, erro
 	if err != nil {
 		return nil, err
 	}
-	result := make([]note.Note, 0)
+	result := make(note.Notes, 0)
 	for i, n := range reps {
 		include := kind == 0 && left[i] > 0 && right[i] > 0 || kind == 1 && left[i] > 0 && right[i] == 0 || kind == 2
 		if include {

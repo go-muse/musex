@@ -172,7 +172,7 @@ func (n Note) MustOctaveDistance(other Note) int {
 }
 
 // checkNotes reports ErrUnset for the first unset note.
-func checkNotes(op string, notes []Note) error {
+func checkNotes(op string, notes Notes) error {
 	for _, x := range notes {
 		if err := checkNote(op, x); err != nil {
 			return err
@@ -183,7 +183,7 @@ func checkNotes(op string, notes []Note) error {
 }
 
 // checkOctaves reports ErrNoOctave for the first note without an octave.
-func checkOctaves(op string, notes []Note) error {
+func checkOctaves(op string, notes Notes) error {
 	for _, x := range notes {
 		if err := checkOctave(op, x); err != nil {
 			return err
@@ -198,7 +198,7 @@ func checkOctaves(op string, notes []Note) error {
 // order (each source once), then ErrInadmissible for the first inadmissible
 // name. Notes with one snapshot of settings share one frame, so the tuning of
 // the snapshot is copied at most once.
-func frames(op string, r *reader, c opContext, notes []Note) ([]*frame, error) {
+func frames(op string, r *reader, c opContext, notes Notes) ([]*frame, error) {
 	fs := make([]*frame, len(notes))
 
 	switch {
@@ -247,7 +247,7 @@ func frames(op string, r *reader, c opContext, notes []Note) ([]*frame, error) {
 
 // positionSystem returns the one system of the notes for an operation by
 // position: the checks of frames, then ErrDifferentSystems.
-func positionSystem(op string, r *reader, c opContext, notes []Note) (*system.System, error) {
+func positionSystem(op string, r *reader, c opContext, notes Notes) (*system.System, error) {
 	fs, err := frames(op, r, c, notes)
 	if err != nil {
 		return nil, err
@@ -267,7 +267,7 @@ func positionSystem(op string, r *reader, c opContext, notes []Note) (*system.Sy
 // position checks the notes for an operation by position and returns their
 // system. Every note must have an octave unless names is true; then all the
 // notes must have an octave, or none.
-func position(op string, c opContext, notes []Note, names bool) (*system.System, error) {
+func position(op string, c opContext, notes Notes, names bool) (*system.System, error) {
 	if err := checkNotes(op, notes); err != nil {
 		return nil, err
 	}
@@ -290,7 +290,7 @@ func position(op string, c opContext, notes []Note, names bool) (*system.System,
 }
 
 func (n Note) equivalent(op string, c opContext, other Note) (bool, error) {
-	sys, err := position(op, c, []Note{n, other}, true)
+	sys, err := position(op, c, Notes{n, other}, true)
 	if err != nil {
 		return false, err
 	}
@@ -349,7 +349,7 @@ func (n Note) MustEquivalentInTuning(t *tuning.Tuning, other Note) bool {
 }
 
 func (n Note) comparePosition(op string, c opContext, other Note) (int, error) {
-	sys, err := position(op, c, []Note{n, other}, false)
+	sys, err := position(op, c, Notes{n, other}, false)
 	if err != nil {
 		return 0, err
 	}
@@ -401,7 +401,7 @@ func (n Note) MustComparePositionInTuning(t *tuning.Tuning, other Note) int {
 }
 
 func (n Note) between(op string, c opContext, a, b Note) (bool, error) {
-	sys, err := position(op, c, []Note{n, a, b}, false)
+	sys, err := position(op, c, Notes{n, a, b}, false)
 	if err != nil {
 		return false, err
 	}
@@ -449,7 +449,7 @@ func (n Note) MustBetweenInTuning(t *tuning.Tuning, a, b Note) bool {
 }
 
 func (n Note) distance(op string, c opContext, to Note) (system.Step, error) {
-	sys, err := position(op, c, []Note{n, to}, false)
+	sys, err := position(op, c, Notes{n, to}, false)
 	if err != nil {
 		return 0, err
 	}
@@ -499,7 +499,7 @@ func (n Note) MustDistanceInTuning(t *tuning.Tuning, to Note) system.Step {
 // sounding prepares notes for an operation by sound: the checks of the notes
 // (ErrUnset, then the criterion when crit is not nil), ErrNoOctave, then the
 // frames of the notes.
-func sounding(op string, c opContext, crit *frequency.Criterion, notes []Note) ([]*frame, error) {
+func sounding(op string, c opContext, crit *frequency.Criterion, notes Notes) ([]*frame, error) {
 	if err := checkNotes(op, notes); err != nil {
 		return nil, err
 	}
@@ -574,7 +574,7 @@ func (p soundPair) frequencies(op string) (float64, float64, error) {
 
 // pair prepares n and other for a comparison by sound.
 func (n Note) pair(op string, c opContext, crit *frequency.Criterion, other Note) (soundPair, error) {
-	fs, err := sounding(op, c, crit, []Note{n, other})
+	fs, err := sounding(op, c, crit, Notes{n, other})
 	if err != nil {
 		return soundPair{}, err
 	}

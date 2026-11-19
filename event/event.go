@@ -185,7 +185,7 @@ func (e *Event) TiedNotes() ([]note.Note, error) {
 	if !e.IsSet() {
 		return nil, ErrUnset
 	}
-	notes := make([]note.Note, len(e.marks.Ties))
+	notes := make(note.Notes, len(e.marks.Ties))
 	for i, index := range e.marks.Ties {
 		n, err := e.content.At(index)
 		if err != nil {

@@ -115,7 +115,7 @@ func (s *Scale) Take(start, count int, direction Direction) (*Scale, error) {
 	if count > maxNotes {
 		return nil, ErrOutOfRange
 	}
-	ns := make([]note.Note, 0, count)
+	ns := make(note.Notes, 0, count)
 	for n := range seq {
 		ns = append(ns, n)
 	}
@@ -165,7 +165,7 @@ func (s *Scale) MoveFrom(from Selection, distance int, by ...Comparison) (Elemen
 	if err := s.check(); err != nil {
 		return Element{}, err
 	}
-	p, err := prepare(by, s.notes, []note.Note{from.Note})
+	p, err := prepare(by, s.notes, note.Notes{from.Note})
 	if err != nil {
 		return Element{}, err
 	}
@@ -175,7 +175,7 @@ func (s *Scale) MoveFrom(from Selection, distance int, by ...Comparison) (Elemen
 	}
 	return s.Move(index, distance)
 }
-func selections(ns []note.Note) []Selection {
+func selections(ns note.Notes) []Selection {
 	result := make([]Selection, len(ns))
 	for i, n := range ns {
 		result[i] = Selection{Note: n}
@@ -206,7 +206,7 @@ func (s *Scale) melody(notes []Selection, amount int, mirror bool, by []Comparis
 	if err := s.check(); err != nil {
 		return nil, err
 	}
-	ns := make([]note.Note, len(notes))
+	ns := make(note.Notes, len(notes))
 	selected := make([]Selection, len(notes))
 	for i, n := range notes {
 		selected[i] = n
@@ -241,7 +241,7 @@ func (s *Scale) melody(notes []Selection, amount int, mirror bool, by []Comparis
 	if err != nil {
 		return nil, err
 	}
-	result := make([]note.Note, len(ns))
+	result := make(note.Notes, len(ns))
 	for i, n := range selected {
 		index, err := s.resolve(n, p)
 		if err != nil {

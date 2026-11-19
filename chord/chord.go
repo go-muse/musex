@@ -38,7 +38,7 @@ type Chord struct {
 	// notes are the notes in the order of record. The array behind notes is
 	// never written after it is stored in a chord: copies share it, and every
 	// change stores a new array of exact length (copy on write).
-	notes []note.Note
+	notes note.Notes
 	// set tells a set chord from the unset one; the unset chord has no notes.
 	set bool
 }
@@ -96,10 +96,11 @@ func (c Chord) Len() int {
 // record. It is never nil: the empty and the unset chord give an empty slice.
 // Changing the slice or its notes does not change c.
 func (c Chord) Notes() []note.Note {
-	out := make([]note.Note, len(c.notes))
-	copy(out, c.notes)
+	if len(c.notes) == 0 {
+		return note.Notes{}
+	}
 
-	return out
+	return c.notes.Clone()
 }
 
 // All returns a sequence of the numbers and copies of the notes of c in the
@@ -165,7 +166,7 @@ func (c Chord) SortedNotes() []note.Note {
 func (c Chord) DistinctNotes() []note.Note {
 	ids, count := classes(c.notes, nil, note.Note.Equal)
 	seen := make([]bool, count)
-	out := make([]note.Note, 0, count)
+	out := make(note.Notes, 0, count)
 
 	for i, n := range c.notes {
 		if !seen[ids[i]] {
@@ -253,12 +254,12 @@ func (c *Chord) check(op string) error {
 // behind notes must be new or already shared by chords, and it is never
 // written afterwards; the capacity is cut so that no later append can write
 // into the array.
-func (c *Chord) put(notes []note.Note) {
+func (c *Chord) put(notes note.Notes) {
 	c.notes = notes[:len(notes):len(notes)]
 }
 
 // checkNotes reports ErrUnset for the first unset note of notes given to op.
-func checkNotes(op string, notes []note.Note) error {
+func checkNotes(op string, notes note.Notes) error {
 	for i, n := range notes {
 		if !n.IsValid() {
 			return unsetNoteError(op, i)
@@ -269,15 +270,12 @@ func checkNotes(op string, notes []note.Note) error {
 }
 
 // cloneNotes returns a new array with the notes, or nil for no notes.
-func cloneNotes(notes []note.Note) []note.Note {
+func cloneNotes(notes note.Notes) note.Notes {
 	if len(notes) == 0 {
 		return nil
 	}
 
-	out := make([]note.Note, len(notes))
-	copy(out, notes)
-
-	return out
+	return notes.Clone()
 }
 
 // classes divides the notes of a followed by the notes of b into classes of
@@ -288,7 +286,7 @@ func cloneNotes(notes []note.Note) []note.Note {
 // same holds form one class. same must hold only for notes that stand
 // together in that order: note.Note.Equal (Compare == 0 for set notes) or
 // note.Note.SameRecord (the correction is the last key of Compare).
-func classes(a, b []note.Note, same func(x, y note.Note) bool) (ids []int, count int) {
+func classes(a, b note.Notes, same func(x, y note.Note) bool) (ids []int, count int) {
 	total := len(a) + len(b)
 	if total == 0 {
 		return nil, 0
@@ -327,7 +325,7 @@ func classes(a, b []note.Note, same func(x, y note.Note) bool) (ids []int, count
 
 // multiplicities returns, for the classes of classes(a, b, same), the number
 // of the notes of a and of b in every class.
-func multiplicities(a, b []note.Note, same func(x, y note.Note) bool) (ids, inA, inB []int) {
+func multiplicities(a, b note.Notes, same func(x, y note.Note) bool) (ids, inA, inB []int) {
 	ids, count := classes(a, b, same)
 	inA = make([]int, count)
 	inB = make([]int, count)

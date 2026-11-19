@@ -62,7 +62,7 @@ type prepared struct {
 	sys        *system.System
 }
 
-func prepare(by []Comparison, groups ...[]note.Note) (prepared, error) {
+func prepare(by []Comparison, groups ...note.Notes) (prepared, error) {
 	p := prepared{}
 	for _, ns := range groups {
 		if err := validNotes(ns); err != nil {
@@ -79,7 +79,7 @@ func prepare(by []Comparison, groups ...[]note.Note) (prepared, error) {
 	if c.kind < comparePosition {
 		return p, nil
 	}
-	var all []note.Note
+	var all note.Notes
 	for _, ns := range groups {
 		all = append(all, ns...)
 	}
@@ -177,7 +177,7 @@ func (s *Scale) Find(n note.Note, by ...Comparison) ([]int, error) {
 	if err := s.check(); err != nil {
 		return nil, err
 	}
-	p, err := prepare(by, s.notes, []note.Note{n})
+	p, err := prepare(by, s.notes, note.Notes{n})
 	if err != nil {
 		return nil, err
 	}

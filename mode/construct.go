@@ -133,7 +133,7 @@ func OpenFromNotes(notes []note.Note) (Mode, error) {
 	return fromConstruction(template.OpenFromSpellings(names))
 }
 
-func noteSpellings(notes []note.Note) ([]spelling.Spelling, error) {
+func noteSpellings(notes note.Notes) ([]spelling.Spelling, error) {
 	for i, n := range notes {
 		if !n.IsValid() {
 			return nil, fmt.Errorf("%w: note %d", ErrUnset, i+1)

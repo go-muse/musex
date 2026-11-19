@@ -125,6 +125,27 @@
 // h + c in cents, not the rounded frequencies. Otherwise frequencies are
 // compared, strictly or by a criterion of package frequency.
 //
+// # Lists of notes
+//
+// Notes is an ordered, mutable slice of notes, with repetitions allowed. It
+// adds Clone and methods for the same stable position and sound sorts as the
+// package functions. The existing functions and the APIs of other packages
+// continue to use []Note; a Notes value can be passed to them directly, or as
+// ns... to a variadic operation.
+//
+// Assignment and conversion share the array; Clone copies the elements:
+//
+//	ns := note.Notes{a4, a4}
+//	alias := ns             // alias[0] and ns[0] are the same element
+//	independent := ns.Clone() // changes to independent do not change ns
+//	ordered, err := ns.SortedBySound()
+//
+// The caller handles err before using ordered. Each copied note retains its
+// settings source. Clone preserves nil versus non-nil emptiness and accepts
+// unset notes without reading sources. A successful sort returns a non-nil
+// empty list for either empty form, and validates notes by the sort's usual
+// contract. On error a sort returns nil; its Must form panics with that error.
+//
 // # Errors
 //
 // Errors are tested with errors.Is against the sentinels of the package and

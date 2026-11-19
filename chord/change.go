@@ -30,7 +30,7 @@ func (c *Chord) Add(notes ...note.Note) error {
 		return nil
 	}
 
-	out := make([]note.Note, len(c.notes)+len(notes))
+	out := make(note.Notes, len(c.notes)+len(notes))
 	copy(out, c.notes)
 	copy(out[len(c.notes):], notes)
 	c.put(out)
@@ -59,7 +59,7 @@ func (c *Chord) AddMissing(notes ...note.Note) error {
 		present[id] = count > 0
 	}
 
-	var added []note.Note
+	var added note.Notes
 
 	for k, n := range notes {
 		id := ids[len(c.notes)+k]
@@ -73,7 +73,7 @@ func (c *Chord) AddMissing(notes ...note.Note) error {
 		return nil
 	}
 
-	out := make([]note.Note, len(c.notes)+len(added))
+	out := make(note.Notes, len(c.notes)+len(added))
 	copy(out, c.notes)
 	copy(out[len(c.notes):], added)
 	c.put(out)
@@ -104,7 +104,7 @@ func (c *Chord) Insert(i int, notes ...note.Note) error {
 		return nil
 	}
 
-	out := make([]note.Note, len(c.notes)+len(notes))
+	out := make(note.Notes, len(c.notes)+len(notes))
 	copy(out, c.notes[:i])
 	copy(out[i:], notes)
 	copy(out[i+len(notes):], c.notes[i:])
@@ -139,7 +139,7 @@ func (c *Chord) RemoveAll(n note.Note) error {
 		return err
 	}
 
-	out := make([]note.Note, 0, len(c.notes))
+	out := make(note.Notes, 0, len(c.notes))
 
 	for _, x := range c.notes {
 		if !x.Equal(n) {
@@ -284,7 +284,7 @@ func (c *Chord) ReplaceFunc(t Transform) error {
 		return nil
 	}
 
-	out := make([]note.Note, len(c.notes))
+	out := make(note.Notes, len(c.notes))
 
 	for i, n := range c.notes {
 		r, err := transform("ReplaceFunc", i, n, t)
@@ -380,7 +380,7 @@ func (c *Chord) Union(other Chord) error {
 	ids, inC, _ := multiplicities(c.notes, other.notes, note.Note.Equal)
 	seen := make([]int, len(inC))
 
-	var added []note.Note
+	var added note.Notes
 
 	for k, n := range other.notes {
 		id := ids[len(c.notes)+k]
@@ -395,7 +395,7 @@ func (c *Chord) Union(other Chord) error {
 		return nil
 	}
 
-	out := make([]note.Note, len(c.notes)+len(added))
+	out := make(note.Notes, len(c.notes)+len(added))
 	copy(out, c.notes)
 	copy(out[len(c.notes):], added)
 	c.put(out)
@@ -417,7 +417,7 @@ func (c *Chord) Intersect(other Chord) error {
 
 	ids, _, inOther := multiplicities(c.notes, other.notes, note.Note.Equal)
 	kept := make([]int, len(inOther))
-	out := make([]note.Note, 0, len(c.notes))
+	out := make(note.Notes, 0, len(c.notes))
 
 	for k, n := range c.notes {
 		id := ids[k]
@@ -450,7 +450,7 @@ func (c *Chord) Subtract(other Chord) error {
 
 	ids, _, inOther := multiplicities(c.notes, other.notes, note.Note.Equal)
 	removed := make([]int, len(inOther))
-	out := make([]note.Note, 0, len(c.notes))
+	out := make(note.Notes, 0, len(c.notes))
 
 	for k, n := range c.notes {
 		id := ids[k]
@@ -631,7 +631,7 @@ func (c *Chord) filter(op string, cond Condition, keep bool) error {
 		return err
 	}
 
-	out := make([]note.Note, 0, len(c.notes))
+	out := make(note.Notes, 0, len(c.notes))
 
 	for i, n := range c.notes {
 		if selected[i] == keep {
@@ -686,8 +686,8 @@ func transform(op string, i int, n note.Note, t Transform) (note.Note, error) {
 }
 
 // without returns a new array with the notes except the one with number i.
-func without(notes []note.Note, i int) []note.Note {
-	out := make([]note.Note, len(notes)-1)
+func without(notes note.Notes, i int) note.Notes {
+	out := make(note.Notes, len(notes)-1)
 	copy(out, notes[:i])
 	copy(out[i:], notes[i+1:])
 
