@@ -93,6 +93,8 @@ Definitions may differ from conventional ones.
 
 **[Search](guide/packages/search.md)** finds mode-and-tonic hypotheses whose actual degree notes contain or exactly match a set of input notes. It supports exact-spelling and positional matching in a chosen or context-derived system, tonic-family spellings, and stable grouping without ranking musical likelihood.
 
+**[Modal positions](guide/packages/modal.md)** describe degrees through their specific intervals. Relative analysis returns high, neutral, or low categories together with the full interval from the first degree. Absolute analysis of a closed perfect-octave mode counts five quality families from each degree and orders equal-score groups from brightest to darkest. Integral augmentations and diminutions count once regardless of multiplicity; fractional qualities are unsupported. This package is unreleased.
+
 **[Scale choice](guide/packages/problemsolving/scalechoice.md)** supports a composer's choice of pitch collection: inspect compatible modal readings, common and missing notes, possible continuations, and the consequences of one trial replacement in a set or a phrase. The caller chooses the scope, comparison, condition, and optional center.
 
 **Chord** is a group of notes that sound together. It keeps the notes in their order of record, repeats included, and has no duration and no harmonic name.
@@ -110,6 +112,7 @@ Definitions may differ from conventional ones.
 - **Convert between the written model and MIDI note numbers.** Create any of the 128 numbers, inspect its positional octave and class, shift it without overflow, and convert written pitches and notes in a traditional C-layout system. Choose the return spelling explicitly with sharps, flats, or a custom rule, attach zero or a specific correction, and handle missing inputs, unsupported layouts, and out-of-range results as distinct errors.
 - **Track positions in a caller-defined cycle.** Create numbered degrees with or without notes, move to neighboring positions or by an arbitrary shift, measure directed and shortest distances, and convert between continuous and normalized numbers while keeping cycle counts explicit.
 - **Find modes from a set of notes.** Search an immutable built-in or custom catalog by exact spelling or pitch class, choose containment or full match, inspect every matching degree and compatible tonic spelling, and group hypotheses without treating them as musical recognition or ranking.
+- **Analyze modal positions.** Pass a mode directly to `modal.Relative` or `modal.GroupRelative` to inspect its degrees. Use `modal.AnalyzeAbsolute` for quality counts, scores, and dense ranks in one complete analysis; equal scores share a rank. Relative analysis also supports open modes and arbitrary cycles.
 
 - **Choose a collection and try a change.** Use `problemsolving/scalechoice` to compare collection groups and readings, filter them by added notes, or branch into a replacement trial with observed-set differences and local written/chromatic motions. Analyses snapshot source contexts and preserve the original material.
 
