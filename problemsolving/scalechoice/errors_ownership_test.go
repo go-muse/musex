@@ -23,7 +23,7 @@ import (
 func TestAnalysisInputErrorsBeforeMusicalAbsence(t *testing.T) {
 	t.Parallel()
 	invalidScope := template.MustNewCatalog(template.MustNewEntry("open", []string{"open"}, template.MustOpenFromIntervals([]interval.Interval{interval.MajorSecond()})))
-	nonOctave := customCatalog("two octaves", []interval.Interval{interval.PerfectUnison()}, interval.PerfectFifteenth())
+	nonOctave := customCatalog("two-octaves", []interval.Interval{interval.PerfectUnison()}, interval.PerfectFifteenth())
 	// The complete written cycle is P8, but its third place has deviation
 	// 2*M-1 and cannot initialize a Mode. Catalog validation must catch it.
 	magnitude := alteration.MaxMagnitude
