@@ -345,7 +345,8 @@ func TestNotesEventCompatibility(t *testing.T) {
 		assert.Empty(t, got)
 	}
 	got, err := (event.Content{}).Notes()
-	assert.ErrorIs(t, err, event.ErrUnset)
+	assert.ErrorIs(t, err, event.ErrUnsetContent)
+	assert.NotErrorIs(t, err, event.ErrUnset)
 	assert.Nil(t, got)
 }
 
