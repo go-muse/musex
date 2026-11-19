@@ -100,7 +100,7 @@ func (s Searcher) IsValid() bool {
 	return s.valid
 }
 
-func (s Searcher) checkInput(notes []note.Note, condition Condition) error {
+func (s Searcher) checkInput(notes note.Notes, condition Condition) error {
 	if !s.IsValid() {
 		return fmt.Errorf("search: unset searcher: %w", ErrUnset)
 	}

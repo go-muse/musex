@@ -212,7 +212,7 @@ func (c Chord) NotesFunc(cond Condition) ([]note.Note, error) {
 		return nil, err
 	}
 
-	out := []note.Note{}
+	out := note.Notes{}
 
 	for i, ok := range selected {
 		if ok {

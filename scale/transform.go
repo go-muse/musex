@@ -63,7 +63,7 @@ func (s *Scale) Repeat(times int) (*Scale, error) {
 	if s.Len() == 0 || times == 0 {
 		return New()
 	}
-	ns := make([]note.Note, 0, s.Len()*times)
+	ns := make(note.Notes, 0, s.Len()*times)
 	for range times {
 		ns = append(ns, s.notes...)
 	}
@@ -73,7 +73,7 @@ func (s *Scale) mapNotes(change func(note.Note) (note.Note, error)) (*Scale, err
 	if s == nil {
 		return nil, ErrUnset
 	}
-	ns := make([]note.Note, len(s.notes))
+	ns := make(note.Notes, len(s.notes))
 	for i, n := range s.notes {
 		value, err := change(n)
 		if err != nil {

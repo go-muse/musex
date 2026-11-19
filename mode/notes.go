@@ -26,11 +26,11 @@ func (m Mode) NotesFromIn(sys *system.System, first note.Note) ([]note.Note, err
 	return m.notesFrom(sys, first, true)
 }
 
-func (m Mode) notesFrom(sys *system.System, first note.Note, explicit bool) ([]note.Note, error) {
+func (m Mode) notesFrom(sys *system.System, first note.Note, explicit bool) (note.Notes, error) {
 	if !m.IsValid() || !first.IsValid() || (explicit && !sys.IsValid()) {
 		return nil, ErrUnset
 	}
-	result := make([]note.Note, m.Len())
+	result := make(note.Notes, m.Len())
 	for i, prefix := range m.prefixes {
 		n, err := transposeNote(sys, first, coordinatesOf(prefix))
 		if err != nil {
@@ -51,7 +51,7 @@ func (m Mode) DegreesFromIn(sys *system.System, first note.Note) ([]degree.Degre
 	return degreesWithNotes(m.NotesFromIn(sys, first))
 }
 
-func degreesWithNotes(notes []note.Note, err error) ([]degree.Degree, error) {
+func degreesWithNotes(notes note.Notes, err error) ([]degree.Degree, error) {
 	if err != nil {
 		return nil, err
 	}

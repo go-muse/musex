@@ -15,13 +15,13 @@ import (
 // and without reading any source; the In and InTuning forms then check only
 // that the explicit context is set.
 
-func sortedByPosition(op string, c opContext, notes []Note) ([]Note, error) {
+func sortedByPosition(op string, c opContext, notes Notes) (Notes, error) {
 	if len(notes) == 0 {
 		if err := c.check(op); err != nil {
 			return nil, err
 		}
 
-		return []Note{}, nil
+		return Notes{}, nil
 	}
 
 	sys, err := position(op, c, notes, false)
@@ -29,7 +29,7 @@ func sortedByPosition(op string, c opContext, notes []Note) ([]Note, error) {
 		return nil, err
 	}
 
-	out := slices.Clone(notes)
+	out := notes.Clone()
 	slices.SortStableFunc(out, func(x, y Note) int {
 		r, _ := sys.Compare(x.pitch(), y.pitch()) // the notes are checked: no error
 
@@ -46,35 +46,35 @@ func sortedByPosition(op string, c opContext, notes []Note) ([]Note, error) {
 // Errors, in this order: ErrUnset for a note; ErrNoOctave; ErrNoSource;
 // ErrUnsetSettings; ErrInadmissible; ErrDifferentSystems.
 func SortedByPosition(notes []Note) ([]Note, error) {
-	return sortedByPosition("SortedByPosition", ownContext(), notes)
+	return Notes(notes).SortedByPosition()
 }
 
 // MustSortedByPosition is like SortedByPosition but panics with its error.
 func MustSortedByPosition(notes []Note) []Note {
-	return must(SortedByPosition(notes))
+	return Notes(notes).MustSortedByPosition()
 }
 
 // SortedByPositionIn is like SortedByPosition in the settings of the explicit
 // source src for all notes. A nil src reports ErrUnset.
 func SortedByPositionIn(src settings.Source, notes []Note) ([]Note, error) {
-	return sortedByPosition("SortedByPositionIn", sourceContext(src), notes)
+	return Notes(notes).SortedByPositionIn(src)
 }
 
 // MustSortedByPositionIn is like SortedByPositionIn but panics with its error.
 func MustSortedByPositionIn(src settings.Source, notes []Note) []Note {
-	return must(SortedByPositionIn(src, notes))
+	return Notes(notes).MustSortedByPositionIn(src)
 }
 
 // SortedByPositionInTuning is like SortedByPosition in the system of the
 // explicit tuning t. A nil or unset t reports ErrUnset.
 func SortedByPositionInTuning(t *tuning.Tuning, notes []Note) ([]Note, error) {
-	return sortedByPosition("SortedByPositionInTuning", tuningContext(t), notes)
+	return Notes(notes).SortedByPositionInTuning(t)
 }
 
 // MustSortedByPositionInTuning is like SortedByPositionInTuning but panics
 // with its error.
 func MustSortedByPositionInTuning(t *tuning.Tuning, notes []Note) []Note {
-	return must(SortedByPositionInTuning(t, notes))
+	return Notes(notes).MustSortedByPositionInTuning(t)
 }
 
 // soundKey is the key of a note in a sort by sound: the exact height or the
@@ -85,13 +85,13 @@ type soundKey struct {
 	freq   float64
 }
 
-func sortedBySound(op string, c opContext, notes []Note) ([]Note, error) {
+func sortedBySound(op string, c opContext, notes Notes) (Notes, error) {
 	if len(notes) == 0 {
 		if err := c.check(op); err != nil {
 			return nil, err
 		}
 
-		return []Note{}, nil
+		return Notes{}, nil
 	}
 
 	fs, err := sounding(op, c, nil, notes)
@@ -138,7 +138,7 @@ func sortedBySound(op string, c opContext, notes []Note) ([]Note, error) {
 		return cmp.Compare(a.freq, b.freq)
 	})
 
-	out := make([]Note, len(keys))
+	out := make(Notes, len(keys))
 	for i, k := range keys {
 		out[i] = k.note
 	}
@@ -155,33 +155,33 @@ func sortedBySound(op string, c opContext, notes []Note) ([]Note, error) {
 // ErrUnsetSettings; ErrInadmissible; ErrOutOfRange for a key that does not fit
 // (also the error of tuning or cents).
 func SortedBySound(notes []Note) ([]Note, error) {
-	return sortedBySound("SortedBySound", ownContext(), notes)
+	return Notes(notes).SortedBySound()
 }
 
 // MustSortedBySound is like SortedBySound but panics with its error.
 func MustSortedBySound(notes []Note) []Note {
-	return must(SortedBySound(notes))
+	return Notes(notes).MustSortedBySound()
 }
 
 // SortedBySoundIn is like SortedBySound in the settings of the explicit source
 // src for all notes. A nil src reports ErrUnset.
 func SortedBySoundIn(src settings.Source, notes []Note) ([]Note, error) {
-	return sortedBySound("SortedBySoundIn", sourceContext(src), notes)
+	return Notes(notes).SortedBySoundIn(src)
 }
 
 // MustSortedBySoundIn is like SortedBySoundIn but panics with its error.
 func MustSortedBySoundIn(src settings.Source, notes []Note) []Note {
-	return must(SortedBySoundIn(src, notes))
+	return Notes(notes).MustSortedBySoundIn(src)
 }
 
 // SortedBySoundInTuning is like SortedBySound in the explicit tuning t for all
 // notes. A nil or unset t reports ErrUnset.
 func SortedBySoundInTuning(t *tuning.Tuning, notes []Note) ([]Note, error) {
-	return sortedBySound("SortedBySoundInTuning", tuningContext(t), notes)
+	return Notes(notes).SortedBySoundInTuning(t)
 }
 
 // MustSortedBySoundInTuning is like SortedBySoundInTuning but panics with its
 // error.
 func MustSortedBySoundInTuning(t *tuning.Tuning, notes []Note) []Note {
-	return must(SortedBySoundInTuning(t, notes))
+	return Notes(notes).MustSortedBySoundInTuning(t)
 }

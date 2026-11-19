@@ -12,7 +12,7 @@ import (
 
 // Scale owns an ordered list. Its zero value is an empty scale. Mutations
 // replace the backing list, so copies made by assignment remain independent.
-type Scale struct{ notes []note.Note }
+type Scale struct{ notes note.Notes }
 
 // Direction selects a direction through a list.
 type Direction int8
@@ -65,7 +65,7 @@ var (
 	ErrOutOfRange      = errors.New("scale: result out of range")
 )
 
-func validNotes(ns []note.Note) error {
+func validNotes(ns note.Notes) error {
 	for _, n := range ns {
 		if !n.IsValid() {
 			return errors.Join(ErrUnset, note.ErrUnset)
@@ -73,7 +73,12 @@ func validNotes(ns []note.Note) error {
 	}
 	return nil
 }
-func owned(ns []note.Note) []note.Note { return append(make([]note.Note, 0, len(ns)), ns...) }
+func owned(ns note.Notes) note.Notes {
+	if len(ns) == 0 {
+		return note.Notes{}
+	}
+	return ns.Clone()
+}
 
 // New copies notes, preserving order and repetitions.
 func New(notes ...note.Note) (*Scale, error) {
@@ -178,7 +183,7 @@ func (s *Scale) Set(index int, n note.Note) error {
 	if err := s.check(); err != nil {
 		return err
 	}
-	if err := validNotes([]note.Note{n}); err != nil {
+	if err := validNotes(note.Notes{n}); err != nil {
 		return err
 	}
 	if err := s.index(index); err != nil {
@@ -213,7 +218,7 @@ func (s *Scale) Insert(index int, notes ...note.Note) error {
 	if err := listSize(len(s.notes), len(notes)); err != nil {
 		return err
 	}
-	ns := make([]note.Note, 0, len(s.notes)+len(notes))
+	ns := make(note.Notes, 0, len(s.notes)+len(notes))
 	ns = append(ns, s.notes[:index]...)
 	ns = append(ns, notes...)
 	ns = append(ns, s.notes[index:]...)
@@ -246,7 +251,7 @@ func (s *Scale) Delete(begin, end int) error {
 	if err := s.bounds(begin, end); err != nil {
 		return err
 	}
-	ns := make([]note.Note, 0, len(s.notes)-(end-begin))
+	ns := make(note.Notes, 0, len(s.notes)-(end-begin))
 	ns = append(ns, s.notes[:begin]...)
 	s.notes = append(ns, s.notes[end:]...)
 	return nil

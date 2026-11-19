@@ -109,7 +109,7 @@ func (m Mode) scaleAdjacent() []coordinates {
 	}
 	return result
 }
-func finishScale(ns []note.Note, strip bool) (*scale.Scale, error) {
+func finishScale(ns note.Notes, strip bool) (*scale.Scale, error) {
 	if strip {
 		for i := range ns {
 			if err := ns[i].RemoveOctave(); err != nil {
@@ -152,7 +152,7 @@ func (m Mode) fromTonicCount(sys *system.System, tonic note.Note, count int, opt
 	if count > maxScaleNotes {
 		return nil, ErrOutOfRange
 	}
-	ns := make([]note.Note, count)
+	ns := make(note.Notes, count)
 	for i := range ns {
 		n, err := transposeNote(sys, tonic, cursor.shift)
 		if err != nil {
@@ -345,7 +345,7 @@ func (m Mode) fromTonicRange(sys *system.System, tonic note.Note, end pitch.Pitc
 			return nil, err
 		}
 	}
-	ns := make([]note.Note, 0)
+	ns := make(note.Notes, 0)
 	for {
 		position, err := shiftedPosition(sys, tonic, cursor.shift)
 		if err != nil {
