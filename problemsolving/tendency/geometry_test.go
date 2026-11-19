@@ -28,7 +28,7 @@ func TestBetweenPlaces(t *testing.T) {
 		{"descending", ionian(), place(1, 0), place(7, -1), iv("m2").MustDown(), tendency.Descending},
 		{"non octave", closed("P1 M3 P5", "P12"), place(3, -1), place(1, 0), iv("P8"), tendency.Ascending},
 		{"single degree", closed("P1", "P5"), place(1, 0), place(1, 1), iv("P5"), tendency.Ascending},
-		{"single open", open("P1"), place(1, 0), place(1, 0), iv("P1"), tendency.Stationary},
+		{"minimal open", open("P1 M2"), place(1, 0), place(2, 0), iv("M2"), tendency.Ascending},
 		{"fractional", mode.MustOpenFromDegreeIntervals([]interval.Interval{iv("P1"), fractional}), place(1, 0), place(2, 0), fractional, tendency.Ascending},
 	}
 	for _, tc := range cases {

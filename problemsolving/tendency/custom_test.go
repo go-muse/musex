@@ -73,8 +73,8 @@ func TestFiniteUserRules(t *testing.T) {
 		assert.NotNil(t, g.Degrees)
 		assert.Empty(t, g.Degrees)
 	}
-	// Pentatonic, single-degree, non-octave and fractional structures retain their own rules.
-	for _, m := range []mode.Mode{mode.MustFromCode("pentatonic-major"), open("P1"), closed("P1 M3 P5", "P12"), mode.MustOpenFromDegreeIntervals([]interval.Interval{iv("P1"), interval.MustFromDeviation(2, alteration.MustFromFraction(-1, 2))})} {
+	// Pentatonic, single-degree, minimal open, non-octave and fractional structures retain their own rules.
+	for _, m := range []mode.Mode{mode.MustFromCode("pentatonic-major"), closed("P1", "P5"), open("P1 M2"), closed("P1 M3 P5", "P12"), mode.MustOpenFromDegreeIntervals([]interval.Interval{iv("P1"), interval.MustFromDeviation(2, alteration.MustFromFraction(-1, 2))})} {
 		d := definition(m)
 		d.Roles = []tendency.RoleRule{{Degree: 1, Role: "Anchor", Bases: basis("anchor")}}
 		custom := tendency.MustNew(d)
