@@ -209,7 +209,7 @@ func TestPitchOperationFailures(t *testing.T) {
 			failsAt(0, voice.ErrNoSystem)},
 		{"one unbound sound is checked", line(rst(q()), snd(free(spelling.C(), 4), q())), nil, false, failsAt(1, voice.ErrNoSystem)},
 		{"name not admissible in the explicit system", line(snd(free(spelling.C(), 4), q()), snd(bad, q())), traditional(), true,
-			failsAt(1, system.ErrInadmissible)},
+			failsAt(1, system.ErrInadmissible).only()},
 		{"КП-45 different systems", line(snd(c4(), q()), snd(n19(spelling.C(), 4), q())), nil, false,
 			failsAt(1, voice.ErrDifferentSystems)},
 		{"the first sound gives the system", line(snd(n19(spelling.C(), 4), q()), snd(c4(), q()), snd(n19(spelling.E(), 4), q())), nil, false,
@@ -288,4 +288,40 @@ func TestIntervalsInOtherSystem(t *testing.T) {
 	lowest, highest := l.MustExtremes()
 	assert.Equal(t, 0, lowest)
 	assert.Equal(t, 1, highest, "E4 is above D sharp 4 in the 19-position system")
+}
+
+// Architecture 6.9, 6.16: a failure of interval.BetweenPitches is the
+// failure of the pair with the index of its second sound; the ambitus fails
+// without *voice.ItemError; range and extremes do not fail after the checks
+// of the sounds.
+func TestPitchResultsOutOfRange(t *testing.T) {
+	t.Parallel()
+	low, high := nt(spelling.C(), -1<<60), nt(spelling.C(), 1<<60)
+	l := line(snd(low, q()), rst(q()), snd(high, q()))
+
+	assertFailure(t, failsAt(2, interval.ErrOutOfRange), l.Intervals, l.MustIntervals)
+	assertFailure(t, failsAt(2, interval.ErrOutOfRange),
+		func() ([]voice.MelodicInterval, error) { return l.IntervalsIn(traditional()) },
+		func() []voice.MelodicInterval { return l.MustIntervalsIn(traditional()) })
+	assertFailure(t, fails(interval.ErrOutOfRange), l.Ambitus, l.MustAmbitus)
+	assertFailure(t, fails(interval.ErrOutOfRange),
+		func() (interval.Interval, error) { return l.AmbitusIn(traditional()) },
+		func() interval.Interval { return l.MustAmbitusIn(traditional()) })
+
+	r, err := l.Range()
+	require.NoError(t, err)
+	assert.True(t, low.MustPitch().Equal(r.Lower()))
+	assert.True(t, high.MustPitch().Equal(r.Upper()))
+	assert.True(t, r.Equal(l.MustRangeIn(traditional())))
+	lowest, highest, err := l.Extremes()
+	require.NoError(t, err)
+	assert.Equal(t, 0, lowest)
+	assert.Equal(t, 2, highest)
+	il, ih := l.MustExtremesIn(traditional())
+	assert.Equal(t, 0, il)
+	assert.Equal(t, 2, ih)
+
+	// A large but representable step gives an interval.
+	assertMelodic(t, []melodic{{0, 1, interval.MustBetweenPitches(traditional(), c4().MustPitch(), high.MustPitch()).String(), false}},
+		line(snd(c4(), q()), snd(high, q())).MustIntervals())
 }

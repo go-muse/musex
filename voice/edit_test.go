@@ -212,13 +212,14 @@ func TestEditFailures(t *testing.T) {
 		{"WithFermata of an unset line", func() (*voice.Line, error) { return unset.WithFermata(9, true) },
 			func() *voice.Line { return unset.MustWithFermata(9, true) }, fails(voice.ErrUnset).only()},
 	}
+	// The receiver is checked after all parallel subtests have finished.
+	t.Cleanup(func() { assertLine(t, line(snd(c4(), q()), rst(q()), snd(d4(), q())), l) })
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			assertFailure(t, tt.want, tt.call, tt.must)
 		})
 	}
-	assertLine(t, line(snd(c4(), q()), rst(q()), snd(d4(), q())), l)
 }
 
 func TestSplitFailures(t *testing.T) {
