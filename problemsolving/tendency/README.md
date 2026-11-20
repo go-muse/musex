@@ -86,7 +86,7 @@ answer := s.MustTendency(m, tendency.Place{Degree: 2})
 
 A nil section means unsupported task. A present empty section has no known rows. A tendency row's nil `Goals` means unknown goals; a present empty goal list means known absence.
 
-For a tendency row, nil `Directions` leaves the direction unknown. An explicitly empty `Directions` list is a known rule admitting no direction: `CheckTransition` denies even a stationary move, while incomplete goal coverage remains `Partial`.
+For a tendency row with `DirectComplete=false`, nil `Directions` leaves the direction unknown. When `DirectComplete=true` and `Directions` is nil, directions are derived from the complete list of `Immediate` goals. An explicitly empty `Directions` list is a known rule admitting no direction: `CheckTransition` denies even a stationary move, while incomplete goal coverage remains `Partial`.
 
 `DirectComplete` specifically asserts completeness of immediate goals. Named/ultimate goals may have unknown cycles, with `CycleKnown: false`, `Cycle: 0`, and unset direction. Repeated modal rows explicitly enable joint cycle translation; open modes cannot repeat. Crossing in finite two-voice data requires `AllowCrossing`.
 
