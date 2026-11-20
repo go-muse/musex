@@ -53,6 +53,7 @@ func reasonRules(reasons []tendency.Reason) []string {
 func checkReasons(t *testing.T, reasons []tendency.Reason) {
 	t.Helper()
 	require.NotEmpty(t, reasons)
+	checkReasonOrder(t, reasons)
 	for index, r := range reasons {
 		assert.NotEmpty(t, r.Rule)
 		assert.NotEmpty(t, r.Reference)
