@@ -44,7 +44,16 @@ func makeRoundingAttempt(
 	places int,
 	mode rounding.Mode,
 ) roundingAttempt {
-	step := decimalStep(places)
+	return makeStepAttempt(precision, maxPrecision, lower, upper, decimalStep(places), mode)
+}
+
+// makeStepAttempt selects the rounding candidates of lower and upper on the
+// grid k*step. It is makeRoundingAttempt with an arbitrary positive step.
+func makeStepAttempt(
+	precision, maxPrecision uint,
+	lower, upper, step *big.Rat,
+	mode rounding.Mode,
+) roundingAttempt {
 	lowerK, _, err := mode.RatMultiple(lower, step)
 	if err != nil {
 		panic(err)
@@ -67,10 +76,20 @@ func roundWithLimit(
 	initialPrecision, maxPrecision uint,
 	eval func(precision uint) (lower, upper *big.Rat),
 ) (k *big.Int, usedPrecision, refinements uint, ok bool) {
+	return roundStepWithLimit(decimalStep(places), mode, initialPrecision, maxPrecision, eval)
+}
+
+// roundStepWithLimit is roundWithLimit on the grid k*step.
+func roundStepWithLimit(
+	step *big.Rat,
+	mode rounding.Mode,
+	initialPrecision, maxPrecision uint,
+	eval func(precision uint) (lower, upper *big.Rat),
+) (k *big.Int, usedPrecision, refinements uint, ok bool) {
 	precision := initialPrecision
 	for {
 		lower, upper := eval(precision)
-		attempt := makeRoundingAttempt(precision, maxPrecision, lower, upper, places, mode)
+		attempt := makeStepAttempt(precision, maxPrecision, lower, upper, step, mode)
 		if attempt.decided {
 			return new(big.Int).Set(attempt.lowerK), precision, refinements, true
 		}
@@ -92,6 +111,11 @@ func roundWithLimit(
 func roundingNode(k *big.Int, places int) *big.Rat {
 	scale := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(places)), nil)
 	return new(big.Rat).SetFrac(new(big.Int).Set(k), scale)
+}
+
+// stepNode returns k*step as a new value.
+func stepNode(k *big.Int, step *big.Rat) *big.Rat {
+	return new(big.Rat).Mul(new(big.Rat).SetInt(k), step)
 }
 
 func zeroLogForm() logForm { return logForm{constant: new(big.Rat)} }

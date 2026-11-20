@@ -56,32 +56,43 @@ func (m Map) secondsAt(at Address, end bool, places int, mode rounding.Mode, gri
 	if end {
 		op = "Map.End"
 	}
+	form, approximate, err := m.momentForm(op, at, end, func() error { return checkPrecision(op, places, mode) }, grid)
+	if err != nil {
+		return SecondsResult{}, err
+	}
+	return secondsResultFromLogForm(op, form, approximate, places, mode)
+}
+
+// momentForm validates the arguments of Start or End, with check validating
+// the precision arguments in their place, and returns the exact seconds of the
+// moment as a symbolic form and whether it is irrational.
+func (m Map) momentForm(op string, at Address, end bool, check func() error, grid []measure.Grid) (logForm, bool, error) {
 	if !m.IsSet() {
-		return SecondsResult{}, simpleError(ErrUnset, op, "receiver")
+		return logForm{}, false, simpleError(ErrUnset, op, "receiver")
 	}
 	if !at.IsSet() {
-		return SecondsResult{}, simpleError(ErrUnset, op, "address")
+		return logForm{}, false, simpleError(ErrUnset, op, "address")
 	}
 	g, err := m.gridArgument(op, grid)
 	if err != nil {
-		return SecondsResult{}, err
+		return logForm{}, false, err
 	}
-	if err = checkPrecision(op, places, mode); err != nil {
-		return SecondsResult{}, err
+	if err = check(); err != nil {
+		return logForm{}, false, err
 	}
 	position, err := addressPosition(op, at, m.addressing, g)
 	if err != nil {
-		return SecondsResult{}, err
+		return logForm{}, false, err
 	}
 	idx, err := m.positionIndex(grid)
 	if err != nil {
-		return SecondsResult{}, err
+		return logForm{}, false, err
 	}
 	if unfinishedAt(idx, position) {
-		return SecondsResult{}, simpleError(ErrUnfinished, op, "unfinished gradual segment")
+		return logForm{}, false, simpleError(ErrUnfinished, op, "unfinished gradual segment")
 	}
 	form, approximate := startFormAt(idx, position, end)
-	return secondsResultFromLogForm(op, form, approximate, places, mode)
+	return form, approximate, nil
 }
 
 // Start returns seconds at the beginning of at, excluding its own hold.
@@ -128,47 +139,57 @@ func approximateBetween(idx *mapIndex, from, to duration.Position) bool {
 // Between returns Start(to)-Start(from), including the hold at from and excluding to's.
 func (m Map) Between(from, to Address, places int, mode rounding.Mode, grid ...measure.Grid) (SecondsResult, error) {
 	const op = "Map.Between"
+	form, approximate, err := m.betweenForm(op, from, to, func() error { return checkPrecision(op, places, mode) }, grid)
+	if err != nil {
+		return SecondsResult{}, err
+	}
+	return secondsResultFromLogForm(op, form, approximate, places, mode)
+}
+
+// betweenForm validates the arguments of Between, with check validating the
+// precision arguments in their place, and returns the exact seconds between the
+// addresses as a symbolic form and whether it is irrational.
+func (m Map) betweenForm(op string, from, to Address, check func() error, grid []measure.Grid) (logForm, bool, error) {
 	if !m.IsSet() {
-		return SecondsResult{}, simpleError(ErrUnset, op, "receiver")
+		return logForm{}, false, simpleError(ErrUnset, op, "receiver")
 	}
 	if !from.IsSet() {
-		return SecondsResult{}, simpleError(ErrUnset, op, "from address")
+		return logForm{}, false, simpleError(ErrUnset, op, "from address")
 	}
 	if !to.IsSet() {
-		return SecondsResult{}, simpleError(ErrUnset, op, "to address")
+		return logForm{}, false, simpleError(ErrUnset, op, "to address")
 	}
 	g, err := m.gridArgument(op, grid)
 	if err != nil {
-		return SecondsResult{}, err
+		return logForm{}, false, err
 	}
-	if err = checkPrecision(op, places, mode); err != nil {
-		return SecondsResult{}, err
+	if err = check(); err != nil {
+		return logForm{}, false, err
 	}
 	fromPosition, err := addressPosition(op, from, m.addressing, g)
 	if err != nil {
-		return SecondsResult{}, err
+		return logForm{}, false, err
 	}
 	toPosition, err := addressPosition(op, to, m.addressing, g)
 	if err != nil {
-		return SecondsResult{}, err
+		return logForm{}, false, err
 	}
 	if fromPosition.Compare(toPosition) > 0 {
-		return SecondsResult{}, simpleError(ErrInvalidArgument, op, "from follows to")
+		return logForm{}, false, simpleError(ErrInvalidArgument, op, "from follows to")
 	}
 	idx, err := m.positionIndex(grid)
 	if err != nil {
-		return SecondsResult{}, err
+		return logForm{}, false, err
 	}
 	if unfinishedAt(idx, toPosition) {
-		return SecondsResult{}, simpleError(ErrUnfinished, op, "unfinished gradual segment")
+		return logForm{}, false, simpleError(ErrUnfinished, op, "unfinished gradual segment")
 	}
 	if fromPosition.Compare(toPosition) == 0 {
-		return exactSecondsResult(tempo.ZeroSeconds()), nil
+		return zeroLogForm(), false, nil
 	}
 	fromForm, _ := startFormAt(idx, fromPosition, false)
 	toForm, _ := startFormAt(idx, toPosition, false)
-	form := logFormSub(toForm, fromForm)
-	return secondsResultFromLogForm(op, form, approximateBetween(idx, fromPosition, toPosition), places, mode)
+	return logFormSub(toForm, fromForm), approximateBetween(idx, fromPosition, toPosition), nil
 }
 
 // MustBetween is like Between but panics with its error.
@@ -178,12 +199,23 @@ func (m Map) MustBetween(from, to Address, places int, mode rounding.Mode, grid 
 
 func positionFromSeconds(idx *mapIndex, seconds tempo.Seconds, places int, mode rounding.Mode) (PositionResult, error) {
 	const op = "tempomap.positionFromSeconds"
+	exact, expression, err := positionTarget(idx, seconds)
+	if err != nil {
+		return PositionResult{}, err
+	}
+	return positionResultFromExpression(op, expression, expression != nil, exact, places, mode)
+}
+
+// positionTarget returns the exact position at seconds: a rational value, or a
+// nil value and the irrational expression of the position.
+func positionTarget(idx *mapIndex, seconds tempo.Seconds) (*big.Rat, numericExpression, error) {
+	const op = "tempomap.positionFromSeconds"
 	time := ratOfSeconds(seconds)
 	if time.Sign() == 0 {
 		if unfinishedAt(idx, duration.Origin()) {
-			return PositionResult{}, simpleError(ErrUnfinished, op, "unfinished gradual segment")
+			return nil, nil, simpleError(ErrUnfinished, op, "unfinished gradual segment")
 		}
-		return exactPositionResult(duration.Origin()), nil
+		return ratOfPosition(duration.Origin()), nil, nil
 	}
 	lo, hi := 0, len(idx.events)
 	for lo < hi {
@@ -196,18 +228,18 @@ func positionFromSeconds(idx *mapIndex, seconds tempo.Seconds, places int, mode 
 	}
 	event := idx.events[lo-1]
 	if unfinishedAt(idx, event.position) {
-		return PositionResult{}, simpleError(ErrUnfinished, op, "unfinished gradual segment")
+		return nil, nil, simpleError(ErrUnfinished, op, "unfinished gradual segment")
 	}
 	if compareLogForm(event.start, time) == 0 {
-		return exactPositionResult(event.position), nil
+		return ratOfPosition(event.position), nil, nil
 	}
 	if event.hasExtension && compareLogForm(event.end, time) >= 0 {
-		return exactPositionResult(event.position), nil
+		return ratOfPosition(event.position), nil, nil
 	}
 	changeIndex := changeAtPosition(idx, event.position)
 	current := idx.changes[changeIndex]
 	if changeIndex+1 == len(idx.changes) && current.change.kind == ChangeGradual {
-		return PositionResult{}, simpleError(ErrUnfinished, op, "unfinished gradual segment")
+		return nil, nil, simpleError(ErrUnfinished, op, "unfinished gradual segment")
 	}
 	startSeconds, _ := startFormAt(idx, current.position, false)
 	holdsAfterStart := new(big.Rat).Sub(extensionSumAt(idx, event.position, true), extensionSumAt(idx, current.position, false))
@@ -226,12 +258,14 @@ func positionFromSeconds(idx *mapIndex, seconds tempo.Seconds, places int, mode 
 		if ratio.Cmp(big.NewRat(1, 1)) < 0 {
 			minExp, maxExp = maxExp, minExp
 		}
-		expression := expForm{a: ratOfPosition(current.position), b: b, x: x, minExp: minExp, maxExp: maxExp}
-		return positionResultFromExpression(op, expression, true, nil, places, mode)
+		return nil, expForm{a: ratOfPosition(current.position), b: b, x: x, minExp: minExp, maxExp: maxExp}, nil
 	}
 	speedOver60 := new(big.Rat).Quo(ratOfFraction(current.startSpeed), big.NewRat(60, 1))
 	position := logFormAddRat(logFormScale(residual, speedOver60), ratOfPosition(current.position))
-	return positionResultFromExpression(op, logExpression{form: position}, approximate, position.constant, places, mode)
+	if !approximate {
+		return position.constant, nil, nil
+	}
+	return nil, logExpression{form: position}, nil
 }
 
 // Position returns the position at seconds in a positional map.

@@ -358,13 +358,19 @@ func initialPrecision(places, bits int) uint {
 }
 
 func precisionLimit(expression numericExpression, y *big.Rat, places int) uint {
+	return precisionLimitFrom(expression, y, initialPrecision(places, expression.inputBits()))
+}
+
+// precisionLimitFrom is the computable Pmax of a comparison with y whose
+// starting precision is initial.
+func precisionLimitFrom(expression numericExpression, y *big.Rat, initial uint) uint {
 	u := expression.upperBound(y)
 	onePlusU := new(big.Rat).Add(big.NewRat(1, 1), u)
 	logU := ceilLog2Rat(onePlusU)
 	l := expression.separationLog2(y)
 	l2 := ceilRatPrecision(new(big.Rat).Mul(big.NewRat(2, 1), new(big.Rat).Add(big.NewRat(int64(2+logU), 1), l)))
 	c := uint(expression.exponentialJ() + 80)
-	limit := initialPrecision(places, expression.inputBits())
+	limit := initial
 	for _, candidate := range []uint{c, 4, l2 + 64} {
 		if candidate > limit {
 			limit = candidate
@@ -373,57 +379,75 @@ func precisionLimit(expression numericExpression, y *big.Rat, places int) uint {
 	return limit
 }
 
+// stepInitialPrecision is the starting precision for rounding to multiples of
+// step: 128 + max(0, ceil(log2(10^4/step))) + 2B, where B adds the bit lengths
+// of the numerator and the denominator of step to the input bits.
+func stepInitialPrecision(step *big.Rat, inputBits int) uint {
+	scale := new(big.Rat).Quo(big.NewRat(10000, 1), step)
+	extra := max(0, ceilLog2Rat(scale))
+	bits := inputBits + step.Num().BitLen() + step.Denom().BitLen()
+	return uint(128 + extra + 2*bits)
+}
+
 func decimalStep(places int) *big.Rat {
 	scale := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(places)), nil)
 	return new(big.Rat).SetFrac(big.NewInt(1), scale)
 }
 
 func roundExpression(expression numericExpression, places int, mode rounding.Mode) *big.Rat {
-	precision := initialPrecision(places, expression.inputBits())
+	initial := initialPrecision(places, expression.inputBits())
+	k := roundExpressionSteps(expression, decimalStep(places), mode, initial)
+	return roundingNode(k, places)
+}
+
+// roundExpressionSteps returns the index k of the multiple k*step that mode
+// selects from the exact value of expression, starting at precision initial.
+func roundExpressionSteps(expression numericExpression, step *big.Rat, mode rounding.Mode, initial uint) *big.Int {
+	precision := initial
 	eval := func(p uint) (*big.Rat, *big.Rat) {
 		value := expression.interval(p)
 		return ratOfFloat(value.lo), ratOfFloat(value.hi)
 	}
 	for {
 		lower, upper := eval(precision)
-		attempt := makeRoundingAttempt(precision, precision, lower, upper, places, mode)
+		attempt := makeStepAttempt(precision, precision, lower, upper, step, mode)
 		if attempt.decided {
-			return roundingNode(attempt.lowerK, places)
+			return attempt.lowerK
 		}
-		lowerNode := roundingNode(attempt.lowerK, places)
-		upperNode := roundingNode(attempt.upperK, places)
+		lowerNode := stepNode(attempt.lowerK, step)
+		upperNode := stepNode(attempt.upperK, step)
 		if expression.isZeroAt(lowerNode) {
-			return lowerNode
+			return attempt.lowerK
 		}
 		if expression.isZeroAt(upperNode) {
-			return upperNode
+			return attempt.upperK
 		}
 
 		var midpoint *big.Rat
-		if !mode.IsDirected() && new(big.Rat).Sub(upperNode, lowerNode).Cmp(decimalStep(places)) == 0 {
+		if !mode.IsDirected() && new(big.Rat).Sub(upperNode, lowerNode).Cmp(step) == 0 {
 			midpoint = new(big.Rat).Add(lowerNode, upperNode)
 			midpoint.Quo(midpoint, big.NewRat(2, 1))
 			if expression.isZeroAt(midpoint) {
-				midpointAttempt := makeRoundingAttempt(precision, precision, midpoint, midpoint, places, mode)
-				return roundingNode(midpointAttempt.lowerK, places)
+				midpointAttempt := makeStepAttempt(precision, precision, midpoint, midpoint, step, mode)
+				return midpointAttempt.lowerK
 			}
 		}
 
-		maxPrecision := precisionLimit(expression, lowerNode, places)
-		if upperLimit := precisionLimit(expression, upperNode, places); upperLimit > maxPrecision {
+		maxPrecision := precisionLimitFrom(expression, lowerNode, initial)
+		if upperLimit := precisionLimitFrom(expression, upperNode, initial); upperLimit > maxPrecision {
 			maxPrecision = upperLimit
 		}
 		if midpoint != nil {
-			if midpointLimit := precisionLimit(expression, midpoint, places); midpointLimit > maxPrecision {
+			if midpointLimit := precisionLimitFrom(expression, midpoint, initial); midpointLimit > maxPrecision {
 				maxPrecision = midpointLimit
 			}
 		}
 		if precision >= maxPrecision {
 			panic("tempomap: certified precision limit did not select a rounding node")
 		}
-		k, usedPrecision, _, ok := roundWithLimit(places, mode, precision, maxPrecision, eval)
+		k, usedPrecision, _, ok := roundStepWithLimit(step, mode, precision, maxPrecision, eval)
 		if ok {
-			return roundingNode(k, places)
+			return k
 		}
 		precision = usedPrecision
 	}

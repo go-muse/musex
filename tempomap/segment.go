@@ -101,18 +101,23 @@ func (s Segment) Seconds(places int, mode rounding.Mode) (SecondsResult, bool, e
 	if s.open {
 		return SecondsResult{}, false, nil
 	}
-	start, end := s.startPosition, s.endPosition
-	form := constantSegmentForm(start, end, ratOfFraction(s.startSpeed))
-	approximate := false
-	if s.change.kind == ChangeGradual {
-		form = gradualSegmentForm(start, end, ratOfFraction(s.startSpeed), ratOfFraction(s.endSpeed))
-		approximate = !s.startSpeed.Equal(s.endSpeed)
-	}
+	form, approximate := s.secondsForm()
 	result, err := secondsResultFromLogForm(op, form, approximate, places, mode)
 	if err != nil {
 		return SecondsResult{}, false, err
 	}
 	return result, true, nil
+}
+
+// secondsForm returns the exact musical seconds of a bounded segment as a
+// symbolic form and whether they are irrational.
+func (s Segment) secondsForm() (logForm, bool) {
+	start, end := s.startPosition, s.endPosition
+	if s.change.kind == ChangeGradual {
+		form := gradualSegmentForm(start, end, ratOfFraction(s.startSpeed), ratOfFraction(s.endSpeed))
+		return form, !s.startSpeed.Equal(s.endSpeed)
+	}
+	return constantSegmentForm(start, end, ratOfFraction(s.startSpeed)), false
 }
 
 // MustSeconds is like Seconds but panics with its error.
