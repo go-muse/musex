@@ -39,6 +39,17 @@ func assertTimings(t *testing.T, want []span, got []voice.Timing) {
 	}
 }
 
+// assertSameTimings compares timings by index and SecondsResult.Equal.
+func assertSameTimings(t *testing.T, want, got []voice.Timing) {
+	t.Helper()
+	require.Len(t, got, len(want))
+	for i := range want {
+		assert.Equal(t, want[i].Index, got[i].Index)
+		assert.True(t, want[i].Start.Equal(got[i].Start), "start %d: want %v, got %v", i, want[i].Start, got[i].Start)
+		assert.True(t, want[i].End.Equal(got[i].End), "end %d: want %v, got %v", i, want[i].End, got[i].End)
+	}
+}
+
 // heldLine is the line of КП-25: C4 quarter, D4 half with a fermata, E4
 // quarter.
 func heldLine() *voice.Line {
@@ -57,10 +68,10 @@ func TestSoundSecondsWithHold(t *testing.T) {
 			got, err := l.SoundSeconds(map60Hold(), p.places, p.mode)
 			require.NoError(t, err)
 			assertTimings(t, want, got)
-			assert.Equal(t, got, l.MustSoundSeconds(map60Hold(), p.places, p.mode))
+			assertSameTimings(t, got, l.MustSoundSeconds(map60Hold(), p.places, p.mode))
 			from, err := l.SoundSecondsFrom(map60Hold(), duration.Origin(), p.places, p.mode)
 			require.NoError(t, err)
-			assert.Equal(t, got, from)
+			assertSameTimings(t, got, from)
 		})
 	}
 
@@ -85,7 +96,7 @@ func TestSoundSecondsFrom(t *testing.T) {
 			got, err := l.SoundSecondsFrom(map60(), pos(1, 1), p.places, p.mode)
 			require.NoError(t, err)
 			assertTimings(t, want, got)
-			assert.Equal(t, got, l.MustSoundSecondsFrom(map60(), pos(1, 1), p.places, p.mode))
+			assertSameTimings(t, got, l.MustSoundSecondsFrom(map60(), pos(1, 1), p.places, p.mode))
 		})
 	}
 }
@@ -111,7 +122,7 @@ func TestElementSeconds(t *testing.T) {
 			got, err := l.ElementSeconds(1, map60(), p.places, p.mode)
 			require.NoError(t, err)
 			assertTimings(t, []span{{1, seconds(1, 1), seconds(2, 1)}}, []voice.Timing{got})
-			assert.Equal(t, got, l.MustElementSeconds(1, map60(), p.places, p.mode))
+			assertSameTimings(t, []voice.Timing{got}, []voice.Timing{l.MustElementSeconds(1, map60(), p.places, p.mode)})
 
 			first, err := l.ElementSeconds(0, map60(), p.places, p.mode)
 			require.NoError(t, err)
@@ -120,7 +131,7 @@ func TestElementSeconds(t *testing.T) {
 			from, err := l.ElementSecondsFrom(1, map60(), pos(1, 1), p.places, p.mode)
 			require.NoError(t, err)
 			assertTimings(t, []span{{1, seconds(5, 1), seconds(6, 1)}}, []voice.Timing{from})
-			assert.Equal(t, from, l.MustElementSecondsFrom(1, map60(), pos(1, 1), p.places, p.mode))
+			assertSameTimings(t, []voice.Timing{from}, []voice.Timing{l.MustElementSecondsFrom(1, map60(), pos(1, 1), p.places, p.mode)})
 		})
 	}
 

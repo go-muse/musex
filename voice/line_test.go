@@ -247,6 +247,11 @@ func TestElementByIndex(t *testing.T) {
 			func() (voice.Element, error) { return l.Element(i) },
 			func() voice.Element { return l.MustElement(i) })
 	}
+	// КП-35: number 3 in a line of three elements.
+	three := line(snd(c4(), q()), rst(q()), snd(d4(), q()))
+	assertFailure(t, fails(voice.ErrIndex).only(),
+		func() (voice.Element, error) { return three.Element(3) },
+		func() voice.Element { return three.MustElement(3) })
 	assertFailure(t, fails(voice.ErrIndex).only(),
 		func() (voice.Element, error) { return line().Element(0) },
 		func() voice.Element { return line().MustElement(0) })

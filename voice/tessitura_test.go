@@ -31,6 +31,14 @@ func assertLocations(t *testing.T, want []location, got []voice.SoundLocation) {
 	}
 }
 
+// assertTessitura compares two results by the value of the number and the
+// kind.
+func assertTessitura(t *testing.T, want, got voice.Tessitura) {
+	t.Helper()
+	assert.True(t, want.Number.Equal(got.Number), "number: want %v, got %v", want.Number, got.Number)
+	assert.Equal(t, want.Kind, got.Kind)
+}
+
 // sopranoInstrument returns a new instrument from the built-in soprano
 // voice; every test owns its instrument.
 func sopranoInstrument() *instrument.Instrument {
@@ -82,12 +90,12 @@ func TestTessitura(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tt.number, got.Number.String(), "the number is a reduced fraction")
 			assert.Equal(t, tt.kind, got.Kind)
-			assert.Equal(t, got, tt.l.MustTessitura(tt.ref()))
+			assertTessitura(t, got, tt.l.MustTessitura(tt.ref()))
 
 			byLength, err := tt.l.TessituraBy(tt.ref(), voice.ByLength, voice.DefaultZones())
 			require.NoError(t, err)
-			assert.Equal(t, got, byLength)
-			assert.Equal(t, got, tt.l.MustTessituraBy(tt.ref(), voice.ByLength, voice.DefaultZones()))
+			assertTessitura(t, got, byLength)
+			assertTessitura(t, got, tt.l.MustTessituraBy(tt.ref(), voice.ByLength, voice.DefaultZones()))
 
 			byCount, err := tt.l.TessituraBy(tt.ref(), voice.ByCount, voice.DefaultZones())
 			require.NoError(t, err)
@@ -95,12 +103,12 @@ func TestTessitura(t *testing.T) {
 
 			in, err := tt.l.TessituraIn(traditional(), tt.ref())
 			require.NoError(t, err)
-			assert.Equal(t, got, in)
-			assert.Equal(t, got, tt.l.MustTessituraIn(traditional(), tt.ref()))
+			assertTessitura(t, got, in)
+			assertTessitura(t, got, tt.l.MustTessituraIn(traditional(), tt.ref()))
 			byIn, err := tt.l.TessituraByIn(traditional(), tt.ref(), voice.ByCount, voice.DefaultZones())
 			require.NoError(t, err)
-			assert.Equal(t, byCount, byIn)
-			assert.Equal(t, byCount, tt.l.MustTessituraByIn(traditional(), tt.ref(), voice.ByCount, voice.DefaultZones()))
+			assertTessitura(t, byCount, byIn)
+			assertTessitura(t, byCount, tt.l.MustTessituraByIn(traditional(), tt.ref(), voice.ByCount, voice.DefaultZones()))
 		})
 	}
 }
@@ -273,7 +281,7 @@ func TestPresetAndInstrumentAgree(t *testing.T) {
 	l := line(snd(free(spelling.C(), 4), q()), snd(nt(spelling.A(), 5), h()), rst(q()), snd(free(spelling.B(), 3), e8()))
 	preset := voice.PresetReference(soprano())
 	inst := voice.InstrumentReference(sopranoInstrument())
-	assert.Equal(t, l.MustTessitura(preset), l.MustTessitura(inst))
+	assertTessitura(t, l.MustTessitura(preset), l.MustTessitura(inst))
 	assert.Equal(t, l.MustLocate(preset), l.MustLocate(inst))
 	pw, po := l.MustWithin(preset)
 	iw, io := l.MustWithin(inst)
@@ -300,7 +308,6 @@ func TestInstrumentReferenceReadsCurrentState(t *testing.T) {
 	assertFailure(t, fails(voice.ErrNoRange).only(),
 		func() (pair[bool, []int], error) { return two(l.Within(ref)) },
 		func() pair[bool, []int] { return mustTwo(l.MustWithin(ref)) })
-	assert.True(t, soprano().Range().Equal(sopranoInstrument().Range()), "the operation does not change instruments")
 }
 
 // КП-43, КП-44, П-9а: the system of the comparison without an explicit
@@ -329,7 +336,7 @@ func TestTessituraSystems(t *testing.T) {
 		{"settings are read before systems are compared", line(snd(n19(spelling.C(), 4), q()), snd(brokenNote(spelling.E(), 4), q())),
 			func() voice.Reference { return voice.PresetReference(soprano()) }, failsAt(1, note.ErrUnsetSettings)},
 		{"name not admissible in the system of the preset", line(snd(c4(), q()), snd(halfSharpC(), q())),
-			func() voice.Reference { return voice.PresetReference(soprano()) }, failsAt(1, system.ErrInadmissible)},
+			func() voice.Reference { return voice.PresetReference(soprano()) }, failsAt(1, system.ErrInadmissible).only()},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -433,7 +440,7 @@ func TestReferenceFailures(t *testing.T) {
 		{"КП-22 zero width", std, nil, false, point,
 			want{}, fails(voice.ErrZeroWidth).only()},
 		{"zero width before the sounds", badName, traditional(), true, point,
-			failsAt(1, system.ErrInadmissible), fails(voice.ErrZeroWidth).only()},
+			failsAt(1, system.ErrInadmissible).only(), fails(voice.ErrZeroWidth).only()},
 		{"system before zero width", freeLine, nil, false, point,
 			failsAt(0, voice.ErrNoSystem), failsAt(0, voice.ErrNoSystem)},
 		{"unset system", std, nil, true, func() voice.Reference { return voice.Reference{} },
@@ -635,4 +642,57 @@ func TestLocateInOtherSystem(t *testing.T) {
 	assertLocations(t, []location{{0, instrument.Below, 2}, {1, instrument.Inside, 0}, {2, instrument.Above, 2}}, got)
 	tess := l.MustTessituraBy(voice.PresetReference(preset), voice.ByCount, voice.DefaultZones())
 	assert.Equal(t, "1/2", tess.Number.String(), "(−2 + 3 + 8) / (3 · 6)")
+}
+
+// Architecture 6.10, 6.16: the distance of a sound out of the range of steps
+// is the failure of that sound for Locate and the tessitura; Within computes
+// no distances and does not fail.
+func TestDistanceOutOfRange(t *testing.T) {
+	t.Parallel()
+	far := nt(spelling.C(), 1<<60)
+	l := line(snd(c4(), q()), rst(q()), snd(far, q()))
+	ref := voice.PresetReference(soprano())
+	w := failsAt(2, system.ErrOutOfRange)
+
+	assertFailure(t, w, func() ([]voice.SoundLocation, error) { return l.Locate(ref) },
+		func() []voice.SoundLocation { return l.MustLocate(ref) })
+	assertFailure(t, w, func() ([]voice.SoundLocation, error) { return l.LocateIn(traditional(), ref) },
+		func() []voice.SoundLocation { return l.MustLocateIn(traditional(), ref) })
+	assertFailure(t, w, func() (voice.Tessitura, error) { return l.Tessitura(ref) },
+		func() voice.Tessitura { return l.MustTessitura(ref) })
+	assertFailure(t, w, func() (voice.Tessitura, error) {
+		return l.TessituraByIn(traditional(), ref, voice.ByCount, voice.DefaultZones())
+	},
+		func() voice.Tessitura {
+			return l.MustTessituraByIn(traditional(), ref, voice.ByCount, voice.DefaultZones())
+		})
+
+	within, outside, err := l.Within(ref)
+	require.NoError(t, err)
+	assert.False(t, within)
+	assert.Equal(t, []int{2}, outside)
+	within, outside, err = l.WithinIn(traditional(), ref)
+	require.NoError(t, err)
+	assert.False(t, within)
+	assert.Equal(t, []int{2}, outside)
+}
+
+// Architecture 6.10: a sum of the tessitura out of the range of
+// common/fraction fails without *voice.ItemError. With the lengths 1/p and
+// (p−1)/p the number is D·(p−1)/(19·p) for the distance D of the high sound:
+// its numerator has about 262 bits.
+func TestTessituraSumOutOfRange(t *testing.T) {
+	t.Parallel()
+	invP, restP, _ := overflowDurations()
+	l := line(snd(c4(), voice.MustValueDuration(invP)), snd(nt(spelling.C(), 1<<58), voice.MustValueDuration(restP)))
+	ref := voice.PresetReference(soprano())
+	assertFailure(t, fails(fraction.ErrOutOfRange), func() (voice.Tessitura, error) { return l.Tessitura(ref) },
+		func() voice.Tessitura { return l.MustTessitura(ref) })
+	assertFailure(t, fails(fraction.ErrOutOfRange),
+		func() (voice.Tessitura, error) { return l.TessituraIn(traditional(), ref) },
+		func() voice.Tessitura { return l.MustTessituraIn(traditional(), ref) })
+
+	// Weighted by count the number is representable.
+	_, err := l.TessituraBy(ref, voice.ByCount, voice.DefaultZones())
+	require.NoError(t, err)
 }
