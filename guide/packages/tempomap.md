@@ -45,6 +45,10 @@ An approximate result carries its value, decimal precision, and a guaranteed err
 
 Calculations use exact rational arithmetic and directed arbitrary-precision intervals, with a precomputed limit on refinement. They do not use machine floating-point values, unbounded iteration, NaN, or infinity. Values and error bounds must fit the library's exact fraction range. Both bounds remain representable at 76 decimal places; at 77 an approximate operation fails because its required bound is outside that range, while an exact result still succeeds.
 
+## Rounding to a step
+
+Seconds and positions can also be rounded to a multiple of any positive step instead of to decimal places: a MIDI tick, a video frame, a millisecond, or a microsecond. The result is the number of whole steps, chosen once from the exact value by the caller's rounding mode. The guarantee is stronger than for decimal places: the choice is always correct, even when the exact value is not a fraction or lies exactly halfway between two steps, and there is no precision limit at which the calculation gives up. This is what allows exact export of tempo maps to MIDI ticks and microseconds.
+
 ## Text, unset values, and concurrency
 
 Changes, holds, maps, laws, addresses, and both result types have canonical text with round-trip parsing. Exact and approximate results use different forms, so an approximation cannot silently be read as exact. Diagnostic placeholder strings for unset values are rejected by parsers.

@@ -101,7 +101,9 @@ Definitions may differ from conventional ones.
 
 **Chord** is a group of notes that sound together. It keeps the notes in their order of record, repeats included, and has no duration and no harmonic name.
 
-**Tempo map** is an immutable timeline of tempo changes and explicit fermata holds at positions or measure addresses. It distinguishes main and current tempo, supports jumps, gradual changes, a tempo, Tempo I, and metric modulation, and converts seconds to and from positions and measures, with one explicitly selected rounding for the complete result.
+**Tempo map** is an immutable timeline of tempo changes and explicit fermata holds at positions or measure addresses. It distinguishes main and current tempo, supports jumps, gradual changes, a tempo, Tempo I, and metric modulation, and converts seconds to and from positions and measures, with one explicitly selected rounding for the complete result, to decimal places or to any step.
+
+**[Ticks](guide/packages/format/ticks.md)** are the whole-number units of exchange formats: MIDI ticks, MusicXML divisions, and MEI pulses per quarter. The `format/ticks` package converts durations, positions, and measure addresses to them and back exactly, chooses a resolution, and translates tempo and tempo maps, time signatures and their changes, SMPTE time, and MIDI clocks; any rounding is explicit and happens once.
 
 **[Event](guide/packages/event.md)** is one written element of a voice. It combines a note, chord, or rest with a duration and any ties, fermata, arpeggio, or grace sign.
 
