@@ -70,6 +70,20 @@
 // D>=77 fails with ErrOutOfRange even if its rounded value would fit. An exact
 // operation remains valid at those precisions.
 //
+// # Rounding to a step
+//
+// StartSteps, EndSteps, BetweenSteps, PositionSteps, AddressAtSteps, and
+// Segment.SecondsSteps round the same exact values to a multiple of any
+// positive step instead of to decimal places: a tick, a frame, a millisecond,
+// or a microsecond. They return the integer index k of the selected multiple
+// k*step, correctly rounded by the selected mode from the exact value, also
+// when that value is irrational or lies exactly on a rounding boundary. There
+// is no precision limit: the step methods never fail because a value cannot be
+// decided. An exact value gives the index that rounding.Mode.RatMultiple
+// selects. Errors follow the operations without a step; an unset or zero step
+// is ErrInvalidArgument, and an index greater than math.MaxInt is
+// ErrOutOfRange together with fraction.ErrNotRepresentable.
+//
 // # Text
 //
 // String, MarshalText, and AppendText emit canonical text; the corresponding
