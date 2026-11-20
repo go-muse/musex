@@ -115,6 +115,7 @@ Definitions may differ from conventional ones.
 - **Analyze modal positions.** Pass a mode directly to `modal.Relative` or `modal.GroupRelative` to inspect its degrees. Use `modal.AnalyzeAbsolute` for quality counts, scores, and dense ranks in one complete analysis; equal scores share a rank. Relative analysis also supports open modes and arbitrary cycles.
 
 - **Choose a collection and try a change.** Use `problemsolving/scalechoice` to compare collection groups and readings, filter them by added notes, or branch into a replacement trial with observed-set differences and local written/chromatic motions. Analyses snapshot source contexts and preserve the original material.
+- **Write and analyze a melodic line.** Use `voice` to build a monophonic line of sounds and rests with a name and roles, read positions and the element at a moment without measures, get seconds from a tempo map, melodic intervals, the range, the ambitus, and the tessitura against a singing voice or an instrument, and build transpositions, doublings, exact imitations, inversions, and retrogrades.
 
 ### Build a voice event
 
@@ -138,4 +139,26 @@ _, err := rest.Length()
 if errors.Is(err, event.ErrNeedsMeasureContext) {
     fmt.Println(rest.MustDuration().MustMeasureCount()) // 3
 }
+```
+
+### Build a melodic line
+
+Given `note.Note` values `c4`, `d4`, and `e4` bound to standard settings, build a subject, answer it at the fifth after a half rest, and measure its tessitura against the soprano range.
+
+```go
+q := voice.MustWrittenDuration(duration.MustNewWritten(duration.Quarter, 0))
+h := voice.MustWrittenDuration(duration.MustNewWritten(duration.Half, 0))
+subject := voice.MustNew(
+    voice.MustNewSound(c4, q),
+    voice.MustNewSound(d4, q),
+    voice.MustNewSound(e4, h),
+).MustWithName("Subject").MustWithPlacement(voice.Soprano)
+for _, m := range subject.MustIntervals() {
+    fmt.Println(m.Interval) // M2, then M2
+}
+answer := subject.MustImitateAfter(interval.PerfectFifth(), h) // a half rest, then G4, A4, B4
+fmt.Println(answer.MustThematic(), answer.MustLength())        // imitating 3/2
+fmt.Println(answer.MustAt(duration.MustNewPosition(3, 4)))       // 2 true: A4 sounds at 3/4
+t := subject.MustTessitura(voice.PlacementReference(voice.Soprano))
+fmt.Println(t.Number, t.Kind) // 5/38 low
 ```
