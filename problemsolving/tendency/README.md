@@ -84,7 +84,11 @@ s := tendency.MustNew(tendency.Definition{
 answer := s.MustTendency(m, tendency.Place{Degree: 2})
 ```
 
-A nil section means unsupported task. A present empty section has no known rows. A tendency row's nil `Goals` means unknown goals; a present empty goal list means known absence. `DirectComplete` specifically asserts completeness of immediate goals. Named/ultimate goals may have unknown cycles, with `CycleKnown: false`, `Cycle: 0`, and unset direction. Repeated modal rows explicitly enable joint cycle translation; open modes cannot repeat. Crossing in finite two-voice data requires `AllowCrossing`.
+A nil section means unsupported task. A present empty section has no known rows. A tendency row's nil `Goals` means unknown goals; a present empty goal list means known absence.
+
+For a tendency row, nil `Directions` leaves the direction unknown. An explicitly empty `Directions` list is a known rule admitting no direction: `CheckTransition` denies even a stationary move, while incomplete goal coverage remains `Partial`.
+
+`DirectComplete` specifically asserts completeness of immediate goals. Named/ultimate goals may have unknown cycles, with `CycleKnown: false`, `Cycle: 0`, and unset direction. Repeated modal rows explicitly enable joint cycle translation; open modes cannot repeat. Crossing in finite two-voice data requires `AllowCrossing`.
 
 Definitions are copied and canonicalized. Conflicting values, duplicate preferred options, invalid places, contradictory directions, overlapping modal rows, and unrepresentable geometry are rejected. `Definition()` returns an independent canonical user definition. Built-in definitions are not exported as infinite tables.
 
