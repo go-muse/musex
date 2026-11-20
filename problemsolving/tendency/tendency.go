@@ -473,14 +473,19 @@ func (s *Scheme) CheckTransition(m mode.Mode, from, to Place) (CheckResult, erro
 	if d != Allowed && r.DirectKnowledge == Known {
 		d = Denied
 	}
-	if r.DirectionKnowledge == Known && len(r.Directions) > 0 {
-		v, e := Between(m, from, to)
-		if e != nil {
-			return CheckResult{}, e
+	if r.DirectionKnowledge == Known {
+		// A known empty direction set excludes every movement.
+		admitted := false
+		if len(r.Directions) > 0 {
+			v, e := Between(m, from, to)
+			if e != nil {
+				return CheckResult{}, e
+			}
+			admitted = slices.Contains(r.Directions, v.Direction)
 		}
-		if !slices.Contains(r.Directions, v.Direction) {
+		if !admitted {
 			d = Denied
-			a.Reasons = append(a.Reasons, productReason("filter.direction", "The proposed transition contradicts a required direction."))
+			a.Reasons = append(a.Reasons, productReason("filter.direction", "The proposed transition has no direction admitted by the rule."))
 		}
 	}
 	return report(CheckResult{a, d}), nil
