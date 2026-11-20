@@ -1022,7 +1022,7 @@ func exactSoundCases(t *testing.T) []exactSoundCase {
 			x:          exactSoundNote{spelling.C(), 4, exactTiny30()},
 			y:          exactSoundNote{spelling.D(), 4, exactTiny30()},
 			makeTuning: tuning19,
-			distance:   cents.MustStep(2, 19),
+			distance:   cents.MustStep(3, 19),
 			comparison: -1,
 		},
 		{
