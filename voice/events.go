@@ -43,7 +43,7 @@ func readEvent(e *event.Event) (eventRecord, error) {
 
 	switch {
 	case r.kind == event.KindChord:
-		return eventRecord{}, fmt.Errorf("%w: %s", ErrChord, "chord event")
+		return eventRecord{}, fmt.Errorf("%w: chord event", ErrChord)
 	case d.Kind() == event.DurationMeasures:
 		return eventRecord{}, fmt.Errorf("%w: rest of %d measures", ErrMeasureDuration, d.MustMeasureCount())
 	case marks.Grace:

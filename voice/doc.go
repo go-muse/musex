@@ -11,9 +11,11 @@
 //
 // A line is monophonic. Its elements follow each other in order, and each
 // is a sound with one note with an octave or a rest, with a Duration and an
-// optional fermata sign. Chords, grace notes and rests in measures are never
-// elements: FromEvents reports them as ErrChord, ErrGrace and
-// ErrMeasureDuration.
+// optional fermata sign. Chords and rests in measures are never elements:
+// FromEvents reports them as ErrChord and ErrMeasureDuration. A rule of the
+// product: a grace note is not an element either (ErrGrace), because it takes
+// no time of its own and its attachment to a neighboring note is a rule of
+// the voice of a track.
 //
 // A Duration has one of three forms, kept as given: a written duration, a
 // value without notation, or a tied duration of two or more written parts.
@@ -53,7 +55,8 @@
 // product: an interval between two sounds separated by a rest is reported too,
 // with the flag ThroughRest.
 //
-// Every such operation works in one system. The forms with the suffix In take
+// A rule of the product chooses the system of an operation. Every such
+// operation works in one system. The forms with the suffix In take
 // it explicitly and read no source for it. Without it, a reference range
 // given by a preset or an instrument gives its system, and bound sounds must
 // have that system (ErrDifferentSystems), while unbound sounds are allowed.

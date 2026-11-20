@@ -2,7 +2,7 @@ package voice
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 
 	"github.com/go-muse/musex/common/fraction"
 	"github.com/go-muse/musex/duration"
@@ -154,11 +154,12 @@ func (l *Line) at(t duration.Position) (int, bool) {
 		return 0, false
 	}
 
-	k := sort.Search(len(l.starts), func(i int) bool {
-		return l.starts[i].Compare(t) > 0
-	})
+	k, found := slices.BinarySearchFunc(l.starts, t, duration.Position.Compare)
+	if !found {
+		k--
+	}
 
-	return k - 1, true
+	return k, true
 }
 
 // At returns the index of the element with start <= t < end and true.
@@ -238,9 +239,12 @@ func (l *Line) Span(a, b duration.Position) ([]int, error) {
 		return out, nil
 	}
 
-	first := sort.Search(len(l.elems), func(i int) bool {
-		return l.endOf(i).Compare(a) > 0
-	})
+	// The first element that ends after a is the element at the moment a;
+	// there is none at or after the end of the line.
+	first, ok := l.at(a)
+	if !ok {
+		return out, nil
+	}
 
 	for i := first; i < len(l.elems) && l.starts[i].Compare(b) < 0; i++ {
 		out = append(out, i)
