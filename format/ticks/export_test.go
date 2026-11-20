@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/go-muse/musex/common/fraction"
 	"github.com/go-muse/musex/common/rounding"
 	"github.com/go-muse/musex/duration"
 	"github.com/go-muse/musex/format/ticks"
@@ -468,6 +469,30 @@ func TestMIDITempoMapOfTempoLimit(t *testing.T) {
 	for _, mode := range allModes {
 		_, _, err = ticks.MIDITempoMapOf(slow, r, exportOptions(t, mode).MustWithSteps(dur(1, 1), ticks.StepEqualTime))
 		requireTicksError(t, err, ticks.ErrFormatLimit)
+	}
+
+	// 5.2, fractional-linear target with an irrational S: the КП-15 map with
+	// a hold of 20 s at 1 stretched over L = 1/4. The last StepStart piece has
+	// m = 15·10⁶/26.25 ≈ 571428.57 µs and S = 12·ln(1.05) ≈ 0.5855 s, so
+	// m·(S+E)/S ≈ 2.01·10⁷ > 16777215 (the threshold y₀ = m·E/(M+1−m) ≈ 0.705 > S).
+	ritHold := ritardandoMap().MustWithExtension(tempomap.MustNewExtension(at(1, 1), sec(20, 1)))
+	for _, mode := range allModes {
+		o := exportOptions(t, mode).MustWithSteps(dur(1, 4), ticks.StepStart).MustWithHoldsStretched(dur(1, 4))
+		_, _, err = ticks.MIDITempoMapOf(ritHold, r, o)
+		requireTicksError(t, err, ticks.ErrFormatLimit)
+	}
+
+	// 4.16, E-5: the index of the step call for a tempo does not fit int.
+	// Quarter = 10⁻¹³ slowing to quarter = 5·10⁻¹⁴ over one whole note:
+	// speeds 2.5·10⁻¹⁴ and 1.25·10⁻¹⁴ whole notes per minute, the step of
+	// a whole note lasts T = 60·ln2/(1.25·10⁻¹⁴) ≈ 3.327·10¹⁵ s, and its
+	// equal-time tempo 10⁶·(1/4)·T ≈ 8.32·10²⁰ µs exceeds math.MaxInt.
+	glacial := tempomap.MustNew(quarterTempo(1, 10000000000000)).
+		MustWithChange(tempomap.MustNewGradual(at(0, 1), tempomap.LinearSpeed).MustWithSlot(tempomap.SlotSecond)).
+		MustWithChange(tempomap.MustNewMain(at(1, 1), quarterTempo(1, 20000000000000)))
+	for _, mode := range allModes {
+		_, _, err = ticks.MIDITempoMapOf(glacial, r, exportOptions(t, mode).MustWithSteps(dur(1, 1), ticks.StepEqualTime))
+		requireTicksError(t, err, ticks.ErrFormatLimit, tempomap.ErrOutOfRange, fraction.ErrNotRepresentable)
 	}
 }
 

@@ -203,6 +203,10 @@ func TestAddressAtSteps(t *testing.T) {
 	t.Parallel()
 	grid := measure.MustNew(meter.FourFour())
 	m := tempomap.MustNewMeasured(grid, quarter(60))
+	// The map of КП-15 in measures: bar 2 is position 1.
+	gradual := tempomap.MustNewMeasured(grid, quarter(120)).
+		MustWithChange(tempomap.MustNewGradual(tempomap.MustAtBar(measure.MustNewAddress(1, pos(0, 1))), tempomap.LinearSpeed).MustWithSlot(tempomap.SlotSecond), grid).
+		MustWithChange(tempomap.MustNewMain(tempomap.MustAtBar(measure.MustNewAddress(2, pos(0, 1))), quarter(100)), grid)
 	a, k, err := m.AddressAtSteps(grid, sec(6, 1), duration.MustNew(1, 8), rounding.Down)
 	require.NoError(t, err)
 	assert.Equal(t, 12, k)
@@ -215,11 +219,22 @@ func TestAddressAtSteps(t *testing.T) {
 			want := stepTieIndex(mode, 6, true)
 			assert.Equal(t, want, index)
 			assert.True(t, address.Equal(grid.MustLocate(duration.Origin().MustAdd(duration.MustNew(want, 4)))), "address %s", address)
-			// The result agrees with AddressAt for step = 10^−3.
-			decimalAddress, result := m.MustAddressAt(grid, sec(13, 3), 3, mode)
+			// An exact position 13/12 (13/3 s): k = mode(13/12·1000) by
+			// RatMultiple, the address is that of k/1000.
+			k, _, err := mode.RatMultiple(big.NewRat(13, 12), big.NewRat(1, 1000))
+			require.NoError(t, err)
 			stepAddress, stepIndex := m.MustAddressAtSteps(grid, sec(13, 3), powDuration(3), mode)
-			assert.Equal(t, decimalIndex(t, result.MustValue().MustFraction(), 3), stepIndex)
-			assert.True(t, decimalAddress.Equal(stepAddress))
+			assert.Equal(t, int(k.Int64()), stepIndex)
+			assert.True(t, stepAddress.Equal(grid.MustLocate(duration.Origin().MustAdd(duration.MustNew(int(k.Int64()), 1000)))), "address %s", stepAddress)
+			// On a gradual change the decimal result is approximate and
+			// agrees with the step result for step = 10^−3 and 10^−6.
+			for _, places := range []int{3, 6} {
+				decimalAddress, result := gradual.MustAddressAt(grid, sec(1, 1), places, mode)
+				require.True(t, result.MustApproximate())
+				gradualAddress, gradualIndex := gradual.MustAddressAtSteps(grid, sec(1, 1), powDuration(places), mode)
+				assert.Equal(t, decimalIndex(t, result.MustValue().MustFraction(), places), gradualIndex)
+				assert.True(t, decimalAddress.Equal(gradualAddress), "address %s, want %s", gradualAddress, decimalAddress)
+			}
 		})
 	}
 
