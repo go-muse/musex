@@ -93,9 +93,11 @@ func TestMicrosecondsPerQuarter(t *testing.T) {
 // TestMIDITempoOfTies checks all nine modes on exact ties (ИТ-11).
 func TestMIDITempoOfTies(t *testing.T) {
 	t.Parallel()
-	// 15·10⁶/N = 500000.5 for N = 30000000/1000001; 500001.5 for N = 30000000/1000003.
-	even := quarterTempo(30000000, 1000001)
-	odd := quarterTempo(30000000, 1000003)
+	// For quarter = N the exact tempo is 60·10⁶/N microseconds (ИТ-6 with
+	// w = u = 1/4): 500000.5 for N = 120000000/1000001 and 500001.5 for
+	// N = 120000000/1000003.
+	even := quarterTempo(120000000, 1000001)
+	odd := quarterTempo(120000000, 1000003)
 	for _, mode := range allModes {
 		t.Run(mode.String(), func(t *testing.T) {
 			t.Parallel()

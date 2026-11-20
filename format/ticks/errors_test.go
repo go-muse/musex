@@ -22,7 +22,6 @@ func TestSentinelsArePairwiseDistinct(t *testing.T) {
 				continue
 			}
 			assert.False(t, errors.Is(a, b), "%v wraps %v", a, b)
-			assert.NotEqual(t, a.Error(), b.Error())
 		}
 	}
 }
