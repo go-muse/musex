@@ -30,6 +30,11 @@ var (
 func copyValue(v reflect.Value, nonnil bool) reflect.Value {
 	switch v.Kind() {
 	case reflect.Slice:
+		// Every public report, including nested goals and candidates, exposes
+		// the same canonical reason order after all reasons have been appended.
+		if nonnil && v.Type() == reflect.TypeFor[[]Reason]() {
+			v = reflect.ValueOf(canonicalReasons(v.Interface().([]Reason)))
+		}
 		if v.IsNil() && !nonnil {
 			return reflect.Zero(v.Type())
 		}
@@ -284,6 +289,9 @@ func productReason(rule, text string, facts ...Fact) Reason {
 func canonicalReasons(v []Reason) []Reason {
 	r := copied(v)
 	for i := range r {
+		if r[i].Facts == nil {
+			r[i].Facts = []Fact{}
+		}
 		slices.SortFunc(r[i].Facts, func(a, b Fact) int {
 			if c := cmp.Compare(a.Name, b.Name); c != 0 {
 				return c
@@ -304,7 +312,12 @@ func canonicalReasons(v []Reason) []Reason {
 		if c := cmp.Compare(a.Explanation, b.Explanation); c != 0 {
 			return c
 		}
-		return cmp.Compare(fmt.Sprint(a.Facts), fmt.Sprint(b.Facts))
+		return slices.CompareFunc(a.Facts, b.Facts, func(a, b Fact) int {
+			if c := cmp.Compare(a.Name, b.Name); c != 0 {
+				return c
+			}
+			return cmp.Compare(a.Value, b.Value)
+		})
 	})
 	return slices.CompactFunc(r, func(a, b Reason) bool { return reflect.DeepEqual(a, b) })
 }
