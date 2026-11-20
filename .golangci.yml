@@ -402,15 +402,15 @@ linters:
             - github.com/go-muse/musex/interval$
             - github.com/go-muse/musex/degree$
             - github.com/go-muse/musex/mode$
-        tendency:
+        problemsolving-tendency:
           list-mode: strict
           files:
-            - "**/tendency/*.go"
+            - "**/problemsolving/tendency/*.go"
             - "!$test"
           allow:
             - $gostd
             - github.com/go-muse/musex/interval$
-            - github.com/go-muse/musex/degree$
+            - github.com/go-muse/musex/alteration$
             - github.com/go-muse/musex/mode$
             - github.com/go-muse/musex/modal$
         common-fraction:
