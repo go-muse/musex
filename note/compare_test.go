@@ -315,37 +315,36 @@ func TestPosition(t *testing.T) {
 		stale := onStale(spelling.D(), 4)(t)
 		cases := []struct {
 			name  string
-			call  func() error
+			call  func() (any, error)
 			err   error
 			extra []error
 		}{
-			{"unset note", func() error { _, err := note.Note{}.ComparePosition(c4); return err }, note.ErrUnset, nil},
-			{"unset argument", func() error { _, err := c4.Distance(note.Note{}); return err }, note.ErrUnset, nil},
-			{"unset end", func() error { _, err := c4.Between(c4, note.Note{}); return err }, note.ErrUnset, nil},
-			{"no octave before no source", func() error { _, err := c4.ComparePosition(noOctFree); return err }, note.ErrNoOctave, nil},
-			{"no source", func() error { _, err := c4.ComparePosition(free); return err }, note.ErrNoSource, nil},
-			{"no source of the receiver", func() error { _, err := free.Equivalent(c4); return err }, note.ErrNoSource, nil},
-			{"unset settings", func() error { _, err := c4.Distance(stale); return err }, note.ErrUnsetSettings, []error{settings.ErrUnset}},
-			{"inadmissible", func() error { _, err := c4.Equivalent(inadm); return err }, note.ErrInadmissible, []error{system.ErrInadmissible}},
-			{"inadmissible before different systems", func() error {
-				_, err := inadm.Between(c4, mk(t, spelling.C(), 4, ct(0), s19))
-				return err
+			{"unset note", func() (any, error) { return note.Note{}.ComparePosition(c4) }, note.ErrUnset, nil},
+			{"unset argument", func() (any, error) { return c4.Distance(note.Note{}) }, note.ErrUnset, nil},
+			{"unset end", func() (any, error) { return c4.Between(c4, note.Note{}) }, note.ErrUnset, nil},
+			{"no octave before no source", func() (any, error) { return c4.ComparePosition(noOctFree) }, note.ErrNoOctave, nil},
+			{"no source", func() (any, error) { return c4.ComparePosition(free) }, note.ErrNoSource, nil},
+			{"no source of the receiver", func() (any, error) { return free.Equivalent(c4) }, note.ErrNoSource, nil},
+			{"unset settings", func() (any, error) { return c4.Distance(stale) }, note.ErrUnsetSettings, []error{settings.ErrUnset}},
+			{"inadmissible", func() (any, error) { return c4.Equivalent(inadm) }, note.ErrInadmissible, []error{system.ErrInadmissible}},
+			{"inadmissible before different systems", func() (any, error) {
+				return inadm.Between(c4, mk(t, spelling.C(), 4, ct(0), s19))
 			}, note.ErrInadmissible, nil},
-			{"In nil source", func() error { _, err := free.ComparePositionIn(nil, free); return err }, note.ErrUnset, nil},
-			{"In unset settings", func() error { _, err := free.EquivalentIn(&unsetSource{}, free); return err }, note.ErrUnsetSettings, []error{settings.ErrUnset}},
-			{"In inadmissible", func() error {
-				_, err := free.DistanceIn(setK25(), mk(t, spelling.CDoubleSharp(), 4, ct(0), nil))
-				return err
+			{"In nil source", func() (any, error) { return free.ComparePositionIn(nil, free) }, note.ErrUnset, nil},
+			{"In unset settings", func() (any, error) { return free.EquivalentIn(&unsetSource{}, free) }, note.ErrUnsetSettings, []error{settings.ErrUnset}},
+			{"In inadmissible", func() (any, error) {
+				return free.DistanceIn(setK25(), mk(t, spelling.CDoubleSharp(), 4, ct(0), nil))
 			}, note.ErrInadmissible, []error{system.ErrInadmissible}},
-			{"InTuning nil", func() error { _, err := free.BetweenInTuning(nil, free, free); return err }, note.ErrUnset, nil},
-			{"InTuning unset", func() error { _, err := free.EquivalentInTuning(&tuning.Tuning{}, free); return err }, note.ErrUnset, nil},
-			{"InTuning inadmissible", func() error {
-				_, err := free.ComparePositionInTuning(tuning.Standard(), mk(t, cHalf(), 4, ct(0), nil))
-				return err
+			{"InTuning nil", func() (any, error) { return free.BetweenInTuning(nil, free, free) }, note.ErrUnset, nil},
+			{"InTuning unset", func() (any, error) { return free.EquivalentInTuning(&tuning.Tuning{}, free) }, note.ErrUnset, nil},
+			{"InTuning inadmissible", func() (any, error) {
+				return free.ComparePositionInTuning(tuning.Standard(), mk(t, cHalf(), 4, ct(0), nil))
 			}, note.ErrInadmissible, []error{system.ErrInadmissible}},
 		}
 		for _, c := range cases {
-			if !assertErr(t, c.call(), c.err, c.extra...) {
+			result, err := c.call()
+			assert.Zero(t, result, c.name)
+			if !assertErr(t, err, c.err, c.extra...) {
 				t.Log(c.name)
 			}
 		}
@@ -597,28 +596,29 @@ func TestSound(t *testing.T) {
 		huge := mk(t, spelling.C(), 2000, ct(0), s)
 		cases := []struct {
 			name  string
-			call  func() error
+			call  func() (any, error)
 			err   error
 			extra []error
 		}{
-			{"unset note", func() error { _, err := note.Note{}.CompareSound(a); return err }, note.ErrUnset, nil},
-			{"unset criterion before no octave", func() error { _, err := noOct.SoundsSameBy(a, frequency.Criterion{}); return err }, note.ErrUnset, []error{frequency.ErrUnset}},
-			{"K-19 no source", func() error { _, err := free.CompareSound(a); return err }, note.ErrNoSource, nil},
-			{"no octave before no source", func() error { _, err := free.SoundsSame(noOct); return err }, note.ErrNoOctave, nil},
-			{"unset settings", func() error { _, err := a.CentsTo(stale); return err }, note.ErrUnsetSettings, []error{settings.ErrUnset}},
-			{"inadmissible", func() error { _, err := a.CompareSound(inadm); return err }, note.ErrInadmissible, []error{system.ErrInadmissible}},
-			{"frequency out of range", func() error { _, err := huge.CompareSound(mk(t, spelling.C(), 4, ct(0), set19())); return err }, note.ErrOutOfRange, nil},
-			{"In nil source", func() error { _, err := free.CentsToIn(nil, free); return err }, note.ErrUnset, nil},
-			{"In unset settings", func() error { _, err := free.SoundsSameIn(&unsetSource{}, free); return err }, note.ErrUnsetSettings, []error{settings.ErrUnset}},
-			{"InTuning nil", func() error { _, err := free.CompareSoundInTuning(nil, free); return err }, note.ErrUnset, nil},
-			{"InTuning unset", func() error { _, err := free.CentsToInTuning(&tuning.Tuning{}, free); return err }, note.ErrUnset, nil},
-			{"InTuning inadmissible", func() error {
-				_, err := free.SoundsSameByInTuning(tuning.Standard(), mk(t, cHalf(), 4, ct(0), nil), frequency.Strict())
-				return err
+			{"unset note", func() (any, error) { return note.Note{}.CompareSound(a) }, note.ErrUnset, nil},
+			{"unset criterion before no octave", func() (any, error) { return noOct.SoundsSameBy(a, frequency.Criterion{}) }, note.ErrUnset, []error{frequency.ErrUnset}},
+			{"K-19 no source", func() (any, error) { return free.CompareSound(a) }, note.ErrNoSource, nil},
+			{"no octave before no source", func() (any, error) { return free.SoundsSame(noOct) }, note.ErrNoOctave, nil},
+			{"unset settings", func() (any, error) { return a.CentsTo(stale) }, note.ErrUnsetSettings, []error{settings.ErrUnset}},
+			{"inadmissible", func() (any, error) { return a.CompareSound(inadm) }, note.ErrInadmissible, []error{system.ErrInadmissible}},
+			{"frequency out of range", func() (any, error) { return huge.CompareSound(mk(t, spelling.C(), 4, ct(0), set19())) }, note.ErrOutOfRange, nil},
+			{"In nil source", func() (any, error) { return free.CentsToIn(nil, free) }, note.ErrUnset, nil},
+			{"In unset settings", func() (any, error) { return free.SoundsSameIn(&unsetSource{}, free) }, note.ErrUnsetSettings, []error{settings.ErrUnset}},
+			{"InTuning nil", func() (any, error) { return free.CompareSoundInTuning(nil, free) }, note.ErrUnset, nil},
+			{"InTuning unset", func() (any, error) { return free.CentsToInTuning(&tuning.Tuning{}, free) }, note.ErrUnset, nil},
+			{"InTuning inadmissible", func() (any, error) {
+				return free.SoundsSameByInTuning(tuning.Standard(), mk(t, cHalf(), 4, ct(0), nil), frequency.Strict())
 			}, note.ErrInadmissible, []error{system.ErrInadmissible}},
 		}
 		for _, c := range cases {
-			if !assertErr(t, c.call(), c.err, c.extra...) {
+			result, err := c.call()
+			assert.Zero(t, result, c.name)
+			if !assertErr(t, err, c.err, c.extra...) {
 				t.Log(c.name)
 			}
 		}
