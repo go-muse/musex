@@ -37,7 +37,7 @@
 - [x] **22. [`scale`](guide/packages/scale.md)** — finite note lists with circular traversal, snapshot iterators, comparisons, melody transformations, editing, and multi-octave expansion through modes.
 - [x] **23. [`search`](guide/packages/search.md)** — finding mode-and-tonic hypotheses from sets of notes by exact spelling or pitch class, with containment and full match, tonic families, matching degrees, and stable groupings.
 - [x] **24. [`modal`](guide/packages/modal.md)** — relative categories with full specific intervals; absolute quality counts, scores, comparisons, and equal-score groups for closed perfect-octave modes.
-- [ ] **25. `tendency`** — tendencies and resolutions under rule sets.
+- [x] **25. [`problemsolving/tendency`](problemsolving/tendency/README.md)** — supports, roles, tendencies, classifications, and two-voice resolutions under explicit built-in or finite user rules, with coverage, explanations, filtering, and comparisons.
 
 ## 3. Long-term plans
 

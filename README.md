@@ -95,6 +95,8 @@ Definitions may differ from conventional ones.
 
 **[Modal positions](guide/packages/modal.md)** describe degrees through their specific intervals. Relative analysis returns high, neutral, or low categories together with the full interval from the first degree. Absolute analysis of a closed perfect-octave mode counts five quality families from each degree and orders equal-score groups from brightest to darkest. Integral augmentations and diminutions count once regardless of multiplicity; fractional qualities are unsupported.
 
+**[Tendency and resolution](problemsolving/tendency/README.md)** answers support, degree-label, direction, target, consonance, and two-voice resolution questions under explicit built-in or finite user rules. Coverage and explanations preserve missing context and uncertainty; filters and comparisons retain the original claims.
+
 **[Scale choice](guide/packages/problemsolving/scalechoice.md)** supports a composer's choice of pitch collection: inspect compatible modal readings, common and missing notes, possible continuations, and the consequences of one trial replacement in a set or a phrase. The caller chooses the scope, comparison, condition, and optional center.
 
 **Chord** is a group of notes that sound together. It keeps the notes in their order of record, repeats included, and has no duration and no harmonic name.
