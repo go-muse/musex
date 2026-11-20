@@ -1,6 +1,9 @@
 package note
 
 import (
+	"errors"
+	"math/big"
+
 	"github.com/go-muse/musex/cents"
 	"github.com/go-muse/musex/frequency"
 	"github.com/go-muse/musex/settings"
@@ -524,20 +527,111 @@ func isStrict(crit *frequency.Criterion) bool {
 	return crit == nil || crit.Kind() == frequency.KindStrict
 }
 
+// exactAccumulator aggregates exact cents without checking intermediate values.
+type exactAccumulator struct {
+	total  big.Rat
+	powers []cents.Power
+}
+
+func (a *exactAccumulator) addCents(value cents.Cents, sign int) {
+	num, den, powers := value.Composition()
+	term := new(big.Rat).SetFrac(num, den)
+	if sign < 0 {
+		term.Neg(term)
+	}
+	a.total.Add(&a.total, term)
+
+	for _, power := range powers {
+		if sign < 0 {
+			power.Num.Neg(power.Num)
+		}
+		a.powers = append(a.powers, power)
+	}
+}
+
+func (a *exactAccumulator) addOctaves(octaves int) {
+	term := new(big.Rat).SetInt64(int64(octaves))
+	term.Mul(term, big.NewRat(1200, 1))
+	a.total.Add(&a.total, term)
+}
+
+// addBaseFallback adds the exact terms of t.CentsBetween(x, y) without
+// materializing that intermediate distance as cents.Cents.
+func (a *exactAccumulator) addBaseFallback(op string, t *tuning.Tuning, x, y Note) error {
+	sys := t.System()
+	classes := t.Classes()
+	temp := t.Temperament()
+
+	fromClass, err := sys.PitchClass(x.pitch())
+	if err != nil {
+		return depError(op, err)
+	}
+	if _, err := sys.PitchClass(y.pitch()); err != nil {
+		return depError(op, err)
+	}
+	distance, err := sys.Distance(x.pitch(), y.pitch())
+	if err != nil {
+		return depError(op, err)
+	}
+
+	fromOffset := (fromClass.Number() - t.RootClass().Number()) % classes
+	if fromOffset < 0 {
+		fromOffset += classes
+	}
+
+	steps := int(distance)
+	octaves := steps / classes
+	remainder := steps % classes
+	if remainder < 0 {
+		remainder += classes
+		octaves--
+	}
+
+	toOffset := remainder + fromOffset
+	if toOffset >= classes {
+		toOffset -= classes
+		octaves++
+	}
+
+	a.addOctaves(octaves)
+
+	toCents, err := temp.Offset(toOffset)
+	if err != nil {
+		return depError(op, err)
+	}
+	a.addCents(toCents, 1)
+
+	fromCents, err := temp.Offset(fromOffset)
+	if err != nil {
+		return depError(op, err)
+	}
+	a.addCents(fromCents, -1)
+
+	return nil
+}
+
 // exactDistance returns the exact distance in cents from the sound of x to
-// the sound of y in one tuning t: h(y) + c(y) - (h(x) + c(x)).
+// the sound of y in one tuning t: h(y) + c(y) - (h(x) + c(x)). The base and
+// corrections cancel exactly before only the final value is range-checked.
 func exactDistance(op string, t *tuning.Tuning, x, y Note) (cents.Cents, error) {
-	d, err := t.CentsBetween(x.pitch(), y.pitch())
-	if err != nil {
+	var total exactAccumulator
+
+	base, err := t.CentsBetween(x.pitch(), y.pitch())
+	switch {
+	case err == nil:
+		total.addCents(base, 1)
+	case errors.Is(err, cents.ErrOutOfRange) || errors.Is(err, cents.ErrTooComplex):
+		if err := total.addBaseFallback(op, t, x, y); err != nil {
+			return cents.Cents{}, err
+		}
+	default:
 		return cents.Cents{}, depError(op, err)
 	}
 
-	d, err = d.Add(y.c)
-	if err != nil {
-		return cents.Cents{}, depError(op, err)
-	}
+	total.addCents(y.c, 1)
+	total.addCents(x.c, -1)
 
-	d, err = d.Sub(x.c)
+	d, err := cents.FromComposition(total.total.Num(), total.total.Denom(), total.powers...)
 	if err != nil {
 		return cents.Cents{}, depError(op, err)
 	}
