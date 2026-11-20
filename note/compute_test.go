@@ -309,7 +309,8 @@ func TestComputeFailures(t *testing.T) {
 
 			check := func(label string, call func() (any, error), mustCall func(), want error, extra ...error) {
 				t.Helper()
-				_, err := call()
+				result, err := call()
+				assert.Zero(t, result, label)
 				if !assertErr(t, err, want, extra...) {
 					t.Log(label)
 				}

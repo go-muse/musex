@@ -52,12 +52,13 @@
 - [ ] **28e. `ticks`** — MusicXML divisions, MIDI ticks, and MIDI tempo for durations, positions, and tempo maps.
 - [x] **29. [`chord`](guide/packages/chord.md)** — chords as groups of notes that sound together, without durations or harmony: notes in their order of record with repeats, membership and equality by record, changes of the notes in place with independent copies, joining, intersecting, and subtracting chords, sorting, and moving all the notes by octaves.
 - [x] **29a. [`event`](guide/packages/event.md)** — voice elements with a note, chord, or rest, written or exact duration, rests in measures, and ties, fermatas, arpeggios, and grace notes.
-- [ ] **29b. `voice`** — sequences of events with positions, ties, grace notes, and sounding notes in time.
+- [x] **29c. [`voice`](guide/packages/voice.md)** — melodic lines: monophonic sounds and rests with durations, names, and roles; positions without measures and seconds from a tempo map; melodic intervals, range, ambitus, and tessitura against a singing voice or an instrument; doubling, exact imitation, inversion, transposition, and retrograde.
 - [ ] **30. `track`** — parts as sequences of measures holding the events of each voice.
 - [ ] **31. `score`** — tracks with a common start and one shared tempo map.
 
 ## 4. Problem Solving
 
 - [x] **32. [`problemsolving/scalechoice`](guide/packages/problemsolving/scalechoice.md)** — choosing pitch collections and modal readings from notes, distinguishing alternatives with added notes, and comparing a replacement throughout a set or at one phrase position, including local written and chromatic motions.
+- [ ] **33. `problemsolving/voiceleading`** — voice leading over melodic lines: kinds of motion of two voices, parallel and hidden perfect consonances, crossings and overlaps, chord spacing and distances between voices, distributing chords among voices, leaps, and chord connections, with norms of a chosen tradition.
 
 Package order and scope are derived from the local research in `docs/package-roadmap.md`. That detailed source is excluded from Git; this file is the project-facing overview.

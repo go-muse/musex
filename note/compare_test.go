@@ -2,6 +2,7 @@ package note_test
 
 import (
 	"math"
+	"math/big"
 	"testing"
 
 	"github.com/go-muse/musex/cents"
@@ -13,6 +14,7 @@ import (
 	"github.com/go-muse/musex/spelling"
 	"github.com/go-muse/musex/system"
 	"github.com/go-muse/musex/tuning"
+	"github.com/go-muse/musex/tuning/temperament"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -313,37 +315,36 @@ func TestPosition(t *testing.T) {
 		stale := onStale(spelling.D(), 4)(t)
 		cases := []struct {
 			name  string
-			call  func() error
+			call  func() (any, error)
 			err   error
 			extra []error
 		}{
-			{"unset note", func() error { _, err := note.Note{}.ComparePosition(c4); return err }, note.ErrUnset, nil},
-			{"unset argument", func() error { _, err := c4.Distance(note.Note{}); return err }, note.ErrUnset, nil},
-			{"unset end", func() error { _, err := c4.Between(c4, note.Note{}); return err }, note.ErrUnset, nil},
-			{"no octave before no source", func() error { _, err := c4.ComparePosition(noOctFree); return err }, note.ErrNoOctave, nil},
-			{"no source", func() error { _, err := c4.ComparePosition(free); return err }, note.ErrNoSource, nil},
-			{"no source of the receiver", func() error { _, err := free.Equivalent(c4); return err }, note.ErrNoSource, nil},
-			{"unset settings", func() error { _, err := c4.Distance(stale); return err }, note.ErrUnsetSettings, []error{settings.ErrUnset}},
-			{"inadmissible", func() error { _, err := c4.Equivalent(inadm); return err }, note.ErrInadmissible, []error{system.ErrInadmissible}},
-			{"inadmissible before different systems", func() error {
-				_, err := inadm.Between(c4, mk(t, spelling.C(), 4, ct(0), s19))
-				return err
+			{"unset note", func() (any, error) { return note.Note{}.ComparePosition(c4) }, note.ErrUnset, nil},
+			{"unset argument", func() (any, error) { return c4.Distance(note.Note{}) }, note.ErrUnset, nil},
+			{"unset end", func() (any, error) { return c4.Between(c4, note.Note{}) }, note.ErrUnset, nil},
+			{"no octave before no source", func() (any, error) { return c4.ComparePosition(noOctFree) }, note.ErrNoOctave, nil},
+			{"no source", func() (any, error) { return c4.ComparePosition(free) }, note.ErrNoSource, nil},
+			{"no source of the receiver", func() (any, error) { return free.Equivalent(c4) }, note.ErrNoSource, nil},
+			{"unset settings", func() (any, error) { return c4.Distance(stale) }, note.ErrUnsetSettings, []error{settings.ErrUnset}},
+			{"inadmissible", func() (any, error) { return c4.Equivalent(inadm) }, note.ErrInadmissible, []error{system.ErrInadmissible}},
+			{"inadmissible before different systems", func() (any, error) {
+				return inadm.Between(c4, mk(t, spelling.C(), 4, ct(0), s19))
 			}, note.ErrInadmissible, nil},
-			{"In nil source", func() error { _, err := free.ComparePositionIn(nil, free); return err }, note.ErrUnset, nil},
-			{"In unset settings", func() error { _, err := free.EquivalentIn(&unsetSource{}, free); return err }, note.ErrUnsetSettings, []error{settings.ErrUnset}},
-			{"In inadmissible", func() error {
-				_, err := free.DistanceIn(setK25(), mk(t, spelling.CDoubleSharp(), 4, ct(0), nil))
-				return err
+			{"In nil source", func() (any, error) { return free.ComparePositionIn(nil, free) }, note.ErrUnset, nil},
+			{"In unset settings", func() (any, error) { return free.EquivalentIn(&unsetSource{}, free) }, note.ErrUnsetSettings, []error{settings.ErrUnset}},
+			{"In inadmissible", func() (any, error) {
+				return free.DistanceIn(setK25(), mk(t, spelling.CDoubleSharp(), 4, ct(0), nil))
 			}, note.ErrInadmissible, []error{system.ErrInadmissible}},
-			{"InTuning nil", func() error { _, err := free.BetweenInTuning(nil, free, free); return err }, note.ErrUnset, nil},
-			{"InTuning unset", func() error { _, err := free.EquivalentInTuning(&tuning.Tuning{}, free); return err }, note.ErrUnset, nil},
-			{"InTuning inadmissible", func() error {
-				_, err := free.ComparePositionInTuning(tuning.Standard(), mk(t, cHalf(), 4, ct(0), nil))
-				return err
+			{"InTuning nil", func() (any, error) { return free.BetweenInTuning(nil, free, free) }, note.ErrUnset, nil},
+			{"InTuning unset", func() (any, error) { return free.EquivalentInTuning(&tuning.Tuning{}, free) }, note.ErrUnset, nil},
+			{"InTuning inadmissible", func() (any, error) {
+				return free.ComparePositionInTuning(tuning.Standard(), mk(t, cHalf(), 4, ct(0), nil))
 			}, note.ErrInadmissible, []error{system.ErrInadmissible}},
 		}
 		for _, c := range cases {
-			if !assertErr(t, c.call(), c.err, c.extra...) {
+			result, err := c.call()
+			assert.Zero(t, result, c.name)
+			if !assertErr(t, err, c.err, c.extra...) {
 				t.Log(c.name)
 			}
 		}
@@ -595,28 +596,29 @@ func TestSound(t *testing.T) {
 		huge := mk(t, spelling.C(), 2000, ct(0), s)
 		cases := []struct {
 			name  string
-			call  func() error
+			call  func() (any, error)
 			err   error
 			extra []error
 		}{
-			{"unset note", func() error { _, err := note.Note{}.CompareSound(a); return err }, note.ErrUnset, nil},
-			{"unset criterion before no octave", func() error { _, err := noOct.SoundsSameBy(a, frequency.Criterion{}); return err }, note.ErrUnset, []error{frequency.ErrUnset}},
-			{"K-19 no source", func() error { _, err := free.CompareSound(a); return err }, note.ErrNoSource, nil},
-			{"no octave before no source", func() error { _, err := free.SoundsSame(noOct); return err }, note.ErrNoOctave, nil},
-			{"unset settings", func() error { _, err := a.CentsTo(stale); return err }, note.ErrUnsetSettings, []error{settings.ErrUnset}},
-			{"inadmissible", func() error { _, err := a.CompareSound(inadm); return err }, note.ErrInadmissible, []error{system.ErrInadmissible}},
-			{"frequency out of range", func() error { _, err := huge.CompareSound(mk(t, spelling.C(), 4, ct(0), set19())); return err }, note.ErrOutOfRange, nil},
-			{"In nil source", func() error { _, err := free.CentsToIn(nil, free); return err }, note.ErrUnset, nil},
-			{"In unset settings", func() error { _, err := free.SoundsSameIn(&unsetSource{}, free); return err }, note.ErrUnsetSettings, []error{settings.ErrUnset}},
-			{"InTuning nil", func() error { _, err := free.CompareSoundInTuning(nil, free); return err }, note.ErrUnset, nil},
-			{"InTuning unset", func() error { _, err := free.CentsToInTuning(&tuning.Tuning{}, free); return err }, note.ErrUnset, nil},
-			{"InTuning inadmissible", func() error {
-				_, err := free.SoundsSameByInTuning(tuning.Standard(), mk(t, cHalf(), 4, ct(0), nil), frequency.Strict())
-				return err
+			{"unset note", func() (any, error) { return note.Note{}.CompareSound(a) }, note.ErrUnset, nil},
+			{"unset criterion before no octave", func() (any, error) { return noOct.SoundsSameBy(a, frequency.Criterion{}) }, note.ErrUnset, []error{frequency.ErrUnset}},
+			{"K-19 no source", func() (any, error) { return free.CompareSound(a) }, note.ErrNoSource, nil},
+			{"no octave before no source", func() (any, error) { return free.SoundsSame(noOct) }, note.ErrNoOctave, nil},
+			{"unset settings", func() (any, error) { return a.CentsTo(stale) }, note.ErrUnsetSettings, []error{settings.ErrUnset}},
+			{"inadmissible", func() (any, error) { return a.CompareSound(inadm) }, note.ErrInadmissible, []error{system.ErrInadmissible}},
+			{"frequency out of range", func() (any, error) { return huge.CompareSound(mk(t, spelling.C(), 4, ct(0), set19())) }, note.ErrOutOfRange, nil},
+			{"In nil source", func() (any, error) { return free.CentsToIn(nil, free) }, note.ErrUnset, nil},
+			{"In unset settings", func() (any, error) { return free.SoundsSameIn(&unsetSource{}, free) }, note.ErrUnsetSettings, []error{settings.ErrUnset}},
+			{"InTuning nil", func() (any, error) { return free.CompareSoundInTuning(nil, free) }, note.ErrUnset, nil},
+			{"InTuning unset", func() (any, error) { return free.CentsToInTuning(&tuning.Tuning{}, free) }, note.ErrUnset, nil},
+			{"InTuning inadmissible", func() (any, error) {
+				return free.SoundsSameByInTuning(tuning.Standard(), mk(t, cHalf(), 4, ct(0), nil), frequency.Strict())
 			}, note.ErrInadmissible, []error{system.ErrInadmissible}},
 		}
 		for _, c := range cases {
-			if !assertErr(t, c.call(), c.err, c.extra...) {
+			result, err := c.call()
+			assert.Zero(t, result, c.name)
+			if !assertErr(t, err, c.err, c.extra...) {
 				t.Log(c.name)
 			}
 		}
@@ -848,4 +850,590 @@ func TestOffset(t *testing.T) {
 		assertPanicErr(t, func() { free.MustOffsetInTuning(nil, 440) }, note.ErrUnset)
 		assertPanicErr(t, func() { free.MustOffsetByInTuning(nil, 440, frequency.Strict()) }, note.ErrUnset)
 	})
+}
+
+// Exact-distance regressions for issue #128 (business-spec scenarios 1-6;
+// architecture T-1...T-10). Only the final mathematical distance is required
+// to be representable; intermediate bases and correction sums may overflow.
+
+type exactSoundOperation int
+
+const (
+	exactCompare exactSoundOperation = iota
+	exactCompareBy
+	exactSame
+	exactSameBy
+	exactCents
+)
+
+type exactSoundContext string
+
+const (
+	exactOwn      exactSoundContext = "own"
+	exactIn       exactSoundContext = "In"
+	exactInTuning exactSoundContext = "InTuning"
+)
+
+type exactSoundResult struct {
+	comparison int
+	same       bool
+	distance   cents.Cents
+}
+
+type exactSoundNote struct {
+	name       spelling.Spelling
+	aspn       int
+	correction cents.Cents
+}
+
+type exactSoundCase struct {
+	id         string
+	x, y       exactSoundNote
+	makeTuning func() *tuning.Tuning
+	distance   cents.Cents
+	comparison int
+	same       bool
+	outOfRange bool
+}
+
+var exactSoundOperations = []struct {
+	name string
+	op   exactSoundOperation
+}{
+	{"CompareSound", exactCompare},
+	{"CompareSoundByStrict", exactCompareBy},
+	{"SoundsSame", exactSame},
+	{"SoundsSameByStrict", exactSameBy},
+	{"CentsTo", exactCents},
+}
+
+var exactSoundContexts = []exactSoundContext{exactOwn, exactIn, exactInTuning}
+
+// exactPower30 returns 10^30 without an intermediate machine-sized integer.
+func exactPower30() *big.Int {
+	return new(big.Int).Exp(big.NewInt(10), big.NewInt(30), nil)
+}
+
+// exactTiny30 returns 1/10^30 cents through the exact public constructor.
+func exactTiny30() cents.Cents {
+	return cents.MustFromComposition(big.NewInt(1), exactPower30())
+}
+
+// exact200PlusTiny30 returns 200 + 1/10^30 cents as one rational value.
+func exact200PlusTiny30() cents.Cents {
+	den := exactPower30()
+	num := new(big.Int).Mul(big.NewInt(200), den)
+	num.Add(num, big.NewInt(1))
+	return cents.MustFromComposition(num, den)
+}
+
+// exactBaseTooComplexTuning is the T-10 tuning. The written C4-to-D4 base is
+// 1/3 - 1/D, whose denominator 3D exceeds the exact cents notation limit.
+func exactBaseTooComplexTuning() *tuning.Tuning {
+	temp := temperament.MustNew("base-too-complex", []cents.Cents{
+		ct(0),
+		exactTiny30(),
+		cents.MustFromFraction(1, 6),
+		cents.MustFromFraction(1, 3),
+		ct(600),
+		ct(700),
+		ct(800),
+		ct(900),
+		ct(950),
+		ct(1000),
+		ct(1100),
+		ct(1150),
+	})
+	return tuning.MustNew(system.Traditional(), temp,
+		tuning.RootFromName(spelling.B()), tuning.A4At440())
+}
+
+// exactSoundCases returns the complete contract matrix. Distances and signs
+// are literal expectations from the reviewed architecture, not calculations
+// performed by package note.
+func exactSoundCases(t *testing.T) []exactSoundCase {
+	t.Helper()
+
+	max := ct(cents.MaxMagnitude)
+	almostMax, err := max.Sub(cents.Schisma())
+	require.NoError(t, err, "test setup: M - schisma is representable")
+
+	return []exactSoundCase{
+		{
+			id:         "T-1 positive correction boundary",
+			x:          exactSoundNote{spelling.C(), 4, max},
+			y:          exactSoundNote{spelling.D(), 4, max},
+			distance:   ct(200),
+			comparison: -1,
+		},
+		{
+			id:         "T-2 negative correction boundary",
+			x:          exactSoundNote{spelling.D(), 5, max.Neg()},
+			y:          exactSoundNote{spelling.C(), 5, max.Neg()},
+			distance:   ct(-200),
+			comparison: 1,
+		},
+		{
+			id:         "T-3 negative C4 and D4 corrections",
+			x:          exactSoundNote{spelling.C(), 4, max.Neg()},
+			y:          exactSoundNote{spelling.D(), 4, max.Neg()},
+			distance:   ct(200),
+			comparison: -1,
+		},
+		{
+			id:         "T-3 positive D5 and C5 corrections",
+			x:          exactSoundNote{spelling.D(), 5, max},
+			y:          exactSoundNote{spelling.C(), 5, max},
+			distance:   ct(-200),
+			comparison: 1,
+		},
+		{
+			id:         "T-4 equal positive boundary corrections",
+			x:          exactSoundNote{spelling.C(), 4, max},
+			y:          exactSoundNote{spelling.C(), 4, max},
+			distance:   ct(0),
+			comparison: 0,
+			same:       true,
+		},
+		{
+			id:         "T-4 equal negative boundary corrections",
+			x:          exactSoundNote{spelling.C(), 4, max.Neg()},
+			y:          exactSoundNote{spelling.C(), 4, max.Neg()},
+			distance:   ct(0),
+			comparison: 0,
+			same:       true,
+		},
+		{
+			id:         "T-5 representable final boundary despite correction difference",
+			x:          exactSoundNote{spelling.C(), 4, max},
+			y:          exactSoundNote{spelling.C(), 7504, max.Neg()},
+			distance:   max.Neg(),
+			comparison: 1,
+		},
+		{
+			id:         "T-6 irrational correction cancellation",
+			x:          exactSoundNote{spelling.C(), 4, almostMax},
+			y:          exactSoundNote{spelling.D(), 4, almostMax},
+			distance:   ct(200),
+			comparison: -1,
+		},
+		{
+			id:         "T-7 intermediate notation too complex in 19-EDO",
+			x:          exactSoundNote{spelling.C(), 4, exactTiny30()},
+			y:          exactSoundNote{spelling.D(), 4, exactTiny30()},
+			makeTuning: tuning19,
+			distance:   cents.MustStep(3, 19),
+			comparison: -1,
+		},
+		{
+			id:         "T-8 positive final overflow",
+			x:          exactSoundNote{spelling.C(), 4, ct(0)},
+			y:          exactSoundNote{spelling.D(), 4, max},
+			outOfRange: true,
+		},
+		{
+			id:         "T-8 negative final overflow",
+			x:          exactSoundNote{spelling.D(), 5, ct(0)},
+			y:          exactSoundNote{spelling.C(), 5, max.Neg()},
+			outOfRange: true,
+		},
+		{
+			id:         "T-9 base distance out of range",
+			x:          exactSoundNote{spelling.C(), 3, max},
+			y:          exactSoundNote{spelling.C(), 7504, max.Neg()},
+			distance:   ct(-8_998_800),
+			comparison: 1,
+		},
+		{
+			id:         "T-10 base notation too complex",
+			x:          exactSoundNote{spelling.C(), 4, cents.MustFromFraction(1, 3)},
+			y:          exactSoundNote{spelling.D(), 4, exact200PlusTiny30()},
+			makeTuning: exactBaseTooComplexTuning,
+			distance:   ct(200),
+			comparison: -1,
+		},
+	}
+}
+
+// settingsAndTuning returns an equal-tuning explicit context for the case.
+func (tc exactSoundCase) settingsAndTuning() (*settings.Settings, *tuning.Tuning) {
+	if tc.makeTuning == nil {
+		return std(), tuning.Standard()
+	}
+	tu := tc.makeTuning()
+	return std().MustWithTuning(tu), tu
+}
+
+// notes builds independent inputs for a subtest. A nil source is used by the
+// explicit-context forms; the own form passes its bound source explicitly.
+func (tc exactSoundCase) notes(t *testing.T, src settings.Source) (note.Note, note.Note) {
+	t.Helper()
+	return mk(t, tc.x.name, tc.x.aspn, tc.x.correction, src),
+		mk(t, tc.y.name, tc.y.aspn, tc.y.correction, src)
+}
+
+// callExactSound invokes one public operation through a common adapter. A
+// recovered panic is returned separately so regular and Must forms can be
+// compared without turning an unexpected panic into a test-process failure.
+func callExactSound(
+	op exactSoundOperation,
+	context exactSoundContext,
+	must bool,
+	x, y note.Note,
+	src settings.Source,
+	tu *tuning.Tuning,
+) (got exactSoundResult, panicked any, err error) {
+	defer func() { panicked = recover() }()
+
+	if must {
+		switch op {
+		case exactCompare:
+			switch context {
+			case exactOwn:
+				got.comparison = x.MustCompareSound(y)
+			case exactIn:
+				got.comparison = x.MustCompareSoundIn(src, y)
+			case exactInTuning:
+				got.comparison = x.MustCompareSoundInTuning(tu, y)
+			}
+		case exactCompareBy:
+			switch context {
+			case exactOwn:
+				got.comparison = x.MustCompareSoundBy(y, frequency.Strict())
+			case exactIn:
+				got.comparison = x.MustCompareSoundByIn(src, y, frequency.Strict())
+			case exactInTuning:
+				got.comparison = x.MustCompareSoundByInTuning(tu, y, frequency.Strict())
+			}
+		case exactSame:
+			switch context {
+			case exactOwn:
+				got.same = x.MustSoundsSame(y)
+			case exactIn:
+				got.same = x.MustSoundsSameIn(src, y)
+			case exactInTuning:
+				got.same = x.MustSoundsSameInTuning(tu, y)
+			}
+		case exactSameBy:
+			switch context {
+			case exactOwn:
+				got.same = x.MustSoundsSameBy(y, frequency.Strict())
+			case exactIn:
+				got.same = x.MustSoundsSameByIn(src, y, frequency.Strict())
+			case exactInTuning:
+				got.same = x.MustSoundsSameByInTuning(tu, y, frequency.Strict())
+			}
+		case exactCents:
+			switch context {
+			case exactOwn:
+				got.distance = x.MustCentsTo(y)
+			case exactIn:
+				got.distance = x.MustCentsToIn(src, y)
+			case exactInTuning:
+				got.distance = x.MustCentsToInTuning(tu, y)
+			}
+		}
+		return got, nil, nil
+	}
+
+	switch op {
+	case exactCompare:
+		switch context {
+		case exactOwn:
+			got.comparison, err = x.CompareSound(y)
+		case exactIn:
+			got.comparison, err = x.CompareSoundIn(src, y)
+		case exactInTuning:
+			got.comparison, err = x.CompareSoundInTuning(tu, y)
+		}
+	case exactCompareBy:
+		switch context {
+		case exactOwn:
+			got.comparison, err = x.CompareSoundBy(y, frequency.Strict())
+		case exactIn:
+			got.comparison, err = x.CompareSoundByIn(src, y, frequency.Strict())
+		case exactInTuning:
+			got.comparison, err = x.CompareSoundByInTuning(tu, y, frequency.Strict())
+		}
+	case exactSame:
+		switch context {
+		case exactOwn:
+			got.same, err = x.SoundsSame(y)
+		case exactIn:
+			got.same, err = x.SoundsSameIn(src, y)
+		case exactInTuning:
+			got.same, err = x.SoundsSameInTuning(tu, y)
+		}
+	case exactSameBy:
+		switch context {
+		case exactOwn:
+			got.same, err = x.SoundsSameBy(y, frequency.Strict())
+		case exactIn:
+			got.same, err = x.SoundsSameByIn(src, y, frequency.Strict())
+		case exactInTuning:
+			got.same, err = x.SoundsSameByInTuning(tu, y, frequency.Strict())
+		}
+	case exactCents:
+		switch context {
+		case exactOwn:
+			got.distance, err = x.CentsTo(y)
+		case exactIn:
+			got.distance, err = x.CentsToIn(src, y)
+		case exactInTuning:
+			got.distance, err = x.CentsToInTuning(tu, y)
+		}
+	}
+	return got, nil, err
+}
+
+// assertExactSoundResult checks the operation-specific observable result.
+func assertExactSoundResult(t *testing.T, op exactSoundOperation, got, want exactSoundResult) {
+	t.Helper()
+	switch op {
+	case exactCompare, exactCompareBy:
+		assert.Equal(t, want.comparison, got.comparison)
+	case exactSame, exactSameBy:
+		assert.Equal(t, want.same, got.same)
+	case exactCents:
+		assert.Truef(t, got.distance.Equal(want.distance),
+			"distance: want %v, got %v", want.distance, got.distance)
+	}
+}
+
+// TestExactDistanceIntermediateRepresentation runs every matrix row in both
+// directions through all strict operations, contexts, and regular/Must forms.
+func TestExactDistanceIntermediateRepresentation(t *testing.T) {
+	for _, tc := range exactSoundCases(t) {
+		for _, reverse := range []bool{false, true} {
+			direction := "forward"
+			if reverse {
+				direction = "reverse"
+			}
+			t.Run(tc.id+"/"+direction, func(t *testing.T) {
+				for _, context := range exactSoundContexts {
+					for _, operation := range exactSoundOperations {
+						for _, must := range []bool{false, true} {
+							form := "regular"
+							if must {
+								form = "Must"
+							}
+							t.Run(string(context)+"/"+operation.name+"/"+form, func(t *testing.T) {
+								t.Parallel()
+
+								set, tu := tc.settingsAndTuning()
+								var own settings.Source
+								if context == exactOwn {
+									own = set
+								}
+								x, y := tc.notes(t, own)
+								if reverse {
+									x, y = y, x
+								}
+								xBefore, yBefore := x, y
+
+								want := exactSoundResult{
+									comparison: tc.comparison,
+									same:       tc.same,
+									distance:   tc.distance,
+								}
+								if reverse {
+									want.comparison = -want.comparison
+									want.distance = want.distance.Neg()
+								}
+
+								got, panicked, err := callExactSound(operation.op, context, must, x, y, set, tu)
+								assertSame(t, xBefore, x, "receiver is unchanged")
+								assertSame(t, yBefore, y, "argument is unchanged")
+
+								if tc.outOfRange {
+									if !must {
+										assert.Nil(t, panicked, "unexpected panic in the regular form")
+										assertErr(t, err, note.ErrOutOfRange, cents.ErrOutOfRange)
+										return
+									}
+
+									_, regularPanic, regularErr := callExactSound(operation.op, context, false, x, y, set, tu)
+									assert.Nil(t, regularPanic, "unexpected panic in the regular form")
+									assertErr(t, regularErr, note.ErrOutOfRange, cents.ErrOutOfRange)
+									if !assert.NotNil(t, panicked, "Must must panic") {
+										return
+									}
+									panicErr, isErr := panicked.(error)
+									if !assert.True(t, isErr, "panic value is an error: %v", panicked) {
+										return
+									}
+									assertErr(t, panicErr, note.ErrOutOfRange, cents.ErrOutOfRange)
+									if assert.NotNil(t, regularErr) {
+										assert.Equal(t, regularErr.Error(), panicErr.Error(),
+											"Must panics with the regular operation error")
+									}
+									return
+								}
+
+								require.Nil(t, panicked, "unexpected panic")
+								require.NoError(t, err)
+								assertExactSoundResult(t, operation.op, got, want)
+							})
+						}
+					}
+				}
+			})
+		}
+	}
+}
+
+// TestExactDistanceSourceReads checks that boundary and fallback arithmetic
+// does not change source snapshots or add reads (P-5, P-5a, architecture 6.3).
+func TestExactDistanceSourceReads(t *testing.T) {
+	for _, tc := range exactSoundCases(t) {
+		switch tc.id {
+		case "T-1 positive correction boundary", "T-2 negative correction boundary",
+			"T-9 base distance out of range", "T-10 base notation too complex":
+		default:
+			continue
+		}
+
+		t.Run(tc.id, func(t *testing.T) {
+			set, tu := tc.settingsAndTuning()
+
+			t.Run("one shared source", func(t *testing.T) {
+				t.Parallel()
+				src := newCounting(set)
+				x, y := tc.notes(t, src)
+				before := src.reads()
+				got, err := x.CentsTo(y)
+				require.NoError(t, err)
+				assert.True(t, got.Equal(tc.distance))
+				assert.EqualValues(t, 1, src.reads()-before)
+			})
+
+			t.Run("two equal-tuning sources", func(t *testing.T) {
+				t.Parallel()
+				xSource, ySource := newCounting(set), newCounting(set)
+				x := mk(t, tc.x.name, tc.x.aspn, tc.x.correction, xSource)
+				y := mk(t, tc.y.name, tc.y.aspn, tc.y.correction, ySource)
+				xBefore, yBefore := xSource.reads(), ySource.reads()
+				got, err := x.CentsTo(y)
+				require.NoError(t, err)
+				assert.True(t, got.Equal(tc.distance))
+				assert.EqualValues(t, 1, xSource.reads()-xBefore)
+				assert.EqualValues(t, 1, ySource.reads()-yBefore)
+			})
+
+			t.Run("In reads only the explicit source", func(t *testing.T) {
+				t.Parallel()
+				own, explicit := newCounting(set), newCounting(set)
+				x, y := tc.notes(t, own)
+				ownBefore, explicitBefore := own.reads(), explicit.reads()
+				got, err := x.CentsToIn(explicit, y)
+				require.NoError(t, err)
+				assert.True(t, got.Equal(tc.distance))
+				assert.Equal(t, ownBefore, own.reads())
+				assert.EqualValues(t, 1, explicit.reads()-explicitBefore)
+			})
+
+			t.Run("InTuning reads no sources", func(t *testing.T) {
+				t.Parallel()
+				own := newCounting(set)
+				x, y := tc.notes(t, own)
+				before := own.reads()
+				got, err := x.CentsToInTuning(tu, y)
+				require.NoError(t, err)
+				assert.True(t, got.Equal(tc.distance))
+				assert.Equal(t, before, own.reads())
+			})
+		})
+	}
+}
+
+// TestExactDistanceErrorPriority keeps early failures and genuine tuning
+// errors ahead of the corrected final-distance arithmetic (P-15, E-8).
+func TestExactDistanceErrorPriority(t *testing.T) {
+	t.Parallel()
+
+	max := ct(cents.MaxMagnitude)
+	set := std()
+	x := mk(t, spelling.C(), 4, max, set)
+	y := mk(t, spelling.D(), 4, max, set)
+
+	t.Run("unset strict criterion precedes arithmetic", func(t *testing.T) {
+		t.Parallel()
+		_, err := x.CompareSoundBy(y, frequency.Criterion{})
+		assertErr(t, err, note.ErrUnset, frequency.ErrUnset)
+		_, err = x.SoundsSameBy(y, frequency.Criterion{})
+		assertErr(t, err, note.ErrUnset, frequency.ErrUnset)
+	})
+
+	t.Run("no octave precedes arithmetic and source reads", func(t *testing.T) {
+		t.Parallel()
+		noOctave := mkName(t, spelling.C(), max, nil)
+		_, err := noOctave.CompareSound(y)
+		assertErr(t, err, note.ErrNoOctave)
+	})
+
+	t.Run("no source precedes arithmetic", func(t *testing.T) {
+		t.Parallel()
+		freeX := mk(t, spelling.C(), 4, max, nil)
+		freeY := mk(t, spelling.D(), 4, max, nil)
+		_, err := freeX.CentsTo(freeY)
+		assertErr(t, err, note.ErrNoSource)
+	})
+
+	t.Run("unset settings precede arithmetic", func(t *testing.T) {
+		t.Parallel()
+		src := newSwitch(std())
+		boundX, boundY := tcNotesForPriority(t, src, max)
+		src.set(nil)
+		_, err := boundX.CentsTo(boundY)
+		assertErr(t, err, note.ErrUnsetSettings, settings.ErrUnset)
+	})
+
+	t.Run("genuine system distance error is not replaced by cents fallback", func(t *testing.T) {
+		t.Parallel()
+		lo := mk(t, spelling.C(), math.MinInt, ct(0), set)
+		hi := mk(t, spelling.C(), math.MaxInt, ct(0), set)
+		_, err := lo.CentsTo(hi)
+		assertErr(t, err, note.ErrOutOfRange, system.ErrOutOfRange)
+		assert.NotErrorIs(t, err, cents.ErrOutOfRange)
+		assert.NotErrorIs(t, err, cents.ErrTooComplex)
+	})
+}
+
+// tcNotesForPriority creates two valid bound notes before their source becomes
+// unset, keeping construction separate from the operation under test.
+func tcNotesForPriority(t *testing.T, src settings.Source, correction cents.Cents) (note.Note, note.Note) {
+	t.Helper()
+	return mk(t, spelling.C(), 4, correction, src), mk(t, spelling.D(), 4, correction, src)
+}
+
+// TestSortedBySoundExactBoundaryRegression is the control for T-1 and T-2:
+// each corrected height itself is representable, sorting succeeds in sound
+// order, and neither the input slice nor its notes are mutated.
+func TestSortedBySoundExactBoundaryRegression(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range exactSoundCases(t) {
+		switch tc.id {
+		case "T-1 positive correction boundary", "T-2 negative correction boundary":
+		default:
+			continue
+		}
+
+		t.Run(tc.id, func(t *testing.T) {
+			t.Parallel()
+			set, _ := tc.settingsAndTuning()
+			x, y := tc.notes(t, set)
+			in := []note.Note{y, x}
+			want := []note.Note{y, x}
+			if tc.comparison < 0 {
+				want = []note.Note{x, y}
+			}
+			got, err := note.SortedBySound(in)
+			require.NoError(t, err)
+			assert.True(t, sameNotes(want, got), "ascending corrected heights")
+			assert.True(t, sameNotes([]note.Note{y, x}, in), "the input order is unchanged")
+			got[0] = note.Note{}
+			assert.True(t, sameNotes([]note.Note{y, x}, in), "the result is a new slice")
+		})
+	}
 }

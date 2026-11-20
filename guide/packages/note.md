@@ -3,7 +3,7 @@
 A note is what a score writes on a staff, plus how far it is meant to sound from that record. It has three parts:
 
 - the **record**: a note name such as C♯, or a written pitch — a name in a positional octave, such as C♯ in octave 4;
-- the **correction**: a deviation in cents, zero unless given. It does not change the name, the octave, or the position of the note; it only moves the sound. There is no limit on it: C4 raised by 150 cents still sits below C♯4 by position, while in twelve-tone equal temperament it sounds above it;
+- the **correction**: a deviation in cents, zero unless given. It does not change the name, the octave, or the position of the note; it only moves the sound. The note adds no additional musical-zone restriction, but the correction must be within the representable range of `cents.Cents`: C4 raised by 150 cents still sits below C♯4 by position, while in twelve-tone equal temperament it sounds above it;
 - the **source of settings**: where the note reads its settings from. It is optional.
 
 A note without an octave is a name with a correction, such as "C♯ +30 cents". It has no frequency, no step number, no position, and no written octave: no octave is ever filled in for it. Asking for any of these is an error, not a guess.
@@ -51,7 +51,7 @@ Notes can be compared at three levels.
 
 **By position**, in the system of the settings. B♯3 and C4 are at one position, zero steps apart, though their records differ. A note with a correction keeps its position. Positions can be compared, measured in steps, and sorted only when the systems of all the notes are the same.
 
-**By sound**, each note in its own settings, which may differ. C4 of the standard settings sounds lower than C4 of a 19-position equal temperament (261.6256 Hz against 264.0226 Hz), though by position the two cannot even be compared. When two notes share an equal tuning, the comparison is exact: the heights in cents, with their corrections, are compared instead of rounded frequencies. Otherwise frequencies are compared, strictly by default or within a tolerance in cents, in hertz, or relative to the frequency. A note can also be compared with a bare frequency: whether the frequency is below, within, or above the sound of the note, and by how many cents it deviates.
+**By sound**, each note in its own settings, which may differ. C4 of the standard settings sounds lower than C4 of a 19-position equal temperament (261.6256 Hz against 264.0226 Hz), though by position the two cannot even be compared. With equal tunings, exact corrected heights `h + c` in cents are compared instead of rounded frequencies only when no criterion is given or the criterion has kind `frequency.KindStrict`. All other criteria use frequencies even when the tunings are equal, including zero-valued tolerances and composed criteria. Frequency comparison is strict by default or uses a tolerance in cents, in hertz, or relative to the frequency. Sorting by sound is stable: exact keys `h + c` are used only when the tunings of all notes in the list are pairwise equal; otherwise frequency keys are used for the whole list. A note can also be compared with a bare frequency: whether the frequency is below, within, or above the sound of the note, and by how many cents it deviates.
 
 ## Changing the source
 
