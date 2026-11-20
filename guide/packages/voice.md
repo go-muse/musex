@@ -6,7 +6,7 @@ A melodic line is not the voice of a track. In notation, a voice is also a layer
 
 ## Elements
 
-Each element of a line is either a **sound** — one [note](note.md) with an octave — or a **rest**. Each has a duration and may carry a fermata sign. A chord, even of one note, a grace note, and a rest in measures are never elements: converting [events](event.md) that contain them is refused with distinct errors.
+Each element of a line is either a **sound** — one [note](note.md) with an octave — or a **rest**. Each has a duration and may carry a fermata sign. A chord, even of one note, and a rest in measures are never elements. A rule of the product: a grace note is not an element either, because it takes no time of its own and its attachment to a neighboring note is a rule of the voice of a track. Converting [events](event.md) that contain any of them is refused with distinct errors.
 
 A duration keeps its notation as given, in one of three forms:
 
@@ -34,9 +34,9 @@ A fermata of an element adds no time by itself; music theory gives no fixed leng
 
 A line gives the melodic intervals from each sound to the next one with their direction, its range from the lowest sound to the highest, the indexes of these sounds, and the ambitus, the interval between them. A rule of the product: sounds separated by a rest also form an interval, marked as passing through a rest, so the caller can keep or ignore it.
 
-Intervals are measured as written, so the ambitus of C♭4 and B♯3 is a descending diminished second. When several sounds share the lowest or the highest position, the first one in the line is taken.
+Intervals are measured as written, so the ambitus of C♭4 and B♯3 is a descending doubly diminished second. When several sounds share the lowest or the highest position, the first one in the line is taken.
 
-Comparing pitches needs one [musical system](system.md). Each operation can take it explicitly. Otherwise it comes from the reference range of a preset or an instrument, if one is given, or from the settings of the sounds, which must then all be bound and share one system. Moving sounds — transposition, doubling, imitation, inversion — works on each sound in the system of its own settings, so a line may mix systems; an unbound sound needs an explicit system.
+A rule of the product chooses the system of an operation. Comparing pitches needs one [musical system](system.md). Each operation can take it explicitly. Otherwise it comes from the reference range of a preset or an instrument, if one is given, or from the settings of the sounds, which must then all be bound and share one system. Moving sounds — transposition, doubling, imitation, inversion — works on each sound in the system of its own settings, so a line may mix systems; an unbound sound needs an explicit system.
 
 ## Range of a voice or an instrument and tessitura
 
