@@ -31,8 +31,8 @@ func TestPartialChordTiesAndSoundOrdering(t *testing.T) {
 	assertSpan(t, sounds[1].Time, 0, 1, 1, 2)
 	assertSpan(t, sounds[2].Time, 0, 1, 3, 4)
 	assertSpan(t, sounds[3].Time, 0, 1, 1, 1)
-	assert.Equal(t, []track.Occurrence{{Place: track.Place{Voice: v, Bar: 1, Index: 0}, NoteIndex: 2}, {Place: track.Place{Voice: v, Bar: 1, Index: 1}, NoteIndex: 0}}, sounds[2].Parts)
-	assert.Equal(t, []track.Occurrence{{Place: track.Place{Voice: w, Bar: 1, Index: 0}, NoteIndex: 0}}, sounds[3].Parts)
+	assertOccurrences(t, []track.Occurrence{{Place: track.Place{Voice: v, Bar: 1, Index: 0}, NoteIndex: 2}, {Place: track.Place{Voice: v, Bar: 1, Index: 1}, NoteIndex: 0}}, sounds[2].Parts)
+	assertOccurrences(t, []track.Occurrence{{Place: track.Place{Voice: w, Bar: 1, Index: 0}, NoteIndex: 0}}, sounds[3].Parts)
 	at, ok := p.MustAt(v, position(1, 2))
 	require.True(t, ok)
 	assert.Same(t, last, at.Event)
@@ -42,7 +42,7 @@ func TestPartialChordTiesAndSoundOrdering(t *testing.T) {
 	assert.Empty(t, p.MustSoundingAt(position(3, 4), v))
 	assert.Empty(t, p.MustSoundingAt(position(2, 1)))
 	assert.Len(t, p.MustSounds(w, v), 4)
-	assert.Equal(t, w, p.MustSounds(w)[0].Parts[0].Place.Voice)
+	assert.True(t, w == p.MustSounds(w)[0].Parts[0].Place.Voice)
 	_, err := p.Sounds(v, v)
 	assert.ErrorIs(t, err, track.ErrVoice)
 	_, err = p.SoundingAt(position(1, 4), track.VoiceID{})
@@ -74,7 +74,7 @@ func TestRepeatedOccurrencesMatchInWrittenOrder(t *testing.T) {
 	assertSpan(t, s[0].Time, 0, 1, 1, 4)
 	assertSpan(t, s[1].Time, 0, 1, 1, 2)
 	assertSpan(t, s[2].Time, 1, 4, 1, 2)
-	assert.Equal(t, []track.Occurrence{{Place: track.Place{Voice: v, Bar: 1, Index: 0}, NoteIndex: 1}, {Place: track.Place{Voice: v, Bar: 1, Index: 1}, NoteIndex: 0}}, s[1].Parts)
+	assertOccurrences(t, []track.Occurrence{{Place: track.Place{Voice: v, Bar: 1, Index: 0}, NoteIndex: 1}, {Place: track.Place{Voice: v, Bar: 1, Index: 1}, NoteIndex: 0}}, s[1].Parts)
 	assert.Equal(t, 1, s[2].Parts[0].NoteIndex)
 	all := chordEvent(written(duration.Quarter, 0), event.Marks{Ties: []int{0, 1}}, c, c)
 	two := p.MustSplice(v, 1, 0, 1, all).MustSounds(v)
@@ -103,7 +103,7 @@ func TestTieValidationIsAtomicAndAddressed(t *testing.T) {
 		{"different cents", 1, []*event.Event{sounded(c, written(duration.Quarter, 0), event.Marks{Ties: []int{0}}), sounded(raised, written(duration.Quarter, 0), event.Marks{})}, nil, track.ErrTiePitch, 0},
 		{"missing duplicate", 1, []*event.Event{chordEvent(written(duration.Quarter, 0), event.Marks{Ties: []int{0, 1}}, c, c), tone("C4", duration.Quarter, event.Marks{})}, nil, track.ErrTieMultiplicity, 1},
 		{"interbar gap", 2, []*event.Event{tone("C4", duration.Half, event.Marks{Ties: []int{0}})}, []*event.Event{tone("C4", duration.Quarter, event.Marks{})}, track.ErrTieGap, 0},
-		{"missing octave", 1, []*event.Event{tone("C", duration.Quarter, event.Marks{Ties: []int{0}}), tone("C4", duration.Quarter, event.Marks{})}, nil, track.ErrTiePitch, 0},
+		{"missing octave", 1, []*event.Event{nameTone("C", duration.Quarter, event.Marks{Ties: []int{0}}), tone("C4", duration.Quarter, event.Marks{})}, nil, track.ErrTiePitch, 0},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			p, v := fixture(tc.bars)
@@ -114,14 +114,14 @@ func TestTieValidationIsAtomicAndAddressed(t *testing.T) {
 			next, err := p.Edit(ed)
 			assert.Nil(t, next)
 			is := issues(t, err, tc.cause)
-			assert.Equal(t, track.Place{Voice: v, Bar: 1, Index: 0}, is[0].Place)
+			assertPlace(t, track.Place{Voice: v, Bar: 1, Index: 0}, is[0].Place)
 			assert.Equal(t, tc.noteIndex, is[0].NoteIndex)
 			assert.Empty(t, p.MustEntries(v, 1))
 		})
 	}
 	p, v := fixture(2)
-	tied := tone("C", duration.Whole, event.Marks{Ties: []int{0}})
-	next := tone("C", duration.Quarter, event.Marks{})
+	tied := nameTone("C", duration.Whole, event.Marks{Ties: []int{0}})
+	next := nameTone("C", duration.Quarter, event.Marks{})
 	p = p.MustEdit(track.Edit{Bars: []track.BarEdit{{Voice: v, Bar: 1, Events: []*event.Event{tied}}, {Voice: v, Bar: 2, Events: []*event.Event{next}}}})
 	s := p.MustSounds()
 	require.Len(t, s, 1)
@@ -141,7 +141,7 @@ func TestInterbarTieCanBePublishedAsOneEdit(t *testing.T) {
 	s := p.MustSounds()
 	require.Len(t, s, 1)
 	assertSpan(t, s[0].Time, 0, 1, 3, 2)
-	assert.Equal(t, []track.Occurrence{{Place: track.Place{Voice: v, Bar: 1, Index: 0}, NoteIndex: 0}, {Place: track.Place{Voice: v, Bar: 2, Index: 0}, NoteIndex: 0}}, s[0].Parts)
+	assertOccurrences(t, []track.Occurrence{{Place: track.Place{Voice: v, Bar: 1, Index: 0}, NoteIndex: 0}, {Place: track.Place{Voice: v, Bar: 2, Index: 0}, NoteIndex: 0}}, s[0].Parts)
 	at, ok := p.MustAt(v, position(1, 1))
 	require.True(t, ok)
 	assert.Equal(t, 2, at.Place.Bar)
@@ -170,7 +170,7 @@ func TestGraceGroupsPreserveOrderButDoNotSound(t *testing.T) {
 	s := p.MustSounds()
 	require.Len(t, s, 1)
 	assertNote(t, parsed("D4"), s[0].Note)
-	assert.Equal(t, []track.Occurrence{{Place: track.Place{Voice: v, Bar: 1, Index: 2}, NoteIndex: 0}}, s[0].Parts)
+	assertOccurrences(t, []track.Occurrence{{Place: track.Place{Voice: v, Bar: 1, Index: 2}, NoteIndex: 0}}, s[0].Parts)
 	assert.True(t, e[1].Event.MustDuration().Equal(written(duration.Sixteenth, 0)))
 	for _, events := range [][]*event.Event{{g1}, {g2, tone("E4", duration.Quarter, event.Marks{})}, {g1, rest(written(duration.Quarter, 0), false)}} {
 		base, bv := fixture(1)

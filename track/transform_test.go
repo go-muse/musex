@@ -232,10 +232,10 @@ func TestWriteVacancyReplacementAndExactBoundary(t *testing.T) {
 			removed = true
 		}
 		for _, e := range c.From {
-			assert.Equal(t, v, e.Place.Voice)
+			assert.True(t, v == e.Place.Voice)
 		}
 		for _, e := range c.To {
-			assert.Equal(t, v, e.Place.Voice)
+			assert.True(t, v == e.Place.Voice)
 		}
 	}
 	assert.True(t, removed)
@@ -516,7 +516,7 @@ func TestQuantizeSharedBoundariesTiesAndEmptyTail(t *testing.T) {
 		assert.Same(t, p.MustEntries(w, 1)[0].Event, out.Track.MustEntries(w, 1)[0].Event)
 		for _, c := range out.Changes {
 			for _, e := range append(append([]track.Entry{}, c.From...), c.To...) {
-				assert.Equal(t, v, e.Place.Voice)
+				assert.True(t, v == e.Place.Voice)
 			}
 		}
 		assertSpan(t, p.MustEntries(v, 1)[0].Time, 0, 1, 3, 16)

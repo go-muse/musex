@@ -109,7 +109,7 @@ func TestEqualityIncludesSourcesNotationGridClockAndSigns(t *testing.T) {
 	a, b := piano(), piano()
 	base := track.MustNew(a, grid(2))
 	v := base.MustVoices()[0]
-	na, nb := note.MustParse(a, "C4"), note.MustParse(b, "C4")
+	na, nb := note.MustParsePitch(a, "C4"), note.MustParsePitch(b, "C4")
 	p := base.MustSplice(v, 1, 0, 0, sounded(na, written(duration.Quarter, 0), event.Marks{}))
 	same := base.MustSplice(v, 1, 0, 0, sounded(na, written(duration.Quarter, 0), event.Marks{}))
 	assert.True(t, p.Equal(same))
@@ -130,7 +130,7 @@ func TestEqualityIncludesSourcesNotationGridClockAndSigns(t *testing.T) {
 func TestSplittingNumericChordKeepsSourcesAndEveryMark(t *testing.T) {
 	t.Parallel()
 	a, b := piano(), piano()
-	c, e := note.MustParse(a, "C4"), note.MustParse(b, "E4")
+	c, e := note.MustParsePitch(a, "C4"), note.MustParsePitch(b, "E4")
 	p, v := fixture(3)
 	first := chordEvent(value(3, 2), event.Marks{Arpeggio: true, Ties: []int{1}, Fermata: true}, c, e)
 	last := sounded(e, written(duration.Quarter, 0), event.Marks{})
@@ -182,7 +182,7 @@ func TestRestSplittingAndNonSplittingKeepWrittenForm(t *testing.T) {
 func TestMergeRefusesDifferentSourcesOrAdditionalChordAttack(t *testing.T) {
 	t.Parallel()
 	a, b := piano(), piano()
-	na, nb := note.MustParse(a, "C4"), note.MustParse(b, "C4")
+	na, nb := note.MustParsePitch(a, "C4"), note.MustParsePitch(b, "C4")
 	for _, pair := range [][]*event.Event{
 		{sounded(na, written(duration.Quarter, 0), event.Marks{Ties: []int{0}}), sounded(nb, written(duration.Quarter, 0), event.Marks{})},
 		{chordEvent(written(duration.Quarter, 0), event.Marks{Ties: []int{0}}, na, parsed("E4")), chordEvent(written(duration.Quarter, 0), event.Marks{}, na, parsed("E4"))},
@@ -260,7 +260,7 @@ func TestMeterEditResolvesRestButRejectsWrittenOverflow(t *testing.T) {
 	next, err := p.Edit(track.Edit{Grid: &g})
 	assert.Nil(t, next)
 	is := issues(t, err, track.ErrOverflow)
-	assert.Equal(t, v, is[0].Place.Voice)
+	assert.True(t, v == is[0].Place.Voice)
 	assert.Equal(t, 1, is[0].Place.Bar)
 	assertLength(t, 1, 4, is[0].Amount)
 	assert.True(t, grid(2).Equal(p.MustGrid()))
@@ -280,9 +280,9 @@ func TestAssignedInstrumentForTwoVoicesOfThePublishedMelody(t *testing.T) {
 	p, w := p.MustAddVoice()
 	upper := []*event.Event{}
 	for _, text := range []string{"E4", "F4", "G4", "A4"} {
-		upper = append(upper, sounded(note.MustParse(a, text), written(duration.Quarter, 0), event.Marks{}))
+		upper = append(upper, sounded(note.MustParsePitch(a, text), written(duration.Quarter, 0), event.Marks{}))
 	}
-	c, g := note.MustParse(a, "C3"), note.MustParse(a, "G3")
+	c, g := note.MustParsePitch(a, "C3"), note.MustParsePitch(a, "G3")
 	lower := chordEvent(written(duration.Whole, 0), event.Marks{Ties: []int{1}}, c, g)
 	p = p.MustEdit(track.Edit{Bars: []track.BarEdit{
 		{Voice: v, Bar: 1, Events: upper},

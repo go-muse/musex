@@ -24,7 +24,7 @@ func ExampleTrack_ExtractLine() {
 	part := track.MustNew(piano, grid)
 	upper := part.MustVoices()[0]
 	quarter := event.MustWrittenDuration(duration.MustNewWritten(duration.Quarter, 0))
-	e4 := note.MustParse(piano, "E4")
+	e4 := note.MustParsePitch(piano, "E4")
 	e := event.MustNew(event.MustNoteContent(e4), quarter, event.Marks{})
 	part = part.MustSplice(upper, 2, 0, 0, e)
 	out, err := part.ExtractLine(upper, track.Exact)
@@ -42,7 +42,7 @@ func ExampleTrack_WriteLine() {
 	piano := instrument.MustNew(instrument.Piano())
 	part := track.MustNew(piano, measure.MustNew(meter.MustNew(3, 4)).MustWithBarCount(2))
 	upper := part.MustVoices()[0]
-	c4 := note.MustParse(piano, "C4")
+	c4 := note.MustParsePitch(piano, "C4")
 	half := voice.MustWrittenDuration(duration.MustNewWritten(duration.Half, 0))
 	line := voice.MustNew(voice.MustNewSound(c4, half))
 	start := measure.MustNewAddress(1, duration.MustNewPosition(1, 2))
@@ -89,7 +89,7 @@ func TestExtractLineGapsMeasuredRestsAndNoTrailingSilence(t *testing.T) {
 	assertSpan(t, out.Gaps[0], 0, 1, 1, 1)
 	assertSpan(t, out.Gaps[1], 5, 4, 3, 1)
 	require.Len(t, out.Measured, 1)
-	assert.Equal(t, track.Place{Voice: v, Bar: 4, Index: 0}, out.Measured[0].Place)
+	assertPlace(t, track.Place{Voice: v, Bar: 4, Index: 0}, out.Measured[0].Place)
 	assert.Equal(t, []int{1, 5}, out.FermataBars)
 	require.Len(t, out.Extensions, 2)
 	assertPosition(t, 5, 4, out.Extensions[0])
@@ -140,7 +140,7 @@ func TestExtractionFailuresRetainOriginalAddresses(t *testing.T) {
 	}{
 		{"one note chord", []*event.Event{chordEvent(written(duration.Quarter, 0), event.Marks{}, parsed("C4"))}, voice.ErrChord},
 		{"chord", []*event.Event{chordEvent(written(duration.Quarter, 0), event.Marks{}, parsed("C4"), parsed("E4"))}, voice.ErrChord},
-		{"no octave", []*event.Event{tone("C", duration.Quarter, event.Marks{})}, voice.ErrNoOctave},
+		{"no octave", []*event.Event{nameTone("C", duration.Quarter, event.Marks{})}, voice.ErrNoOctave},
 		{"grace", []*event.Event{tone("C4", duration.Eighth, event.Marks{Grace: true}), tone("D4", duration.Quarter, event.Marks{})}, voice.ErrGrace},
 		{"intermediate fermata", []*event.Event{tone("C4", duration.Quarter, event.Marks{Ties: []int{0}, Fermata: true}), tone("C4", duration.Quarter, event.Marks{})}, voice.ErrFermataInTie},
 		{"numeric tie", []*event.Event{sounded(parsed("C4"), value(1, 4), event.Marks{Ties: []int{0}}), tone("C4", duration.Quarter, event.Marks{})}, voice.ErrTiedValue},
@@ -154,7 +154,7 @@ func TestExtractionFailuresRetainOriginalAddresses(t *testing.T) {
 			assert.Empty(t, out.Measured)
 			assert.Empty(t, out.Skipped)
 			is := issues(t, err, tc.cause)
-			assert.Equal(t, v, is[0].Place.Voice)
+			assert.True(t, v == is[0].Place.Voice)
 			assert.Equal(t, 2, is[0].Place.Bar)
 			assert.Equal(t, 0, is[0].Place.Index)
 			if tc.name != "grace" {
@@ -178,7 +178,7 @@ func TestPrincipalOnlySkipsOnlyGraceAndKeepsWrittenSigns(t *testing.T) {
 	require.Len(t, out.Skipped, 2)
 	assert.Same(t, g1, out.Skipped[0].Event)
 	assert.Same(t, g2, out.Skipped[1].Event)
-	assert.Equal(t, track.Place{Voice: v, Bar: 2, Index: 1}, out.Skipped[1].Place)
+	assertPlace(t, track.Place{Voice: v, Bar: 2, Index: 1}, out.Skipped[1].Place)
 	assert.Equal(t, 2, out.Line.MustLen())
 	assertNote(t, parsed("D4"), out.Line.MustNotes()[0])
 	assert.True(t, out.Line.MustElement(1).MustFermata())
@@ -188,7 +188,7 @@ func TestPrincipalOnlySkipsOnlyGraceAndKeepsWrittenSigns(t *testing.T) {
 func TestCrossBarExtractionAndDifferentSourcesUseFirstLink(t *testing.T) {
 	t.Parallel()
 	a, b := piano(), piano()
-	na, nb := note.MustParse(a, "C4"), note.MustParse(b, "C4")
+	na, nb := note.MustParsePitch(a, "C4"), note.MustParsePitch(b, "C4")
 	p := track.MustNew(a, grid(2))
 	v := p.MustVoices()[0]
 	first := sounded(na, written(duration.Whole, 0), event.Marks{Ties: []int{0}})
@@ -301,7 +301,7 @@ func TestWriteLineReportsElementIndicesAfterExpansion(t *testing.T) {
 	p := track.MustNew(piano(), g)
 	v := p.MustVoices()[0]
 	a, b := piano(), piano()
-	c, d := note.MustParse(a, "C4"), note.MustParse(b, "D4")
+	c, d := note.MustParsePitch(a, "C4"), note.MustParsePitch(b, "D4")
 	// This element already expands into two events before track layout.
 	// Provenance must still refer to element 0, followed by element 1.
 	line := voice.MustNew(
