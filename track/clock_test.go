@@ -40,6 +40,15 @@ func TestNoClockAndSignsDoNotCreateTime(t *testing.T) {
 	assert.Equal(t, []int{1}, removed.MustFermataBars())
 }
 
+func TestSoundSecondsRejectsExcessPrecisionForEmptyTrack(t *testing.T) {
+	t.Parallel()
+	p, _ := fixture(1)
+	p = withClock(p, clockFor(grid(1), 60))
+	result, err := p.SoundSeconds(tempomap.MaxPlaces+1, rounding.HalfUp)
+	assert.Error(t, err)
+	assert.Empty(t, result)
+}
+
 func TestSharedHoldUsesEndsForAttacksAndReleases(t *testing.T) {
 	t.Parallel()
 	p, v := fixture(2)

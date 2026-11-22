@@ -422,6 +422,45 @@ func TestMeasureRestsAndMeterChange(t *testing.T) {
 	assert.ErrorIs(t, err, track.ErrLostRecord)
 }
 
+func TestLongMeasureRestDoesNotUseSplitPartLimit(t *testing.T) {
+	t.Parallel()
+	bars := measure.MaxParts + 1
+	p, v := fixture(bars)
+	r := measureRest(bars, false)
+	t.Run("write whole contextual sign", func(t *testing.T) {
+		out, err := p.WriteEvents(v, address(1, 0, 1), []*event.Event{r}, track.WriteOptions{})
+		require.NoError(t, err)
+		entries := out.Track.MustEntries(v, 1)
+		require.Len(t, entries, 1)
+		assert.Equal(t, event.DurationMeasures, entries[0].Event.MustDuration().Kind())
+		assert.Equal(t, bars, entries[0].Event.MustDuration().MustMeasureCount())
+		assertSpan(t, entries[0].Time, 0, 1, bars, 1)
+		assertPosition(t, bars, 1, out.Track.MustVoiceEnd(v))
+		last, ok := out.Track.MustAt(v, position(bars-1, 1))
+		require.True(t, ok)
+		assert.Equal(t, event.KindRest, last.Event.Kind())
+		assert.Empty(t, out.Track.MustSounds())
+		assert.Empty(t, p.MustEntries(v, 1))
+		assertPosition(t, 0, 1, p.MustVoiceEnd(v))
+	})
+	t.Run("rebar equal grid", func(t *testing.T) {
+		source := p.MustSplice(v, 1, 0, 0, r)
+		out, err := source.Rebar(grid(bars), track.KeepGroups)
+		require.NoError(t, err)
+		assert.True(t, grid(bars).Equal(out.Track.MustGrid()))
+		assertPosition(t, bars, 1, out.Track.MustVoiceEnd(v))
+		last, ok := out.Track.MustAt(v, position(bars-1, 1))
+		require.True(t, ok)
+		assert.Equal(t, event.KindRest, last.Event.Kind())
+		assertPosition(t, bars, 1, last.Time.End)
+		assert.Empty(t, out.Track.MustSounds())
+		original := source.MustEntries(v, 1)
+		require.Len(t, original, 1)
+		assertEvent(t, r, original[0].Event)
+		assertSpan(t, original[0].Time, 0, 1, bars, 1)
+	})
+}
+
 func TestPackUnpackRestsAndFermataBarrier(t *testing.T) {
 	t.Parallel()
 	for _, firstFermata := range []bool{true, false} {
