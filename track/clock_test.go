@@ -123,7 +123,7 @@ func TestClockValidationAndAtomicGridChanges(t *testing.T) {
 	c.BarHolds = []track.BarHold{{AfterBar: 1, Seconds: tempo.MustNewSeconds(1, 1)}}
 	next, err := p.Edit(track.Edit{Clock: &c})
 	assert.Nil(t, next)
-	issues(t, err, track.ErrClockAddress)
+	issues(t, err, track.ErrHoldConflict)
 	c = withExtension(clockFor(grid(2), 60), grid(2), address(1, 7, 8), 1, 1)
 	p = withClock(p, c)
 	g := grid(2).MustWithMark(1, meter.MustNew(3, 4))

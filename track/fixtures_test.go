@@ -31,7 +31,7 @@ func fixture(bars int) (*track.Track, track.VoiceID) {
 	p := track.MustNew(piano(), grid(bars))
 	return p, p.MustVoices()[0]
 }
-func parsed(text string) note.Note { return note.MustParse(settings.Standard(), text) }
+func parsed(text string) note.Note { return note.MustParsePitch(settings.Standard(), text) }
 func written(base duration.Base, dots int) event.Duration {
 	return event.MustWrittenDuration(duration.MustNewWritten(base, dots))
 }
@@ -41,6 +41,9 @@ func sounded(n note.Note, d event.Duration, marks event.Marks) *event.Event {
 }
 func tone(text string, base duration.Base, marks event.Marks) *event.Event {
 	return sounded(parsed(text), written(base, 0), marks)
+}
+func nameTone(text string, base duration.Base, marks event.Marks) *event.Event {
+	return sounded(note.MustParse(settings.Standard(), text), written(base, 0), marks)
 }
 func chordEvent(d event.Duration, marks event.Marks, ns ...note.Note) *event.Event {
 	return event.MustNew(event.MustChordContent(chord.MustNew(ns...)), d, marks)
@@ -75,14 +78,42 @@ func assertSpan(t *testing.T, got track.Span, sn, sd, en, ed int) {
 func assertNote(t *testing.T, want, got note.Note) {
 	t.Helper()
 	assert.True(t, want.Equal(got), "note record: want %v, got %v", want, got)
+	if want.Source() == nil {
+		assert.Nil(t, got.Source())
+		return
+	}
 	assert.True(t, settings.SameSource(want.Source(), got.Source()), "note source changed")
 }
 func assertEntry(t *testing.T, got track.Entry, v track.VoiceID, bar, index int, e *event.Event, sn, sd, en, ed int) {
 	t.Helper()
-	assert.Equal(t, track.Place{Voice: v, Bar: bar, Index: index}, got.Place)
+	assertPlace(t, track.Place{Voice: v, Bar: bar, Index: index}, got.Place)
 	require.NotNil(t, got.Event)
 	assertEvent(t, e, got.Event)
 	assertSpan(t, got.Time, sn, sd, en, ed)
+}
+
+func assertPlace(t *testing.T, want, got track.Place) {
+	t.Helper()
+	assert.True(t, want.Voice == got.Voice, "voice identity changed")
+	assert.Equal(t, want.Bar, got.Bar)
+	assert.Equal(t, want.Index, got.Index)
+}
+
+func assertOccurrences(t *testing.T, want, got []track.Occurrence) {
+	t.Helper()
+	require.Len(t, got, len(want))
+	for i, o := range want {
+		assertPlace(t, o.Place, got[i].Place)
+		assert.Equal(t, o.NoteIndex, got[i].NoteIndex)
+	}
+}
+
+func assertVoices(t *testing.T, want, got []track.VoiceID) {
+	t.Helper()
+	require.Len(t, got, len(want))
+	for i, v := range want {
+		assert.True(t, v == got[i], "voice identity changed at index %d", i)
+	}
 }
 
 func assertEvent(t *testing.T, want, got *event.Event) {
@@ -121,7 +152,7 @@ func assertMustError(t *testing.T, ordinary, cause error, call func()) {
 	for i, want := range wantProblems.Issues {
 		actual := gotProblems.Issues[i]
 		assert.ErrorIs(t, actual.Cause, cause)
-		assert.Equal(t, want.Place, actual.Place)
+		assertPlace(t, want.Place, actual.Place)
 		assert.Equal(t, want.NoteIndex, actual.NoteIndex)
 		assert.Equal(t, want.InputIndex, actual.InputIndex)
 		assert.Equal(t, want.AfterBar, actual.AfterBar)

@@ -31,7 +31,7 @@ func TestNewAndVoiceIdentity(t *testing.T) {
 	assert.True(t, grid(2).Equal(p.MustGrid()))
 	assert.Len(t, p.MustVoices(), 1)
 	v := p.MustVoices()[0]
-	assert.NotEqual(t, track.VoiceID{}, v)
+	assert.True(t, track.VoiceID{} != v)
 	assertPosition(t, 0, 1, p.MustVoiceEnd(v))
 	assert.Empty(t, p.MustEntries(v, 1))
 	assert.Empty(t, p.MustFermataBars())
@@ -45,12 +45,12 @@ func TestNewAndVoiceIdentity(t *testing.T) {
 	assert.False(t, p.Equal(track.MustNew(b, grid(2))), "instrument identity enters equality")
 	derived, id, err := p.AddVoice()
 	require.NoError(t, err)
-	assert.Equal(t, []track.VoiceID{v, id}, derived.MustVoices())
+	assertVoices(t, []track.VoiceID{v, id}, derived.MustVoices())
 	assert.Len(t, p.MustVoices(), 1)
 	sibling, siblingID := p.MustAddVoice()
-	assert.NotEqual(t, id, siblingID)
+	assert.True(t, id != siblingID)
 	assert.True(t, derived.Equal(sibling))
-	assert.NotEqual(t, v, id)
+	assert.True(t, v != id)
 	assert.Equal(t, 2, map[track.VoiceID]int{v: 1, id: 2}[id])
 	for name, bad := range map[string]track.VoiceID{"zero": {}, "foreign": other.MustVoices()[0], "sibling": siblingID} {
 		t.Run(name, func(t *testing.T) {
@@ -80,7 +80,7 @@ func TestUnsetAndConstructorArguments(t *testing.T) {
 		assert.ErrorIs(t, err, track.ErrUnset)
 		next, id, err := p.AddVoice()
 		assert.Nil(t, next)
-		assert.Zero(t, id)
+		assert.True(t, id == track.VoiceID{})
 		assert.ErrorIs(t, err, track.ErrUnset)
 		_, err = p.Edit(track.Edit{})
 		assert.ErrorIs(t, err, track.ErrUnset)
@@ -178,7 +178,12 @@ func TestRecordSpliceAndHalfOpenLookup(t *testing.T) {
 			if ok {
 				assert.Equal(t, tc.index, e.Place.Index)
 			} else {
-				assert.Zero(t, e)
+				assert.True(t, e.Place.Voice == track.VoiceID{})
+				assert.Zero(t, e.Place.Bar)
+				assert.Zero(t, e.Place.Index)
+				assert.Nil(t, e.Event)
+				assert.False(t, e.Time.Start.IsSet())
+				assert.False(t, e.Time.End.IsSet())
 			}
 		})
 	}
@@ -248,9 +253,9 @@ func TestAtomicEditsOverflowAndTruncation(t *testing.T) {
 	assert.Nil(t, next)
 	all := issues(t, err, track.ErrOverflow)
 	require.Len(t, all, 2)
-	assert.Equal(t, v, all[0].Place.Voice)
+	assert.True(t, v == all[0].Place.Voice)
 	assert.Equal(t, 1, all[0].Place.Bar)
-	assert.Equal(t, w, all[1].Place.Voice)
+	assert.True(t, w == all[1].Place.Voice)
 	assert.Equal(t, 2, all[1].Place.Bar)
 	for _, i := range all {
 		assertLength(t, 1, 4, i.Amount)
@@ -301,7 +306,7 @@ func TestIndicesAndRangeDiagnostics(t *testing.T) {
 			next, err := p.Splice(v, 1, tc.index, tc.remove)
 			assert.Nil(t, next)
 			is := issues(t, err, tc.cause)
-			assert.Equal(t, track.Place{Voice: v, Bar: 1, Index: tc.index}, is[0].Place)
+			assertPlace(t, track.Place{Voice: v, Bar: 1, Index: tc.index}, is[0].Place)
 			assert.Equal(t, -1, is[0].NoteIndex)
 			assert.Equal(t, -1, is[0].InputIndex)
 		})
@@ -347,7 +352,7 @@ func TestInstrumentAndNoteSourcesRemainIndependent(t *testing.T) {
 	a, b := piano(), piano()
 	p := track.MustNew(a, grid(2))
 	v := p.MustVoices()[0]
-	na, nb := note.MustParse(a, "A4"), note.MustParse(b, "A4")
+	na, nb := note.MustParsePitch(a, "A4"), note.MustParsePitch(b, "A4")
 	free := na
 	free.MustUnbind()
 	input := []*event.Event{sounded(na, written(duration.Quarter, 0), event.Marks{}), sounded(nb, written(duration.Quarter, 0), event.Marks{}), sounded(free, written(duration.Quarter, 0), event.Marks{})}
@@ -368,7 +373,7 @@ func TestInstrumentAndNoteSourcesRemainIndependent(t *testing.T) {
 	_, err := gotFree.Frequency()
 	assert.ErrorIs(t, err, note.ErrNoSource)
 	assert.InDelta(t, 415, gotFree.MustFrequencyIn(a), 1e-9)
-	p = p.MustSplice(v, 2, 0, 0, sounded(note.MustParse(a, "D8"), written(duration.Quarter, 0), event.Marks{}))
+	p = p.MustSplice(v, 2, 0, 0, sounded(note.MustParsePitch(a, "D8"), written(duration.Quarter, 0), event.Marks{}))
 	assert.Len(t, p.MustEntries(v, 2), 1)
 	gotA.MustSetASPN(5)
 	assertNote(t, na, p.MustEntries(v, 1)[0].Event.MustContent().MustNote())
@@ -432,5 +437,5 @@ func TestBarHoldInputOwnership(t *testing.T) {
 	assert.Equal(t, 1, again.BarHolds[0].AfterBar)
 	voices := p.MustVoices()
 	voices[0] = track.VoiceID{}
-	assert.Equal(t, v, p.MustVoices()[0])
+	assert.True(t, v == p.MustVoices()[0])
 }
