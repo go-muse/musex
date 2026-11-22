@@ -328,14 +328,39 @@ func TestSplitMergePreserveMarksSourcesAndNotation(t *testing.T) {
 	}{
 		{"attack", tone("C4", duration.Quarter, event.Marks{}), tone("C4", duration.Eighth, event.Marks{}), track.ErrWouldLoseMark},
 		{"fermata", tone("C4", duration.Quarter, event.Marks{Ties: []int{0}, Fermata: true}), tone("C4", duration.Eighth, event.Marks{}), track.ErrWouldLoseMark},
-		{"mixed form", sounded(c, value(1, 4), event.Marks{Ties: []int{0}}), tone("C4", duration.Eighth, event.Marks{}), track.ErrNotation},
+		{"mixed form", sounded(c, value(1, 4), event.Marks{Ties: []int{0}}), tone("C4", duration.Eighth, event.Marks{}), nil},
 		{"rest fermata", rest(written(duration.Quarter, 0), true), rest(written(duration.Quarter, 0), false), track.ErrWouldLoseMark},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			p, v := fixture(1)
 			p = p.MustSplice(v, 1, 0, 0, tc.first, tc.last)
 			out, err := p.Merge(v, 1, 0, 2, track.KeepGroups)
-			noProposal(t, out, err, tc.cause)
+			if tc.cause != nil {
+				noProposal(t, out, err, tc.cause)
+			} else {
+				// Mixed forms promise an addressed refusal, not a sentinel
+				// or a preference for either of the two conflicting parts.
+				require.Error(t, err)
+				assert.Nil(t, out.Track)
+				assert.Empty(t, out.Changes)
+				assert.Empty(t, out.Marks)
+				var problems *track.Problems
+				require.ErrorAs(t, err, &problems)
+				require.NotNil(t, problems)
+				require.NotEmpty(t, problems.Issues)
+				for _, i := range problems.Issues {
+					assert.True(t, i.Place.Voice == v)
+					assert.Equal(t, 1, i.Place.Bar)
+					assert.GreaterOrEqual(t, i.Place.Index, 0)
+					assert.Less(t, i.Place.Index, 2)
+				}
+				entries := p.MustEntries(v, 1)
+				require.Len(t, entries, 2)
+				assertEvent(t, tc.first, entries[0].Event)
+				assertEvent(t, tc.last, entries[1].Event)
+				assertSpan(t, entries[0].Time, 0, 1, 1, 4)
+				assertSpan(t, entries[1].Time, 1, 4, 3, 8)
+			}
 			assert.Len(t, p.MustEntries(v, 1), 2)
 		})
 	}
