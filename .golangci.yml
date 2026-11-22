@@ -587,13 +587,13 @@ linters:
           allow:
             - $gostd
             - github.com/go-muse/musex/common/fraction$
+            - github.com/go-muse/musex/common/rounding$
             - github.com/go-muse/musex/duration$
             - github.com/go-muse/musex/meter$
             - github.com/go-muse/musex/measure$
             - github.com/go-muse/musex/tempo$
             - github.com/go-muse/musex/tempomap$
             - github.com/go-muse/musex/event$
-            - github.com/go-muse/musex/voice$
             - github.com/go-muse/musex/track$
 
 # Format: golangci-lint fmt ./...
