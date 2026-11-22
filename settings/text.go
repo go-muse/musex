@@ -3,7 +3,6 @@ package settings
 import (
 	"errors"
 	"fmt"
-	"math"
 
 	"github.com/go-muse/musex/notation"
 	"github.com/go-muse/musex/pitch"
@@ -17,11 +16,6 @@ const (
 	helmholtzHighMark = len("′") // U+2032, above the octave of ASPN 3
 	asciiMark         = len(",") // the comma and the apostrophe of LilyPond and ABC
 )
-
-// lengthSafeCount is a number of repeated marks that never makes a result
-// too long whatever the base name: a name longer than math.MaxInt/2 bytes
-// cannot exist in memory. Above it the exact base length is checked.
-const lengthSafeCount = math.MaxInt / 2
 
 // Expresses reports whether name is expressible by s: admissible in the
 // system of s and in the name domain of its notation.
@@ -54,9 +48,10 @@ func (s *Settings) MustExpresses(name spelling.Spelling) bool {
 // unset. Every other case is an answer: a written octave outside int, a
 // visible number outside int and a result too long for an int length give
 // false, not an error. ExpressesPitch reports true exactly when FormatPitch
-// succeeds, except for octaves so far from the middle that FormatPitch would
-// build a string that does not fit in memory (see the package documentation).
-// ExpressesPitch never builds the formatted string.
+// succeeds, except for exhausted environment resources. A suffix exceeding
+// notation.MaxOctaveRepeatBytes gives false without an error. Name bytes do
+// not consume that budget. ExpressesPitch never calls FormatPitch or builds
+// the repeated suffix.
 func (s *Settings) ExpressesPitch(p pitch.Pitch) (bool, error) {
 	const op = "expresses pitch"
 	if !s.IsValid() {
@@ -141,12 +136,9 @@ func (s *Settings) MustParse(text string) spelling.Spelling {
 // notation without octaves, an AM octave outside 0..8 or an unnamed octave,
 // notation.ErrUnwritableName for a name outside the domain,
 // system.ErrOutOfRange for a written octave outside int, and
-// number.ErrOutOfRange for a visible number outside int.
-//
-// For octaves extremely far from the middle, a notation with repeated marks
-// can need a result string that does not fit in memory; FormatPitch then
-// panics or exhausts memory inside package notation (see the package
-// documentation). Use ExpressesPitch to test such pitches.
+// number.ErrOutOfRange for a visible number outside int. A canonical repeated
+// suffix exceeding notation.MaxOctaveRepeatBytes returns an empty string and
+// an error matching notation.ErrOctaveRepeatLimit after the arithmetic checks.
 func (s *Settings) FormatPitch(p pitch.Pitch) (string, error) {
 	const op = "format pitch"
 	if !s.IsValid() {
@@ -179,7 +171,10 @@ func (s *Settings) MustFormatPitch(p pitch.Pitch) string {
 // recovered before the system checks the name, so for text with both a wrong
 // octave mark and an inadmissible name the error names the octave. When the
 // system reports an inadmissible name, the error also matches
-// ErrInadmissible. A parsed pitch is expressible by s.
+// ErrInadmissible. A canonical repeated suffix exceeding
+// notation.MaxOctaveRepeatBytes returns an unset pitch and preserves
+// notation.ErrOctaveRepeatLimit before the system checks the name. A parsed
+// pitch is expressible by s.
 func (s *Settings) ParsePitch(text string) (pitch.Pitch, error) {
 	const op = "parse pitch"
 	if !s.IsValid() {
@@ -244,12 +239,12 @@ func (s *Settings) expressesPitch(p pitch.Pitch) bool {
 	case notation.OctaveStyleAM:
 		return 0 <= w && w <= 8
 	case notation.OctaveStyleHelmholtz:
-		return s.helmholtzFits(name, w)
+		return s.helmholtzFits(w)
 	case notation.OctaveStyleHelmholtzEnglish:
 		if 0 <= w && w <= 2 {
 			return true
 		}
-		return s.helmholtzFits(name, w)
+		return s.helmholtzFits(w)
 	case notation.OctaveStyleHelmholtzNumbered:
 		if w <= 2 {
 			_, ok := checkedSub(2, w)
@@ -259,65 +254,38 @@ func (s *Settings) expressesPitch(p pitch.Pitch) bool {
 	case notation.OctaveStyleLilyPond:
 		if w < 3 {
 			count, ok := checkedSub(3, w)
-			return ok && s.repeatFits(name, count, asciiMark, 3)
+			return ok && repeatFits(count, asciiMark)
 		}
-		return s.repeatFits(name, w-3, asciiMark, 3)
+		return repeatFits(w-3, asciiMark)
 	case notation.OctaveStyleABC:
 		switch {
 		case w == 4 || w == 5:
 			return true
 		case w < 4:
 			count, ok := checkedSub(4, w)
-			return ok && s.repeatFits(name, count, asciiMark, 4)
+			return ok && repeatFits(count, asciiMark)
 		default:
-			return s.repeatFits(name, w-5, asciiMark, 5)
+			return repeatFits(w-5, asciiMark)
 		}
 	default:
 		return false
 	}
 }
 
-// helmholtzFits reports whether the Helmholtz form of name in the written
-// octave w fits in an int length: below ASPN 3 the upper-case name with
-// 2 − w low marks, from ASPN 3 the lower-case name with w − 3 high marks.
-func (s *Settings) helmholtzFits(name spelling.Spelling, w int) bool {
+// helmholtzFits checks the canonical suffix without generating octave marks.
+func (s *Settings) helmholtzFits(w int) bool {
 	if w <= 2 {
 		count, ok := checkedSub(2, w)
-		return ok && s.repeatFits(name, count, helmholtzLowMark, 2)
+		return ok && repeatFits(count, helmholtzLowMark)
 	}
-	return s.repeatFits(name, w-3, helmholtzHighMark, 3)
+	return repeatFits(w-3, helmholtzHighMark)
 }
 
-// repeatFits reports whether count marks of markLen bytes after the base form
-// of name fit in an int length, as package notation checks before it builds
-// the text. The base form is the text of name in the written octave base,
-// where the style writes no marks; it is obtained from package notation
-// itself, and only when count is large enough for its length to matter.
-func (s *Settings) repeatFits(name spelling.Spelling, count, markLen, base int) bool {
-	if count <= lengthSafeCount/markLen {
-		return true
-	}
-	baseLen, ok := s.baseLength(name, base)
-	return ok && count <= (math.MaxInt-baseLen)/markLen
-}
-
-// baseLength returns the byte length of the text of name in the written
-// octave base by FormatPitch of the notation of s.
-func (s *Settings) baseLength(name spelling.Spelling, base int) (int, bool) {
-	sys := s.tuning.System()
-	carry, err := sys.Carry(name)
-	if err != nil {
-		return 0, false
-	}
-	p, err := pitch.FromASPN(name, base+carry)
-	if err != nil {
-		return 0, false
-	}
-	text, err := s.notation.FormatPitch(p, sys, s.context())
-	if err != nil {
-		return 0, false
-	}
-	return len(text), true
+// repeatFits checks the shared byte budget without multiplication or output.
+// Within this budget both the suffix and its count fit in int. As before,
+// an existing base name cannot occupy more than half the int address space.
+func repeatFits(count, markLen int) bool {
+	return count >= 0 && count <= notation.MaxOctaveRepeatBytes/markLen
 }
 
 // admits reports whether the valid name is admissible in the valid system.

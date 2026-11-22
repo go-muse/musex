@@ -26,12 +26,14 @@ A name is **expressible** by a set when the system admits it and the notation ca
 
 Which written octaves can be shown depends on the notation:
 
-- visible numbers, the Helmholtz styles, LilyPond, and ABC show every octave;
+- visible numbers, the Helmholtz styles, LilyPond, and ABC cover the octave axis, subject to arithmetic and resource limits;
 - the AM style shows only ASPN octaves 0 through 8;
 - a notation that writes octaves by name shows only the octaves named in the catalog of the set;
 - a notation without octave marks shows none.
 
 Writing and reading through the set use its notation, system, numbering, and catalog together. Every name or pitch that the set can express can be written, and everything the set reads is expressible by it. Writing a name the system does not admit is refused before the notation is asked.
+
+The four repeated forms share the [notation suffix limit](notation.md#octave-repetition-limit): 65,536 bytes of generated canonical octave marks, excluding name bytes. `ExpressesPitch` returns false beyond that budget without generating the suffix. `FormatPitch` and `ParsePitch` preserve `notation.ErrOctaveRepeatLimit` through `errors.Is`, returning an empty string or unset pitch; Must variants panic with that error. Parsing checks the canonical suffix, allowing canceling ABC marks and long aliases. Available environment resources remain a separate constraint.
 
 ## Sources of settings
 
@@ -46,7 +48,7 @@ When one set replaces another, nothing the previous set supported may stop being
 - **structure**: every name admissible in the previous system is admissible in the next one;
 - **designations**: every name and every pitch the previous set can express, the next set can express too. Each set uses its own system, so the written octave of the same pitch can differ between them.
 
-When a rule is violated, the result names a concrete counterexample: a name, or a pitch, that the previous set supports and the next one does not. When both rules are violated, both are reported. Either rule can also be checked alone, and the structure rule can be checked for two systems before a whole set is built.
+When a rule is violated, the result names a concrete semantic counterexample: a name, or a pitch, whose designation is lost. Technical limits, including the repetition budget, are excluded from compatibility; the previous set can therefore report false from `ExpressesPitch` for a witness beyond those limits. When both rules are violated, both are reported. Either rule can also be checked alone, and the structure rule can be checked for two systems before a whole set is built.
 
 Notations that show every octave are treated as showing all of them, so the check is exact and finite: name domains are finite, and the octaves that can be shown are either all of them or a short list. For example, replacing the traditional system by the system of 24 quarter tones keeps every name, but the opposite replacement loses C raised by a quarter tone. Replacing English names with visible numbers by German names with AM octave marks loses A double flat, which the German record does not write, and every pitch written outside ASPN octaves 0 through 8.
 

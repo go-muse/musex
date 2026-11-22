@@ -571,7 +571,8 @@ func (n Note) isExpressible(op string, c opContext) (bool, error) {
 // for a note without an octave (settings.Settings.Expresses), its written
 // pitch for a note with an octave (settings.Settings.ExpressesPitch). The
 // correction does not take part. An inadmissible or inexpressible note is the
-// answer false, not an error.
+// answer false, not an error. This includes a canonical octave suffix beyond
+// the shared notation byte budget; the check does not generate the suffix.
 //
 // Errors, in this order: ErrUnset for the note; ErrNoSource;
 // ErrUnsetSettings.
@@ -624,8 +625,9 @@ func (n Note) format(op string, c opContext, nameOnly bool) (string, error) {
 // Errors, in this order: ErrUnset for the note; ErrNoSource;
 // ErrUnsetSettings; ErrInadmissible (also settings.ErrInadmissible); the
 // other errors of settings in the order of its contract, ErrOutOfRange for a
-// result out of range. For octaves extremely far from the middle,
-// settings.Settings.FormatPitch can panic; Format does not recover it.
+// result out of range. A canonical octave suffix beyond the byte budget
+// returns an empty string and preserves notation.ErrOctaveRepeatLimit through
+// settings, without adding ErrOutOfRange or ErrInexpressible.
 func (n Note) Format() (string, error) {
 	return n.format("Format", ownContext(), false)
 }

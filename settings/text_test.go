@@ -300,8 +300,11 @@ func TestUnsetArguments(t *testing.T) {
 }
 
 // TestExtremeOctaves covers K-25, P-17a and the table of A 5.7: the exact
-// technical conditions of ExpressesPitch at the limits of int. FormatPitch is
-// called only where it fails or its result is short (A 5.7, "Huge octaves").
+// technical conditions of ExpressesPitch at the limits of int. Under the 13.2
+// contract, repeated forms near those limits exceed MaxOctaveRepeatBytes even
+// when their lengths fit in int. Those formerly expressible rows remain
+// query-only. FormatPitch is called only for existing arithmetic rejections
+// or short results; numeric, AM, and catalog behavior is unchanged.
 func TestExtremeOctaves(t *testing.T) {
 	t.Parallel()
 	eu := builtin(notation.EnglishUnicodeID).NameRules()
@@ -369,12 +372,12 @@ func TestExtremeOctaves(t *testing.T) {
 		{name: "Helmholtz smallest", set: helmholtz, p: at(c, math.MinInt), want: false, short: true},
 		{name: "Helmholtz 2 − w overflows", set: helmholtz, p: at(c, math.MinInt+2), want: false, short: true},
 		{name: "Helmholtz length overflows below", set: helmholtz, p: at(c, helmLowC-1), want: false, short: true},
-		{name: "Helmholtz last length below", set: helmholtz, p: at(c, helmLowC), want: true},
+		{name: "Helmholtz last length below", set: helmholtz, p: at(c, helmLowC), want: false},
 		{name: "Helmholtz C sharp length overflows below", set: helmholtz, p: at(cs, helmLowCSharp-1), want: false, short: true},
-		{name: "Helmholtz C sharp last length below", set: helmholtz, p: at(cs, helmLowCSharp), want: true},
-		{name: "Helmholtz last length above", set: helmholtz, p: at(c, helmHighC), want: true},
+		{name: "Helmholtz C sharp last length below", set: helmholtz, p: at(cs, helmLowCSharp), want: false},
+		{name: "Helmholtz last length above", set: helmholtz, p: at(c, helmHighC), want: false},
 		{name: "Helmholtz length overflows above", set: helmholtz, p: at(c, helmHighC+1), want: false, short: true},
-		{name: "Helmholtz C sharp last length above", set: helmholtz, p: at(cs, helmHighCSharp), want: true},
+		{name: "Helmholtz C sharp last length above", set: helmholtz, p: at(cs, helmHighCSharp), want: false},
 		{name: "Helmholtz C sharp length overflows above", set: helmholtz, p: at(cs, helmHighCSharp+1), want: false, short: true},
 		{name: "Helmholtz largest", set: helmholtz, p: at(c, math.MaxInt), want: false, short: true},
 		{name: "Helmholtz ordinary", set: helmholtz, p: at(c, 7), want: true, short: true},
@@ -383,7 +386,7 @@ func TestExtremeOctaves(t *testing.T) {
 		{name: "English Helmholtz 2", set: english, p: at(c, 2), want: true, short: true},
 		{name: "English Helmholtz smallest", set: english, p: at(c, math.MinInt), want: false, short: true},
 		{name: "English Helmholtz length overflows below", set: english, p: at(c, helmLowC-1), want: false, short: true},
-		{name: "English Helmholtz last length below", set: english, p: at(c, helmLowC), want: true},
+		{name: "English Helmholtz last length below", set: english, p: at(c, helmLowC), want: false},
 		{name: "English Helmholtz length overflows above", set: english, p: at(c, helmHighC+1), want: false, short: true},
 		{name: "English Helmholtz largest", set: english, p: at(c, math.MaxInt), want: false, short: true},
 		{name: "numbered Helmholtz smallest", set: numbered, p: at(c, math.MinInt), want: false, short: true},
@@ -392,18 +395,18 @@ func TestExtremeOctaves(t *testing.T) {
 		{name: "numbered Helmholtz largest", set: numbered, p: at(c, math.MaxInt), want: true, short: true},
 		{name: "LilyPond smallest", set: lily, p: at(c, math.MinInt), want: false, short: true},
 		{name: "LilyPond length overflows below", set: lily, p: at(c, math.MinInt+4), want: false, short: true},
-		{name: "LilyPond last length below", set: lily, p: at(c, math.MinInt+5), want: true},
+		{name: "LilyPond last length below", set: lily, p: at(c, math.MinInt+5), want: false},
 		{name: "LilyPond cs length overflows below", set: lily, p: at(cs, math.MinInt+5), want: false, short: true},
-		{name: "LilyPond cs last length below", set: lily, p: at(cs, math.MinInt+6), want: true},
-		{name: "LilyPond largest", set: lily, p: at(c, math.MaxInt), want: true},
+		{name: "LilyPond cs last length below", set: lily, p: at(cs, math.MinInt+6), want: false},
+		{name: "LilyPond largest", set: lily, p: at(c, math.MaxInt), want: false},
 		{name: "ABC smallest", set: abc, p: at(c, math.MinInt), want: false, short: true},
 		{name: "ABC length overflows below", set: abc, p: at(c, math.MinInt+5), want: false, short: true},
-		{name: "ABC last length below", set: abc, p: at(c, math.MinInt+6), want: true},
+		{name: "ABC last length below", set: abc, p: at(c, math.MinInt+6), want: false},
 		{name: "ABC ^C length overflows below", set: abc, p: at(cs, math.MinInt+6), want: false, short: true},
-		{name: "ABC ^C last length below", set: abc, p: at(cs, math.MinInt+7), want: true},
+		{name: "ABC ^C last length below", set: abc, p: at(cs, math.MinInt+7), want: false},
 		{name: "ABC 4", set: abc, p: at(c, 4), want: true, short: true},
 		{name: "ABC 5", set: abc, p: at(c, 5), want: true, short: true},
-		{name: "ABC largest", set: abc, p: at(c, math.MaxInt), want: true},
+		{name: "ABC largest", set: abc, p: at(c, math.MaxInt), want: false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()

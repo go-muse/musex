@@ -12,9 +12,16 @@ import (
 	"github.com/go-muse/musex/system"
 )
 
+// MaxOctaveRepeatBytes is the inclusive byte limit of the generated canonical
+// octave-mark suffix in Helmholtz, HelmholtzEnglish, LilyPond, and ABC forms.
+// Name bytes and fixed English letter repeats do not consume this budget.
+const MaxOctaveRepeatBytes = 64 * 1024
+
 // FormatPitch formats p with an explicit musical system and octave context.
 // The system alone converts between the written octave and the positional
 // octave stored in p. No traditional system, numbering, or catalog is implied.
+// Repeated octave suffixes exceeding MaxOctaveRepeatBytes return an empty
+// string and ErrOctaveRepeatLimit after the existing arithmetic checks.
 func (n Notation) FormatPitch(p pitch.Pitch, s *system.System, ctx OctaveContext) (string, error) {
 	if !p.IsValid() {
 		return "", fmt.Errorf("%w: format pitch", ErrUndefined)
@@ -41,6 +48,9 @@ func (n Notation) MustFormatPitch(p pitch.Pitch, s *system.System, ctx OctaveCon
 
 // ParsePitch parses text and reconstructs the pitch through the explicit
 // musical system. Dependency errors remain available through errors.Is.
+// The canonical octave suffix, rather than the raw input, must fit within
+// MaxOctaveRepeatBytes. ErrOctaveRepeatLimit returns an unset pitch before
+// the system checks the parsed name.
 func (n Notation) ParsePitch(text string, s *system.System, ctx OctaveContext) (pitch.Pitch, error) {
 	if err := n.checkPitchOperation(s, ctx); err != nil {
 		return pitch.Pitch{}, err
@@ -48,6 +58,20 @@ func (n Notation) ParsePitch(text string, s *system.System, ctx OctaveContext) (
 	name, written, err := n.parseWritten(text, ctx)
 	if err != nil {
 		return pitch.Pitch{}, err
+	}
+	switch n.style {
+	case OctaveStyleHelmholtz, OctaveStyleHelmholtzEnglish, OctaveStyleLilyPond, OctaveStyleABC:
+		canonical, err := n.rules.Format(name)
+		if err != nil {
+			return pitch.Pitch{}, err
+		}
+		w, err := written.ASPN()
+		if err != nil {
+			return pitch.Pitch{}, fmt.Errorf("notation: written octave: %w", err)
+		}
+		if _, _, _, err := n.octaveRepeat(canonical, w); err != nil {
+			return pitch.Pitch{}, err
+		}
 	}
 	p, err := s.FromWritten(name, written)
 	if err != nil {
@@ -117,49 +141,16 @@ func (n Notation) formatWritten(name string, written octave.Octave, ctx OctaveCo
 			return "", fmt.Errorf("%w: AM octave %d", ErrNoOctave, w)
 		}
 		return formatAM(name, w), nil
-	case OctaveStyleHelmholtz:
-		if w <= 2 {
-			count, ok := checkedSub(2, w)
-			if !ok {
-				return "", octaveRangeError()
-			}
-			upper, _ := changeCase(name, true)
-			return joinRepeated(upper, "͵", count)
+	case OctaveStyleHelmholtz, OctaveStyleHelmholtzEnglish, OctaveStyleLilyPond, OctaveStyleABC:
+		base, mark, count, err := n.octaveRepeat(name, w)
+		if err != nil {
+			return "", err
 		}
-		count, ok := checkedSub(w, 3)
-		if !ok {
-			return "", octaveRangeError()
-		}
-		lower, _ := changeCase(name, false)
-		return joinRepeated(lower, "′", count)
-	case OctaveStyleHelmholtzEnglish:
-		switch {
-		case w == 0:
-			upper, _ := changeCase(name, true)
-			text, _ := repeatFirstCased(upper, 3)
+		if n.style == OctaveStyleHelmholtzEnglish && (w == 0 || w == 1) {
+			text, _ := repeatFirstCased(base, 3-w)
 			return text, nil
-		case w == 1:
-			upper, _ := changeCase(name, true)
-			text, _ := repeatFirstCased(upper, 2)
-			return text, nil
-		case w == 2:
-			upper, _ := changeCase(name, true)
-			return upper, nil
-		case w < 0:
-			count, ok := checkedSub(2, w)
-			if !ok {
-				return "", octaveRangeError()
-			}
-			upper, _ := changeCase(name, true)
-			return joinRepeated(upper, "͵", count)
-		default:
-			count, ok := checkedSub(w, 3)
-			if !ok {
-				return "", octaveRangeError()
-			}
-			lower, _ := changeCase(name, false)
-			return joinRepeated(lower, "′", count)
 		}
+		return joinRepeated(base, mark, count)
 	case OctaveStyleHelmholtzNumbered:
 		var count int
 		var ok bool
@@ -178,46 +169,59 @@ func (n Notation) formatWritten(name string, written octave.Octave, ctx OctaveCo
 			return text, nil
 		}
 		return joinStrings(text, strconv.Itoa(count))
-	case OctaveStyleLilyPond:
-		lower, _ := changeCase(name, false)
-		if w < 3 {
-			count, ok := checkedSub(3, w)
-			if !ok {
-				return "", octaveRangeError()
-			}
-			return joinRepeated(lower, ",", count)
-		}
-		count, ok := checkedSub(w, 3)
-		if !ok {
-			return "", octaveRangeError()
-		}
-		return joinRepeated(lower, "'", count)
-	case OctaveStyleABC:
-		switch {
-		case w == 4:
-			upper, _ := changeCase(name, true)
-			return upper, nil
-		case w == 5:
-			lower, _ := changeCase(name, false)
-			return lower, nil
-		case w < 4:
-			count, ok := checkedSub(4, w)
-			if !ok {
-				return "", octaveRangeError()
-			}
-			upper, _ := changeCase(name, true)
-			return joinRepeated(upper, ",", count)
-		default:
-			count, ok := checkedSub(w, 5)
-			if !ok {
-				return "", octaveRangeError()
-			}
-			lower, _ := changeCase(name, false)
-			return joinRepeated(lower, "'", count)
-		}
 	default:
 		return "", fmt.Errorf("%w: name-only notation", ErrNoOctave)
 	}
+}
+
+// octaveRepeat derives the canonical base and suffix without generating marks.
+// Keep the old int-length refusal ahead of the resource-budget refusal.
+func (n Notation) octaveRepeat(name string, w int) (string, string, int, error) {
+	baseW, mark, upper := 3, "′", false
+	var count int
+	var ok bool
+	switch n.style {
+	case OctaveStyleHelmholtz, OctaveStyleHelmholtzEnglish:
+		if w <= 2 {
+			baseW, mark, upper = 2, "͵", true
+		}
+		if n.style == OctaveStyleHelmholtzEnglish && 0 <= w && w <= 2 {
+			baseW = w // The fixed letter repeats have no generated suffix.
+		}
+	case OctaveStyleLilyPond:
+		mark = "'"
+		if w < 3 {
+			mark = ","
+		}
+	case OctaveStyleABC:
+		baseW, mark = 5, "'"
+		if w <= 4 {
+			baseW, mark, upper = 4, ",", true
+		}
+	}
+	if w < baseW {
+		count, ok = checkedSub(baseW, w)
+	} else {
+		count, ok = checkedSub(w, baseW)
+	}
+	if !ok {
+		return "", "", 0, octaveRangeError()
+	}
+	base, _ := changeCase(name, upper)
+	if err := checkOctaveRepeat(base, mark, count); err != nil {
+		return "", "", 0, err
+	}
+	return base, mark, count, nil
+}
+
+func checkOctaveRepeat(base, mark string, count int) error {
+	if count < 0 || mark == "" || count > (int(^uint(0)>>1)-len(base))/len(mark) {
+		return octaveRangeError()
+	}
+	if count > MaxOctaveRepeatBytes/len(mark) {
+		return fmt.Errorf("%w: canonical octave suffix", ErrOctaveRepeatLimit)
+	}
+	return nil
 }
 
 func (n Notation) parseWritten(text string, ctx OctaveContext) (spelling.Spelling, octave.Octave, error) {
@@ -364,8 +368,8 @@ func onlyRunes(text, allowed string) bool {
 }
 
 func joinRepeated(base, mark string, count int) (string, error) {
-	if count < 0 || mark == "" || count > (int(^uint(0)>>1)-len(base))/len(mark) {
-		return "", octaveRangeError()
+	if err := checkOctaveRepeat(base, mark, count); err != nil {
+		return "", err
 	}
 	return joinStrings(base, strings.Repeat(mark, count))
 }

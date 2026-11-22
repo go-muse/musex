@@ -37,6 +37,10 @@ var (
 	// style, including a pitch operation on a name-only notation.
 	ErrNoOctave = errors.New("notation: octave is not representable")
 
+	// ErrOctaveRepeatLimit reports a canonical generated octave-mark suffix
+	// exceeding MaxOctaveRepeatBytes after its int arithmetic is checked.
+	ErrOctaveRepeatLimit = errors.New("notation: octave repetition limit exceeded")
+
 	// ErrIncompatibleSystem reports a musical system whose chromatic unit does
 	// not match the unit of an ups-and-downs notation.
 	ErrIncompatibleSystem = errors.New("notation: incompatible musical system")

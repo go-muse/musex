@@ -24,7 +24,8 @@ const (
 	// admissible in the next one.
 	RuleStructure
 	// RuleDesignations: every name and every pitch expressible by the
-	// previous set is expressible by the next one.
+	// previous set is expressible by the next one, ignoring technical limits
+	// such as the octave repetition budget.
 	RuleDesignations
 )
 
@@ -54,8 +55,10 @@ func ruleBit(r Rule) uint8 {
 }
 
 // Violation is a violated rule together with its counterexample: a name or
-// a pitch expressible (for RuleStructure, admissible) by the previous set and
-// not by the next one. Exactly one of Name and Pitch is set in a violation
+// a pitch semantically expressible (for RuleStructure, admissible) by the
+// previous set and not by the next one. Technical limits, including the
+// octave repetition budget, are excluded: Pitch need not be actually
+// expressible by the previous set. Exactly one of Name and Pitch is set in a violation
 // returned by the package. The zero Violation is no violation.
 type Violation struct {
 	// Rule is the violated rule.
@@ -199,6 +202,7 @@ func MustCheckSystems(prev, next *system.System) Report {
 // violations. Notes are not taken into account, so a refusal can be false
 // for the notes actually in use; that is not an error of the check.
 //
+// Technical limits, including the octave repetition budget, are excluded.
 // It fails with ErrUnset when s or next is unset.
 func (s *Settings) CheckReplacement(next *Settings) (Report, error) {
 	if err := checkPair("check replacement", s, next); err != nil {
@@ -237,7 +241,8 @@ func (s *Settings) MustCheckStructure(next *Settings) Report {
 
 // CheckDesignations checks only RuleDesignations: every name and every pitch
 // expressible by s must be expressible by next, each set using its own
-// system. It fails with ErrUnset when s or next is unset.
+// system. Technical limits, including the octave repetition budget, are
+// excluded. It fails with ErrUnset when s or next is unset.
 func (s *Settings) CheckDesignations(next *Settings) (Report, error) {
 	if err := checkPair("check designations", s, next); err != nil {
 		return Report{}, err

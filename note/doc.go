@@ -152,6 +152,13 @@
 // of its dependencies; the documentation of the errors of the package
 // describes the order in which the causes are reported. Must variants panic
 // with the same error.
-// Format can panic inside package notation for octaves extremely far from the
-// middle; use IsExpressible to test such notes.
+// Format, FormatIn, and ParsePitch preserve notation.ErrOctaveRepeatLimit
+// through settings when a generated canonical octave suffix exceeds
+// notation.MaxOctaveRepeatBytes (65,536 bytes), after arithmetic checks.
+// Formatting returns an empty string; parsing returns an unset note. This
+// cause does not add ErrOutOfRange or ErrInexpressible; Must variants panic
+// with the underlying error. IsExpressible and IsExpressibleIn return false
+// without generating the suffix. Name bytes, name-only formatting, and the
+// debugging String form are outside this budget; environment resources and
+// user strings retain their own costs.
 package note

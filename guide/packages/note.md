@@ -18,6 +18,12 @@ An **unbound** note has no source. Everything that does not depend on settings w
 
 A bound note keeps a name admissible in the system of its settings: creating it, renaming it, or deriving notes from it is refused when the new name is not admissible there. An unbound note is not checked.
 
+## Text and octave limits
+
+Writing a pitch through `Format` or `FormatIn` and reading it through `ParsePitch` follow the [notation suffix limit](notation.md#octave-repetition-limit): at most 65,536 bytes of generated canonical octave marks. Names and fixed English letter repeats do not consume the budget. These operations preserve `notation.ErrOctaveRepeatLimit` through settings and `errors.Is`, without adding the note errors `ErrOutOfRange` or `ErrInexpressible`. Formatting returns an empty string, parsing an unset note, and Must variants panic with the same cause.
+
+`IsExpressible` and `IsExpressibleIn` return false beyond the budget without generating the suffix. Name-only formatting and the debugging `String` form keep their existing behavior. User strings and environment resources are outside this limit.
+
 ## The frequency of a note
 
 The note does not store a frequency and does not compute one itself. When asked for its frequency, it reads its settings, takes their tuning, and hands it the written pitch and the correction. The tuning counts how many steps the pitch is from its reference note, turns that into cents by its temperament, adds the correction, and applies the result to the reference frequency with a single rounding. So the frequency depends only on the record, the correction, and the tuning — not on the notation or the octave numbering.
