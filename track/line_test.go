@@ -302,8 +302,11 @@ func TestWriteLineReportsElementIndicesAfterExpansion(t *testing.T) {
 	v := p.MustVoices()[0]
 	a, b := piano(), piano()
 	c, d := note.MustParse(a, "C4"), note.MustParse(b, "D4")
+	// This element already expands into two events before track layout.
+	// Provenance must still refer to element 0, followed by element 1.
 	line := voice.MustNew(
-		voice.MustNewSound(c, voice.MustWrittenDuration(duration.MustNewWritten(duration.Half, 0))),
+		voice.MustNewSound(c, voice.MustTiedDuration(duration.MustNewTied(
+			duration.MustNewWritten(duration.Quarter, 0), duration.MustNewWritten(duration.Quarter, 0)))),
 		voice.MustNewSound(d, voice.MustWrittenDuration(duration.MustNewWritten(duration.Quarter, 0))),
 	)
 	out := p.MustWriteLine(v, address(1, 1, 2), line, track.WriteOptions{})
