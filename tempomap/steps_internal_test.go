@@ -281,3 +281,94 @@ func TestStepSeamEquivalentToDecimalSeam(t *testing.T) {
 	assert.Equal(t, "499/1000", inputs[0].lower.RatString())
 	assert.Equal(t, "501/1000", inputs[0].upper.RatString())
 }
+
+// TestRoundStepWithBoundBeyondUint checks 14.4 without allocating at the
+// theoretical bound: maxUint+1 permits the actual sequence 128,256.
+func TestRoundStepWithBoundBeyondUint(t *testing.T) {
+	t.Parallel()
+	bound := new(big.Int).Add(new(big.Int).SetUint64(uint64(^uint(0))), big.NewInt(1))
+	before := bound.String()
+	step := big.NewRat(1, 1)
+	lo, hi := big.NewRat(499, 1000), big.NewRat(501, 1000)
+	point := big.NewRat(1, 2)
+	var calls []uint
+	eval := func(p uint) (*big.Rat, *big.Rat) {
+		calls = append(calls, p)
+		if p == 128 {
+			return lo, hi
+		}
+		assert.Equal(t, uint(256), p)
+		return point, point
+	}
+	var k *big.Int
+	var used, refinements uint
+	var ok bool
+	require.NotPanics(t, func() { k, used, refinements, ok = roundStepWithBound(step, rounding.HalfUp, 128, bound, eval) })
+	require.True(t, ok)
+	assertInternalBigInt(t, 1, k)
+	assert.Equal(t, uint(256), used)
+	assert.Equal(t, uint(1), refinements)
+	assert.Equal(t, []uint{128, 256}, calls)
+	assert.Equal(t, before, bound.String())
+	assert.Equal(t, "1", step.RatString())
+	assert.Equal(t, "499/1000", lo.RatString())
+	assert.Equal(t, "501/1000", hi.RatString())
+	require.NotNil(t, k)
+	k.SetInt64(99)
+	assert.Equal(t, "1/2", point.RatString())
+	assert.Equal(t, before, bound.String())
+}
+
+// TestRoundStepWithBoundMatchesLimit compares every return value and every
+// evaluation with the uint seam, including a non-power-of-two final limit.
+func TestRoundStepWithBoundMatchesLimit(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name     string
+		decideAt uint
+		max      uint
+		calls    []uint
+		ok       bool
+	}{
+		{name: "first attempt", decideAt: 64, max: 256, calls: []uint{64}, ok: true},
+		{name: "after refinement", decideAt: 128, max: 256, calls: []uint{64, 128}, ok: true},
+		{name: "at clipped limit", decideAt: 200, max: 200, calls: []uint{64, 128, 200}, ok: true},
+		{name: "undecided at limit", decideAt: 1000, max: 200, calls: []uint{64, 128, 200}},
+	} {
+		for _, mode := range stepInternalAllModes {
+			t.Run(tt.name+"/"+mode.name, func(t *testing.T) {
+				t.Parallel()
+				makeEval := func(calls *[]uint) func(uint) (*big.Rat, *big.Rat) {
+					return func(p uint) (*big.Rat, *big.Rat) {
+						*calls = append(*calls, p)
+						if p >= tt.decideAt {
+							return big.NewRat(1, 2), big.NewRat(1, 2)
+						}
+						return big.NewRat(0, 1), big.NewRat(1, 1)
+					}
+				}
+				var wantCalls, gotCalls []uint
+				step := big.NewRat(1, 3)
+				bound := new(big.Int).SetUint64(uint64(tt.max))
+				want, wantUsed, wantRefinements, wantOK := roundStepWithLimit(step, mode.mode, 64, tt.max, makeEval(&wantCalls))
+				got, used, refinements, ok := roundStepWithBound(step, mode.mode, 64, bound, makeEval(&gotCalls))
+				assert.Equal(t, tt.ok, wantOK)
+				assert.Equal(t, wantOK, ok)
+				assert.Equal(t, wantUsed, used)
+				assert.Equal(t, wantRefinements, refinements)
+				assert.Equal(t, tt.calls, gotCalls)
+				assert.Equal(t, wantCalls, gotCalls)
+				if want == nil {
+					assert.Nil(t, got)
+				} else {
+					require.NotNil(t, got)
+					assert.Zero(t, want.Cmp(got))
+					got.SetInt64(999)
+					assert.NotZero(t, want.Cmp(got), "returned integers belong to separate calls")
+				}
+				assert.Equal(t, new(big.Int).SetUint64(uint64(tt.max)).String(), bound.String())
+				assert.Equal(t, "1/3", step.RatString())
+			})
+		}
+	}
+}
