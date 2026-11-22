@@ -679,11 +679,11 @@ func TestWeightedBetweenStepsErrors(t *testing.T) {
 	assert.Equal(t, 1, unfinished.MustWeightedBetweenSteps([]tempomap.WeightedInterval{valid}, one, rounding.Down))
 	assert.Zero(t, measured.MustWeightedBetweenSteps(nil, one, rounding.Down, grid))
 	assert.Equal(t, 1, measured.MustWeightedBetweenSteps([]tempomap.WeightedInterval{{From: bar(1, 0, 1), To: bar(1, 1, 4), Weight: one}}, one, rounding.Down, grid))
-	// A valid measured address can resolve outside fraction even when its
-	// offset and the meter fit individually: their denominators multiply.
+	// The offset (M-1)/M lies inside an ordinary 4/4 bar. In bar 2 its
+	// position is (2*M-1)/M: the reduced numerator exceeds fraction's M.
 	max := fraction.MaxComponentBig()
 	offset := duration.MustPositionFromFraction(fraction.MustFromBigInt(new(big.Int).Sub(max, big.NewInt(1)), max))
-	wideGrid := measure.MustNew(meter.MustNew(1<<62, (1<<62)-1))
+	wideGrid := measure.MustNew(meter.FourFour())
 	wideMap := tempomap.MustNewMeasured(wideGrid, quarter(60))
 	a := tempomap.MustAtBar(measure.MustNewAddress(2, offset))
 	k, err := wideMap.WeightedBetweenSteps([]tempomap.WeightedInterval{{From: a, To: a, Weight: one}}, one, rounding.Down, wideGrid)
