@@ -58,6 +58,12 @@ A visible name uses an independently selected catalog. An empty catalog is still
 
 AM, Helmholtz, numbered Helmholtz, LilyPond, and ABC have their own case and mark rules and do not need an independent numbering. ABC accepts mixed apostrophes and commas during parsing and adds their effects algebraically; canonical output uses only one kind of mark. The other supported special forms are not artificially limited to MIDI octaves, subject to their notation's domain and technical representation limits.
 
+## Octave repetition limit
+
+Helmholtz, Helmholtz with English repeats, LilyPond, and ABC allow a generated canonical octave suffix of at most `notation.MaxOctaveRepeatBytes` (65,536 bytes), inclusive. This counts bytes, so a Unicode mark can consume more than one byte. Note-name bytes, aliases, and fixed English letter repeats do not consume this budget. Numeric, named, AM, and numbered Helmholtz forms keep their existing conditions.
+
+After checking arithmetic representability, output beyond this budget returns an empty string and an error matching `notation.ErrOctaveRepeatLimit` through `errors.Is`. Parsing applies the same check to the canonical result before the musical system converts it, returning an unset pitch on failure. Mixed ABC marks can cancel, so raw input length alone does not determine this refusal. Pitch conversion preserves the cause from either stage; Must variants panic with the underlying error. This limits generated repeats, not user strings or the memory available in the environment.
+
 ## Custom notations and conversion
 
 Custom rules can be generated from letters and alteration forms or listed as a complete whole-name table. Whole-name exceptions replace both the generated canonical output and its generated aliases. Built-in name rules can be reused with a different octave style.

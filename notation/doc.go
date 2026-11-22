@@ -46,10 +46,19 @@
 //
 // OctaveStyleAM supports only ASPN octaves 0 through 8. Helmholtz, numbered
 // Helmholtz, LilyPond, and ABC forms are not restricted to the MIDI range;
-// their limits are the technical limits of int and the result string. ABC
-// parsing accepts mixed apostrophes and commas and adds them algebraically,
+// arithmetic must fit in int. Helmholtz, HelmholtzEnglish, LilyPond, and ABC
+// additionally limit the generated canonical octave suffix to
+// MaxOctaveRepeatBytes (65,536 bytes), inclusive. This excludes name bytes,
+// aliases, and fixed English letter repeats. Number, Name, AM, and numbered
+// Helmholtz receive no new resource limit. ABC parsing accepts mixed
+// apostrophes and commas and adds them algebraically,
 // while canonical output uses only one kind of mark. Arithmetic overflow is
 // checked before allocating a result and reports octave.ErrOutOfRange.
+// After those arithmetic checks, an excessive suffix reports
+// ErrOctaveRepeatLimit and an empty string. Parsing checks the canonical
+// suffix before converting through the system, without generating the suffix;
+// aliases and canceling ABC marks are not limited by raw input length.
+// This budget bounds generated repeats, not user strings or available memory.
 //
 // Convert parses a name with one notation and canonically formats it with
 // another. ConvertPitch does the same for a pitch, using one explicit system
@@ -109,7 +118,7 @@
 // Errors are classified with errors.Is. ErrUndefined, ErrUnknownID,
 // ErrMissingChromaticUnit, ErrInvalidChromaticUnit, ErrInvalidDefinition,
 // ErrAmbiguous, ErrParse, ErrUnwritableName, ErrNoOctave, and
-// ErrIncompatibleSystem distinguish package-level causes. Errors from system,
+// ErrIncompatibleSystem and ErrOctaveRepeatLimit distinguish package-level causes. Errors from system,
 // octave, octave/number, and octave/naming are wrapped with context and remain
 // distinguishable. Every operation that returns an error has a Must wrapper;
 // the wrapper returns the same result on success and panics with the same error

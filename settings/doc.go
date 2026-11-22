@@ -87,7 +87,8 @@
 //   - AM: 0 <= w <= 8 (ASPN);
 //   - Helmholtz, Helmholtz with English repeats, LilyPond and ABC: the counts
 //     of repeated marks and the length of the result fit in int, exactly as
-//     package notation checks them before it builds the text;
+//     package notation checks them before it builds the text, and the
+//     canonical suffix fits within notation.MaxOctaveRepeatBytes;
 //   - numbered Helmholtz: 2 − w fits in int for w <= 2, always for w >= 3.
 //
 // A written octave outside int (for example B♯ at the smallest Octave in the
@@ -99,24 +100,24 @@
 // the numbering and the catalog of the set; OctaveContext gives the same
 // context for direct calls of package notation. The operations agree:
 // Expresses is true exactly when Format succeeds, ExpressesPitch is true
-// exactly when FormatPitch succeeds (see "Huge octaves" below), and every
+// exactly when FormatPitch succeeds, except for exhausted environment
+// resources, and every
 // result of a successful Parse or ParsePitch is expressible.
 //
-// # Huge octaves
+// # Octave repetition budget
 //
-// For the styles with repeated marks (Helmholtz, Helmholtz with English
-// repeats, LilyPond and ABC) the text of an octave far from the middle is a
-// string of very many marks. ExpressesPitch reports true for such an octave
-// as long as the length fits in int, and it never builds the text.
-// FormatPitch and MustFormatPitch delegate the text to package notation,
-// which then needs a string of that length: for lengths of about 2^48 bytes
-// and more (the limit depends on the platform; for the three-byte mark ′
-// from about 2^46 marks) it panics with "runtime error: makeslice: len out of
-// range", and for smaller but still enormous lengths the process can run out
-// of memory. This is the behavior of package notation, not an error of this
-// package; settings does not recover from it or change it. The equivalence of
-// ExpressesPitch and a successful FormatPitch holds for octaves whose text
-// fits in memory.
+// Helmholtz, Helmholtz with English repeats, LilyPond, and ABC allow at most
+// notation.MaxOctaveRepeatBytes (65,536 bytes) in the generated canonical
+// octave suffix. Name bytes and fixed English letter repeats are excluded.
+// ExpressesPitch checks this budget without generating marks or calling
+// FormatPitch, returning false without an error when the suffix is too large.
+// FormatPitch and ParsePitch preserve notation.ErrOctaveRepeatLimit through
+// errors.Is and return an empty string or unset pitch. Must variants panic
+// with the underlying error. ParsePitch checks the canonical suffix before
+// the system checks the name; raw aliases and canceling ABC marks do not
+// consume the budget. Numeric and named styles keep their existing limits.
+// User strings and the memory available in the environment are not bounded
+// by this suffix budget.
 //
 // # Compatibility
 //
@@ -133,14 +134,15 @@
 //
 // Expressibility in RuleDesignations treats a style that shows any octave
 // (number, the Helmholtz styles, LilyPond, ABC) as showing every octave: the
-// technical limits of int are not a violation. The check is exact and finite:
-// the name domains are finite, and the writable octaves are either all
-// octaves or a finite set (AM, a catalog). Every counterexample in a report is
-// exact: for RuleStructure the name is admissible in the previous system and
-// not in the next one; for RuleDesignations the name or the pitch is
-// expressible by the previous set (Expresses, ExpressesPitch) and not by the
-// next one. Which counterexample is chosen is not part of the contract, but
-// one pair always gives an equal (==) report.
+// technical limits of int and the octave repetition budget are not a
+// violation. The check is exact and finite: the name domains are finite,
+// and the writable octaves are either all octaves or a finite set (AM, a
+// catalog). A counterexample shows a semantic loss of designations; a pitch
+// can be technically inexpressible even by the previous set, including when
+// its suffix exceeds the repetition budget. For RuleStructure the name is
+// admissible in the previous system and not in the next one. Which
+// counterexample is chosen is not part of the contract, but one pair always
+// gives an equal (==) report.
 //
 // CheckStructure and CheckDesignations check one rule each; CheckSystems
 // checks RuleStructure for two systems before a set is built. A Report tells
