@@ -11,7 +11,10 @@ import (
 	"github.com/go-muse/musex/note"
 	"github.com/go-muse/musex/problemsolving/voiceleading"
 	"github.com/go-muse/musex/settings"
+	"github.com/go-muse/musex/spelling"
 	"github.com/go-muse/musex/system"
+	"github.com/go-muse/musex/tuning"
+	"github.com/go-muse/musex/tuning/temperament"
 	"github.com/go-muse/musex/voice"
 
 	"github.com/stretchr/testify/assert"
@@ -66,7 +69,7 @@ func TestSystemSelectionAndSnapshot(t *testing.T) {
 	assert.True(t, ok)
 	assert.True(t, system.Traditional().Equal(sys))
 	assert.Equal(t, system.Step(7), a.MustVerticals(pair)[0].Chromatic)
-	changed := settings.Standard().MustWithSystem(system.Positions19())
+	changed := settings19(t)
 	src.reset(changed)
 	assert.Equal(t, system.Step(7), a.MustVerticals(pair)[0].Chromatic)
 	assert.Len(t, a.MustFindMotion(voiceleading.MotionOblique), 1)
@@ -169,7 +172,7 @@ func TestSystemFailureOrder(t *testing.T) {
 		middle := voice.MustNew(sound(t, "E", 4, 1, 4, two))
 		high := voice.MustNew(sound(t, "G", 4, 1, 4, three))
 		one.reset(settings.Standard())
-		two.reset(settings.Standard().MustWithSystem(system.Positions19()))
+		two.reset(settings19(t))
 		three.reset(nil)
 		a, err := voiceleading.Analyze([]*voice.Line{low, middle, high}, voiceleading.Options{})
 		assert.Nil(t, a)
@@ -178,7 +181,7 @@ func TestSystemFailureOrder(t *testing.T) {
 	})
 	t.Run("first system mismatch in part order", func(t *testing.T) {
 		t.Parallel()
-		a, err := voiceleading.Analyze([]*voice.Line{voice.MustNew(sound(t, "C", 4, 1, 4, settings.Standard())), voice.MustNew(sound(t, "E", 4, 1, 4, settings.Standard().MustWithSystem(system.Positions19())))}, voiceleading.Options{})
+		a, err := voiceleading.Analyze([]*voice.Line{voice.MustNew(sound(t, "C", 4, 1, 4, settings.Standard())), voice.MustNew(sound(t, "E", 4, 1, 4, settings19(t)))}, voiceleading.Options{})
 		assert.Nil(t, a)
 		assertPartError(t, err, voiceleading.ErrDifferentSystems, 1, 0)
 	})
@@ -285,4 +288,15 @@ func TestWrittenIntervalPreservesQualityAndFullSize(t *testing.T) {
 	require.Len(t, found, 1)
 	assertInterval(t, found[0].From.Specific, 19, interval.Perfect, interval.Up)
 	assertInterval(t, found[0].To.Specific, 19, interval.Perfect, interval.Up)
+}
+
+// Changing the class count replaces the complete tuning: WithSystem preserves
+// the old temperament and therefore cannot change a 12-class set to 19 classes.
+func settings19(t *testing.T) *settings.Settings {
+	t.Helper()
+	tuned, err := tuning.New(system.Positions19(), temperament.Equal19(), tuning.RootFromName(spelling.C()), tuning.A4At440())
+	require.NoError(t, err)
+	result, err := settings.Standard().WithTuning(tuned)
+	require.NoError(t, err)
+	return result
 }
