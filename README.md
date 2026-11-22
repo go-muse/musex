@@ -99,6 +99,8 @@ Definitions may differ from conventional ones.
 
 **[Scale choice](guide/packages/problemsolving/scalechoice.md)** supports a composer's choice of pitch collection: inspect compatible modal readings, common and missing notes, possible continuations, and the consequences of one trial replacement in a set or a phrase. The caller chooses the scope, comparison, condition, and optional center.
 
+**[Voice leading](#analyze-voice-leading)** compares existing melodic lines: written and chromatic intervals, kinds of two-part motion, perfect parallels, consecutive perfect families, direct arrivals, crossings, and overlaps. A separate, explicit assessment checks one Open Music Theory first-species rule. This package is **unreleased**.
+
 **Chord** is a group of notes that sound together. It keeps the notes in their order of record, repeats included, and has no duration and no harmonic name.
 
 **Tempo map** is an immutable timeline of tempo changes and explicit fermata holds at positions or measure addresses. It distinguishes main and current tempo, supports jumps, gradual changes, a tempo, Tempo I, and metric modulation, and converts seconds to and from positions and measures, with one explicitly selected rounding for the complete result.
@@ -118,6 +120,7 @@ Definitions may differ from conventional ones.
 
 - **Choose a collection and try a change.** Use `problemsolving/scalechoice` to compare collection groups and readings, filter them by added notes, or branch into a replacement trial with observed-set differences and local written/chromatic motions. Analyses snapshot source contexts and preserve the original material.
 - **Write and analyze a melodic line.** Use `voice` to build a monophonic line of sounds and rests with a name and roles, read positions and the element at a moment without measures, get seconds from a tempo map, melodic intervals, the range, the ambitus, and the tessitura against a singing voice or an instrument, and build transpositions, doublings, exact imitations, inversions, and retrogrades.
+- **Inspect how parts move together.** Use `problemsolving/voiceleading` to analyze two or more existing lines on independent pairwise grids. Keep the original notes and element boundaries, choose interval-family filters explicitly, and supply nominal order when looking for crossings or overlaps.
 
 ### Build a voice event
 
@@ -164,3 +167,71 @@ fmt.Println(answer.MustAt(duration.MustNewPosition(3, 4)))       // 2 true: A4 s
 t := subject.MustTessitura(voice.PlacementReference(voice.Soprano))
 fmt.Println(t.Number, t.Kind) // 5/38 low
 ```
+
+### Analyze voice leading
+
+Given two set `voice.Line` values `bass` and `upper`, declare their nominal
+order and choose a system explicitly. Input slots identify the parts; their
+names may repeat. A later entry is represented by an initial rest.
+
+```go
+a, err := voiceleading.Analyze([]*voice.Line{bass, upper}, voiceleading.Options{
+    System: system.Traditional(),
+    Order:  voiceleading.LowToHigh,
+})
+if err != nil {
+    return err
+}
+pair := voiceleading.Pair{First: 0, Second: 1}
+v, ok := a.MustVerticalAt(pair, duration.Origin())
+if ok && v.Sounding {
+    fmt.Println(v.Specific, v.Specific.Size(), v.Chromatic)
+}
+parallels := a.MustFindParallels(voiceleading.ParallelOptions{
+    Perfect: voiceleading.PerfectBoth,
+})
+for _, t := range parallels {
+    fmt.Println(t.From.Start, t.To.Start, t.First, t.Second)
+}
+assessment := a.MustCheckOMTFirstSpecies(pair)
+fmt.Println(assessment.Rule, assessment.Applicable, assessment.Issues, assessment.Violations)
+```
+
+Each pair ends at its shorter line and uses only the starts of its own
+elements. Rests remain visible and break classified motion. `VerticalAt`
+accepts a position inside a segment; `TransitionAt` requires two adjacent
+increasing segment starts and otherwise returns `ErrTransition`.
+
+Specific intervals preserve written direction, quality, and full generic size.
+Chromatic distances count signed system positions; cents, tuning frequencies,
+and performance timing do not change these measurements. `Options{}` is
+valid: it leaves nominal order unspecified and reads a common system once per
+participating sound element. An explicit system permits unbound notes and
+avoids reading their sources. Subsequent source changes do not alter the
+measured snapshot.
+
+`FindMotion(MotionDirect)` includes parallel motion. Strict `FindParallels`
+requires parallel written movement and equal full perfect sizes: normally P5
+or P8, with explicit `Compound` and `Unisons` extensions. `FindConsecutive`
+instead matches perfect families regardless of movement or octave extension.
+`FindDirect` requires an explicit `AnyOrigin` or `DifferentFamily` choice.
+Crossings inspect all pairs; overlaps inspect adjacent nominal parts. Both
+require `LowToHigh` and compare positional heights.
+
+The explicit OMT assessment checks consecutive perfect families only. Its
+note-against-note scope requires equal original sounding-element starts and
+ends. If that scope fails, issues explain the affected verticals and violations
+are empty. It does not apply a general stylistic judgment or check every rule
+of first-species counterpoint.
+
+Analyses are immutable, safe to copy and read concurrently, and compared with
+`Equal`. Every returned slice, including nested crossing and assessment
+slices, is independent. For example, changing `a.MustVerticals(pair)[0]`
+changes only that returned copy. Returned notes keep their original source
+binding; returned systems are borrowed immutable values. Successful empty
+collections are non-nil. Invalid inputs return zero results and errors
+inspectable with `errors.Is` or contextual `PartError` and `MeasurementError`.
+Every fallible operation has a `Must` wrapper that panics with its error.
+
+Chord spacing, chord distribution, leap checking, and chord connections remain
+planned work beyond this first version.
