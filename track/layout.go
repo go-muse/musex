@@ -35,10 +35,22 @@ func rest(d duration.Duration, m event.Marks) (*event.Event, error) {
 	}
 	return event.New(event.RestContent(), ed, m)
 }
+
+// notationPartError retains the input segment that failed exact notation.
+// The segment index is independent of how many signs earlier segments used.
+type notationPartError struct {
+	index  int
+	amount duration.Duration
+	cause  error
+}
+
+func (e *notationPartError) Error() string { return e.cause.Error() }
+func (e *notationPartError) Unwrap() error { return e.cause }
+
 func lengthsToEvents(e *event.Event, ds []duration.Duration, g Groups, force bool) ([]*event.Event, error) {
 	ed := e.MustDuration()
 	var forms []event.Duration
-	for _, d := range ds {
+	for partIndex, d := range ds {
 		if ed.Kind() == event.DurationValue && !force {
 			forms = append(forms, event.MustValueDuration(d.MustFraction()))
 			continue
@@ -55,7 +67,7 @@ func lengthsToEvents(e *event.Event, ds []duration.Duration, g Groups, force boo
 		}
 		ws, err := d.Notate(chain...)
 		if err != nil {
-			return nil, errors.Join(ErrNotation, err)
+			return nil, &notationPartError{index: partIndex, amount: d, cause: errors.Join(ErrNotation, err)}
 		}
 		for _, w := range ws {
 			forms = append(forms, event.MustWrittenDuration(w))
@@ -194,8 +206,13 @@ func (t *Track) fragments(v VoiceID, items []layoutItem, g Groups) ([]fragment, 
 		es, err := lengthsToEvents(it.e, ds, g, it.e.Kind() != event.KindRest)
 		if err != nil {
 			x.Cause = err
-			x.Amount = parts[0].Duration
-			x.Address = parts[0].Address
+			failed := 0
+			if detail, ok := errors.AsType[*notationPartError](err); ok {
+				failed = detail.index
+			}
+			x.Amount = parts[failed].Duration
+			x.Address = parts[failed].Address
+			x.Position = parts[failed].Start
 			return nil, &Problems{[]Issue{x}}
 		}
 		pos := it.start
@@ -392,6 +409,21 @@ func (t *Track) WriteEvents(v VoiceID, at measure.Address, events []*event.Event
 			pos, err = pos.Add(it.length)
 			if err != nil {
 				return Proposal{}, err
+			}
+			gridEnd, _, err := t.grid.End()
+			if err != nil {
+				return Proposal{}, err
+			}
+			if pos.Compare(gridEnd) > 0 {
+				missing, err := gridEnd.DurationTo(pos)
+				if err != nil {
+					return Proposal{}, err
+				}
+				x := issue(ErrNeedBars, Place{v, it.bar, -1})
+				x.InputIndex = i
+				x.Position = gridEnd
+				x.Amount = missing
+				return Proposal{}, &Problems{[]Issue{x}}
 			}
 		}
 		if o.Mode == Vacant {
