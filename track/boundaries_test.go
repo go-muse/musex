@@ -1,8 +1,10 @@
 package track_test
 
 import (
+	"math/big"
 	"testing"
 
+	"github.com/go-muse/musex/common/fraction"
 	"github.com/go-muse/musex/common/rounding"
 	"github.com/go-muse/musex/duration"
 	"github.com/go-muse/musex/event"
@@ -59,33 +61,46 @@ func TestMustWrappersPanicWithTheirError(t *testing.T) {
 	t.Parallel()
 	p, v := fixture(1)
 	bad := track.VoiceID{}
-	for name, call := range map[string]func(){
-		"instrument":      func() { var p *track.Track; p.MustInstrument() },
-		"grid":            func() { var p *track.Track; p.MustGrid() },
-		"voices":          func() { var p *track.Track; p.MustVoices() },
-		"add voice":       func() { var p *track.Track; p.MustAddVoice() },
-		"edit":            func() { p.MustEdit(track.Edit{Grid: &measure.Grid{}}) },
-		"splice":          func() { p.MustSplice(v, 1, -1, 0) },
-		"entries":         func() { p.MustEntries(bad, 1) },
-		"at":              func() { p.MustAt(v, position(2, 1)) },
-		"voice end":       func() { p.MustVoiceEnd(bad) },
-		"fermata bars":    func() { var p *track.Track; p.MustFermataBars() },
-		"sounds":          func() { p.MustSounds(bad) },
-		"sounding at":     func() { p.MustSoundingAt(position(2, 1)) },
-		"clock":           func() { var p *track.Track; p.MustClock() },
-		"performance map": func() { p.MustPerformanceMap() },
-		"sound seconds":   func() { p.MustSoundSeconds(3, rounding.HalfUp) },
-		"write events":    func() { p.MustWriteEvents(bad, address(1, 0, 1), nil, track.WriteOptions{}) },
-		"rebar":           func() { p.MustRebar(measure.Grid{}, track.KeepGroups) },
-		"quantize":        func() { p.MustQuantize(v, 1, 1, duration.Duration{}, rounding.HalfUp, track.KeepGroups) },
-		"split":           func() { p.MustSplit(track.Place{Voice: v, Bar: 1, Index: 0}, length(1, 8), track.KeepGroups) },
-		"merge":           func() { p.MustMerge(v, 1, 0, 2, track.KeepGroups) },
-		"pack":            func() { p.MustPackRests(v, 0, 1) },
-		"unpack":          func() { p.MustUnpackRest(track.Place{Voice: v, Bar: 1, Index: 0}) },
-		"extract":         func() { p.MustExtractLine(bad, track.Exact) },
-		"write line":      func() { p.MustWriteLine(v, address(1, 0, 1), nil, track.WriteOptions{}) },
-	} {
-		t.Run(name, func(t *testing.T) { assert.Panics(t, call) })
+	var unset *track.Track
+	cases := []struct {
+		name     string
+		cause    error
+		ordinary func() error
+		must     func()
+	}{
+		{"instrument", track.ErrUnset, func() error { _, e := unset.Instrument(); return e }, func() { unset.MustInstrument() }},
+		{"grid", track.ErrUnset, func() error { _, e := unset.Grid(); return e }, func() { unset.MustGrid() }},
+		{"voices", track.ErrUnset, func() error { _, e := unset.Voices(); return e }, func() { unset.MustVoices() }},
+		{"add voice", track.ErrUnset, func() error { _, _, e := unset.AddVoice(); return e }, func() { unset.MustAddVoice() }},
+		{"edit", track.ErrInvalidArgument, func() error { _, e := p.Edit(track.Edit{Grid: &measure.Grid{}}); return e }, func() { p.MustEdit(track.Edit{Grid: &measure.Grid{}}) }},
+		{"splice", track.ErrPlace, func() error { _, e := p.Splice(v, 1, -1, 0); return e }, func() { p.MustSplice(v, 1, -1, 0) }},
+		{"entries", track.ErrVoice, func() error { _, e := p.Entries(bad, 1); return e }, func() { p.MustEntries(bad, 1) }},
+		{"at", track.ErrPlace, func() error { _, _, e := p.At(v, position(2, 1)); return e }, func() { p.MustAt(v, position(2, 1)) }},
+		{"voice end", track.ErrVoice, func() error { _, e := p.VoiceEnd(bad); return e }, func() { p.MustVoiceEnd(bad) }},
+		{"fermata bars", track.ErrUnset, func() error { _, e := unset.FermataBars(); return e }, func() { unset.MustFermataBars() }},
+		{"sounds", track.ErrVoice, func() error { _, e := p.Sounds(bad); return e }, func() { p.MustSounds(bad) }},
+		{"sounding at", track.ErrPlace, func() error { _, e := p.SoundingAt(position(2, 1)); return e }, func() { p.MustSoundingAt(position(2, 1)) }},
+		{"clock", track.ErrUnset, func() error { _, _, e := unset.Clock(); return e }, func() { unset.MustClock() }},
+		{"performance map", track.ErrNoClock, func() error { _, e := p.PerformanceMap(); return e }, func() { p.MustPerformanceMap() }},
+		{"sound seconds", track.ErrNoClock, func() error { _, e := p.SoundSeconds(3, rounding.HalfUp); return e }, func() { p.MustSoundSeconds(3, rounding.HalfUp) }},
+		{"write events", track.ErrVoice, func() error { _, e := p.WriteEvents(bad, address(1, 0, 1), nil, track.WriteOptions{}); return e }, func() { p.MustWriteEvents(bad, address(1, 0, 1), nil, track.WriteOptions{}) }},
+		{"rebar", track.ErrInvalidArgument, func() error { _, e := p.Rebar(measure.Grid{}, track.KeepGroups); return e }, func() { p.MustRebar(measure.Grid{}, track.KeepGroups) }},
+		{"quantize", track.ErrInvalidArgument, func() error {
+			_, e := p.Quantize(v, 1, 1, duration.Duration{}, rounding.HalfUp, track.KeepGroups)
+			return e
+		}, func() { p.MustQuantize(v, 1, 1, duration.Duration{}, rounding.HalfUp, track.KeepGroups) }},
+		{"split", track.ErrPlace, func() error {
+			_, e := p.Split(track.Place{Voice: v, Bar: 1, Index: 0}, length(1, 8), track.KeepGroups)
+			return e
+		}, func() { p.MustSplit(track.Place{Voice: v, Bar: 1, Index: 0}, length(1, 8), track.KeepGroups) }},
+		{"merge", track.ErrPlace, func() error { _, e := p.Merge(v, 1, 0, 2, track.KeepGroups); return e }, func() { p.MustMerge(v, 1, 0, 2, track.KeepGroups) }},
+		{"pack", track.ErrPlace, func() error { _, e := p.PackRests(v, 0, 1); return e }, func() { p.MustPackRests(v, 0, 1) }},
+		{"unpack", track.ErrPlace, func() error { _, e := p.UnpackRest(track.Place{Voice: v, Bar: 1, Index: 0}); return e }, func() { p.MustUnpackRest(track.Place{Voice: v, Bar: 1, Index: 0}) }},
+		{"extract", track.ErrVoice, func() error { _, e := p.ExtractLine(bad, track.Exact); return e }, func() { p.MustExtractLine(bad, track.Exact) }},
+		{"write line", track.ErrUnset, func() error { _, e := unset.WriteLine(bad, address(1, 0, 1), nil, track.WriteOptions{}); return e }, func() { unset.MustWriteLine(bad, address(1, 0, 1), nil, track.WriteOptions{}) }},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) { assertMustError(t, tc.ordinary(), tc.cause, tc.must) })
 	}
 }
 
@@ -283,4 +298,39 @@ func TestAssignedInstrumentForTwoVoicesOfThePublishedMelody(t *testing.T) {
 	assertSpan(t, s[0].Time, 0, 1, 1, 1)
 	assertSpan(t, s[1].Time, 0, 1, 5, 4)
 	assert.Len(t, s[1].Parts, 2)
+}
+
+func TestAccumulatedPositionPreservesFractionRangeError(t *testing.T) {
+	t.Parallel()
+	// common/fraction's public limit is M, not the host integer width.
+	// 1/M + 1/(M-1) = (2M-1)/(M(M-1)); both factors are coprime
+	// with 2M-1, so the result cannot be reduced into the allowed range.
+	m := fraction.MaxComponentBig()
+	f1, err := fraction.FromBigInt(big.NewInt(1), m)
+	require.NoError(t, err)
+	f2, err := fraction.FromBigInt(big.NewInt(1), new(big.Int).Sub(m, big.NewInt(1)))
+	require.NoError(t, err)
+	d1, err := event.ValueDuration(f1)
+	require.NoError(t, err)
+	d2, err := event.ValueDuration(f2)
+	require.NoError(t, err)
+	first := sounded(parsed("C4"), d1, event.Marks{})
+	second := sounded(parsed("D4"), d2, event.Marks{})
+	p, v := fixture(1)
+	p = p.MustSplice(v, 1, 0, 0, first)
+	before := p.MustEntries(v, 1)
+	assert.True(t, duration.MustPositionFromFraction(f1).Equal(before[0].Time.End))
+	next, err := p.Splice(v, 1, 1, 0, second)
+	assert.Nil(t, next)
+	require.ErrorIs(t, err, fraction.ErrOutOfRange)
+	after := p.MustEntries(v, 1)
+	require.Len(t, after, 1)
+	assertEvent(t, first, after[0].Event)
+	assert.True(t, before[0].Time.Start.Equal(after[0].Time.Start))
+	assert.True(t, before[0].Time.End.Equal(after[0].Time.End))
+	assert.True(t, p.MustVoiceEnd(v).Equal(before[0].Time.End))
+	// A failed proposal leaves the original version usable for another edit.
+	replaced := p.MustSplice(v, 1, 0, 1, tone("E4", duration.Quarter, event.Marks{}))
+	assertPosition(t, 1, 4, replaced.MustVoiceEnd(v))
+	assertEvent(t, first, p.MustEntries(v, 1)[0].Event)
 }

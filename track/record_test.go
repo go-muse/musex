@@ -137,7 +137,7 @@ func TestUnsetAndConstructorArguments(t *testing.T) {
 			require.ErrorIs(t, err, track.ErrInvalidArgument)
 			_, ok := errors.AsType[*track.Problems](err)
 			assert.False(t, ok)
-			assert.Panics(t, func() { track.MustNew(tc.inst, tc.g) })
+			assertMustError(t, err, track.ErrInvalidArgument, func() { track.MustNew(tc.inst, tc.g) })
 		})
 	}
 	withoutRange := instrument.MustNew(instrument.Piano().MustWithoutRange())

@@ -81,8 +81,66 @@ func assertEntry(t *testing.T, got track.Entry, v track.VoiceID, bar, index int,
 	t.Helper()
 	assert.Equal(t, track.Place{Voice: v, Bar: bar, Index: index}, got.Place)
 	require.NotNil(t, got.Event)
-	assert.True(t, e.Equal(got.Event))
+	assertEvent(t, e, got.Event)
 	assertSpan(t, got.Time, sn, sd, en, ed)
+}
+
+func assertEvent(t *testing.T, want, got *event.Event) {
+	t.Helper()
+	require.NotNil(t, want)
+	require.NotNil(t, got)
+	assert.True(t, want.Equal(got))
+	wn, gn := want.MustContent().MustNotes(), got.MustContent().MustNotes()
+	require.Len(t, gn, len(wn))
+	for i, n := range wn {
+		assertNote(t, n, gn[i])
+	}
+}
+
+func expectedEntry(v track.VoiceID, bar, index int, e *event.Event, sn, sd, en, ed int) track.Entry {
+	return track.Entry{Place: track.Place{Voice: v, Bar: bar, Index: index}, Event: e, Time: track.Span{Start: position(sn, sd), End: position(en, ed)}}
+}
+
+// Check the recovered error and preserve the addressed details of the paired
+// ordinary operation. A panic string or a runtime error cannot satisfy this.
+func assertMustError(t *testing.T, ordinary, cause error, call func()) {
+	t.Helper()
+	require.ErrorIs(t, ordinary, cause)
+	var caught any
+	func() { defer func() { caught = recover() }(); call() }()
+	got, ok := caught.(error)
+	require.True(t, ok, "Must panic must carry error, got %T", caught)
+	require.ErrorIs(t, got, cause)
+	wantProblems, wantOK := errors.AsType[*track.Problems](ordinary)
+	gotProblems, gotOK := errors.AsType[*track.Problems](got)
+	require.Equal(t, wantOK, gotOK, "Must lost addressed error details")
+	if !wantOK {
+		return
+	}
+	require.Len(t, gotProblems.Issues, len(wantProblems.Issues))
+	for i, want := range wantProblems.Issues {
+		actual := gotProblems.Issues[i]
+		assert.ErrorIs(t, actual.Cause, cause)
+		assert.Equal(t, want.Place, actual.Place)
+		assert.Equal(t, want.NoteIndex, actual.NoteIndex)
+		assert.Equal(t, want.InputIndex, actual.InputIndex)
+		assert.Equal(t, want.AfterBar, actual.AfterBar)
+		assert.Equal(t, want.BarsNeeded, actual.BarsNeeded)
+		assert.Equal(t, want.Kind, actual.Kind)
+		assert.Equal(t, want.Slot, actual.Slot)
+		assert.Equal(t, want.Position.IsSet(), actual.Position.IsSet())
+		if want.Position.IsSet() {
+			assert.True(t, want.Position.Equal(actual.Position))
+		}
+		assert.Equal(t, want.Amount.IsSet(), actual.Amount.IsSet())
+		if want.Amount.IsSet() {
+			assert.True(t, want.Amount.Equal(actual.Amount))
+		}
+		assert.Equal(t, want.Address.IsSet(), actual.Address.IsSet())
+		if want.Address.IsSet() {
+			assert.True(t, want.Address.Equal(actual.Address))
+		}
+	}
 }
 func issues(t *testing.T, err, cause error) []track.Issue {
 	t.Helper()
