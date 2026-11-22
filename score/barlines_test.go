@@ -96,6 +96,74 @@ func TestBarlineShortAndMultipleGrids(t *testing.T) {
 	assert.True(t, s.MustBarlinePeriod(ids[0], ids[1]).Equal(dur(3, 1)))
 }
 
+func TestCommonBarlinesFollowIncompleteAndChangingBars(t *testing.T) {
+	t.Parallel()
+	type expectedLine struct {
+		position       duration.Position
+		previous, next [2]int // -1 means that the boundary has no adjacent bar.
+	}
+	for _, tc := range []struct {
+		name   string
+		a      measure.Grid
+		bCount int
+		end    duration.Position
+		absent duration.Position
+		want   []expectedLine
+	}{
+		{
+			name:   "explicit incomplete first bar",
+			a:      grid(4, 4, 2).MustWithLength(1, dur(1, 2), measure.AlignStart),
+			bCount: 3, end: pos(3, 2), absent: pos(1, 1),
+			want: []expectedLine{
+				{pos(0, 1), [2]int{-1, -1}, [2]int{1, 1}},
+				{pos(1, 2), [2]int{1, 1}, [2]int{2, 2}},
+				{pos(3, 2), [2]int{2, 3}, [2]int{-1, -1}},
+			},
+		},
+		{
+			name:   "meter change after first bar",
+			a:      grid(4, 4, 3).MustWithMark(2, meter.MustNew(3, 4)),
+			bCount: 5, end: pos(5, 2), absent: pos(2, 1),
+			want: []expectedLine{
+				{pos(0, 1), [2]int{-1, -1}, [2]int{1, 1}},
+				{pos(1, 1), [2]int{1, 2}, [2]int{2, 3}},
+				{pos(5, 2), [2]int{3, 5}, [2]int{-1, -1}},
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			a := track.MustNew(instrument.MustNew(instrument.Piano()), tc.a)
+			s, ids := assemble(clock60(), a, emptyPart(2, 4, tc.bCount))
+			got, err := s.CommonBarlines(pos(0, 1), tc.end, ids[1], ids[0])
+			require.NoError(t, err)
+			require.Len(t, got, len(tc.want))
+			for i, expected := range tc.want {
+				assertPos(t, expected.position, got[i].Position)
+				require.Len(t, got[i].Boundaries, 2)
+				for part, boundary := range got[i].Boundaries {
+					assert.Equal(t, ids[part], boundary.Part)
+					for _, adjacent := range []struct {
+						want int
+						got  *int
+					}{
+						{expected.previous[part], boundary.PreviousBar},
+						{expected.next[part], boundary.NextBar},
+					} {
+						if adjacent.want == -1 {
+							assert.Nil(t, adjacent.got)
+						} else {
+							require.NotNil(t, adjacent.got)
+							assert.Equal(t, adjacent.want, *adjacent.got)
+						}
+					}
+				}
+			}
+			// Neither finite grid has a common boundary at the first-meter period.
+			assert.Empty(t, s.MustCommonBarlines(tc.absent, tc.absent, ids...))
+		})
+	}
+}
+
 func TestBarlinePeriodAdmissibility(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {
