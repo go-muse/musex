@@ -1,6 +1,7 @@
 package track_test
 
 import (
+	"math"
 	"slices"
 	"testing"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/go-muse/musex/note"
 	"github.com/go-muse/musex/track"
 	"github.com/go-muse/musex/tuplet"
+	"github.com/go-muse/musex/voice"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -281,6 +283,102 @@ func TestWriteNeedBarsAndRetry(t *testing.T) {
 	assert.ErrorIs(t, err, track.ErrMeasureRest)
 	_, err = p.WriteEvents(v, address(2, 0, 1), nil, track.WriteOptions{})
 	assert.ErrorIs(t, err, track.ErrPlace)
+}
+
+func TestWriteNeedBarsReportsFirstUnplacedInput(t *testing.T) {
+	t.Parallel()
+	for _, lineInput := range []bool{false, true} {
+		name := "events"
+		if lineInput {
+			name = "line"
+		}
+		t.Run(name, func(t *testing.T) {
+			p, v := fixture(1)
+			events := []*event.Event{tone("C4", duration.Half, event.Marks{}), tone("D4", duration.Quarter, event.Marks{})}
+			var out track.Proposal
+			var err error
+			if lineInput {
+				out, err = p.WriteLine(v, address(1, 3, 4), voice.MustFromEvents(events...), track.WriteOptions{})
+			} else {
+				out, err = p.WriteEvents(v, address(1, 3, 4), events, track.WriteOptions{})
+			}
+			is := noProposal(t, out, err, track.ErrNeedBars)
+			assert.Equal(t, 0, is[0].InputIndex)
+			assertPosition(t, 1, 1, is[0].Position)
+			assertLength(t, 1, 4, is[0].Amount)
+			assert.Empty(t, p.MustEntries(v, 1))
+			assertPosition(t, 0, 1, p.MustVoiceEnd(v))
+			assert.True(t, grid(1).Equal(p.MustGrid()))
+		})
+	}
+}
+
+func TestNotationFailureReportsTheUnrepresentablePart(t *testing.T) {
+	t.Parallel()
+	numeric := sounded(parsed("C4"), value(7, 12), event.Marks{})
+	t.Run("later layout part", func(t *testing.T) {
+		p, v := fixture(2)
+		out, err := p.WriteEvents(v, address(1, 3, 4), []*event.Event{numeric}, track.WriteOptions{Groups: track.WithoutGroups})
+		is := noProposal(t, out, err, track.ErrNotation)
+		assert.Equal(t, 0, is[0].InputIndex)
+		assert.True(t, address(2, 0, 1).Equal(is[0].Address))
+		assertLength(t, 1, 3, is[0].Amount)
+		assert.Empty(t, p.MustEntries(v, 1))
+		assert.Empty(t, p.MustEntries(v, 2))
+		assertPosition(t, 0, 1, p.MustVoiceEnd(v))
+	})
+	t.Run("split tail", func(t *testing.T) {
+		p, v := fixture(1)
+		p = p.MustSplice(v, 1, 0, 0, numeric)
+		at := track.Place{Voice: v, Bar: 1, Index: 0}
+		out, err := p.Split(at, length(1, 4), track.WithoutGroups)
+		is := noProposal(t, out, err, track.ErrNotation)
+		assertPlace(t, at, is[0].Place)
+		assertLength(t, 1, 3, is[0].Amount)
+		entries := p.MustEntries(v, 1)
+		require.Len(t, entries, 1)
+		assertEvent(t, numeric, entries[0].Event)
+		assertSpan(t, entries[0].Time, 0, 1, 7, 12)
+	})
+}
+
+func TestPackRestsAtMaxIntFinalBar(t *testing.T) {
+	t.Parallel()
+	last := math.MaxInt
+	t.Run("one final bar is identity", func(t *testing.T) {
+		p, v := fixture(last)
+		r := measureRest(1, false)
+		p = p.MustEdit(track.Edit{Bars: []track.BarEdit{{Voice: v, Bar: last, Events: []*event.Event{r}}}})
+		out, err := p.PackRests(v, last, last)
+		require.NoError(t, err)
+		assert.True(t, p.Equal(out.Track))
+		entries := out.Track.MustEntries(v, last)
+		require.Len(t, entries, 1)
+		assertEntry(t, entries[0], v, last, 0, r, last-1, 1, last, 1)
+		assertPosition(t, last, 1, out.Track.MustVoiceEnd(v))
+		assertEvent(t, r, p.MustEntries(v, last)[0].Event)
+	})
+	t.Run("two final bars pack", func(t *testing.T) {
+		p, v := fixture(last)
+		r := measureRest(1, false)
+		p = p.MustEdit(track.Edit{Bars: []track.BarEdit{{Voice: v, Bar: last - 1, Events: []*event.Event{r}}, {Voice: v, Bar: last, Events: []*event.Event{r}}}})
+		out, err := p.PackRests(v, last-1, last)
+		require.NoError(t, err)
+		entries := out.Track.MustEntries(v, last-1)
+		require.Len(t, entries, 1)
+		assert.Equal(t, 2, entries[0].Event.MustDuration().MustMeasureCount())
+		assertSpan(t, entries[0].Time, last-2, 1, last, 1)
+		assert.Empty(t, out.Track.MustEntries(v, last))
+		inside, ok := out.Track.MustAt(v, position(last-1, 1))
+		require.True(t, ok)
+		assertPlace(t, entries[0].Place, inside.Place)
+		assertPosition(t, last, 1, out.Track.MustVoiceEnd(v))
+		for _, bar := range []int{last - 1, last} {
+			original := p.MustEntries(v, bar)
+			require.Len(t, original, 1)
+			assertEvent(t, r, original[0].Event)
+		}
+	})
 }
 
 func TestSplitMergePreserveMarksSourcesAndNotation(t *testing.T) {
