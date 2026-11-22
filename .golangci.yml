@@ -483,6 +483,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/internal/timecalc$
             - github.com/go-muse/musex/common/rounding$
             - github.com/go-muse/musex/common/fraction$
             - github.com/go-muse/musex/duration$
@@ -495,6 +496,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/internal/timecalc$
             - github.com/go-muse/musex/common/rounding$
             - github.com/go-muse/musex/common/fraction$
             - github.com/go-muse/musex/duration$
@@ -502,6 +504,14 @@ linters:
             - github.com/go-muse/musex/measure$
             - github.com/go-muse/musex/tempo$
             - github.com/go-muse/musex/tempomap$
+        internal-timecalc:
+          list-mode: strict
+          files:
+            - "**/internal/timecalc/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/common/rounding$
         chord:
           list-mode: strict
           files:

@@ -6,19 +6,18 @@ import (
 
 	"github.com/go-muse/musex/common/fraction"
 	"github.com/go-muse/musex/common/rounding"
+	"github.com/go-muse/musex/internal/timecalc"
 	"github.com/go-muse/musex/tempomap"
 )
 
-// This file selects integers from exact irrational values of a musex tempo
-// map. A target that is linear in one exact value of tempomap is rounded by
-// the step methods of tempomap, which are correctly rounded without a
-// precision limit. A target that is a fractional-linear function of one exact
-// value is decided by exact comparisons, which are also step methods. Only the
-// product of two irrational values has no proven bound; it is decided by
-// intervals of increasing precision and may fail with ErrOutOfRange.
+// This file selects integers from exact time forms supplied by the shared
+// kernel. Linear targets use its correctly rounded step operation; a
+// fractional-linear target uses exact comparisons. Only the combination of
+// two irrational forms uses bounded interval refinement and may fail with
+// ErrOutOfRange when none of the scheduled precisions proves the rounding.
 
 // placesSchedule is the fixed sequence of decimal places requested from
-// tempomap, in order.
+// the shared time kernel, in order.
 var placesSchedule = [...]int{20, 40, 60, 76}
 
 // evalFunc returns, for one number of decimal places, a closed interval
@@ -65,40 +64,21 @@ func roundCertified(eval evalFunc, mode rounding.Mode, limit *big.Int) (*big.Int
 	return nil, rangeError(op, "rounding not decided within 76 decimal places")
 }
 
-// span is an interval of positions of a tempo map without holds, with its
-// exact seconds available through tempomap.
-type span struct {
-	m        tempomap.Map
-	from, to tempomap.Address
-}
+// span retains the exact time form of an original source step. Its computed
+// endpoints remain unrestricted rationals throughout the export calculation.
+type span struct{ form timecalc.LogForm }
 
-// steps uses the unbounded rational step API so intermediate ratios never
-// acquire the representability limits of public seconds values.
-func (s span) steps(op string, step *big.Rat, mode rounding.Mode) (k int, overflow, err error) {
-	k, err = s.m.WeightedBetweenSteps([]tempomap.WeightedInterval{{From: s.from, To: s.to, Weight: big.NewRat(1, 1)}}, step, mode)
-	if err != nil {
-		if errors.Is(err, tempomap.ErrOutOfRange) && errors.Is(err, fraction.ErrNotRepresentable) {
-			return 0, err, nil
-		}
-		return 0, nil, dependencyError(op, err)
+func (s span) steps(_ string, step *big.Rat, mode rounding.Mode) (k int, overflow, err error) {
+	n := timecalc.RoundLogSteps(s.form, step, mode)
+	if !n.IsInt64() {
+		return 0, errors.Join(tempomap.ErrOutOfRange, fraction.ErrNotRepresentable), nil
 	}
-	return k, nil, nil
+	return int(n.Int64()), nil, nil
 }
 
-// halfUpInterval returns the interval of the exact seconds from the result of
-// Between with places and HalfUp, and whether it is exact.
 func (s span) halfUpInterval(places int) (lo, hi *big.Rat, exact bool, err error) {
-	result, err := s.m.Between(s.from, s.to, places, rounding.HalfUp)
-	if err != nil {
-		return nil, nil, false, err
-	}
-	value := ratOfSeconds(result.MustValue())
-	if !result.MustApproximate() {
-		return value, new(big.Rat).Set(value), true, nil
-	}
-	half := new(big.Rat).SetFrac(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(places)), nil))
-	half.Quo(half, big.NewRat(2, 1))
-	return new(big.Rat).Sub(value, half), new(big.Rat).Add(value, half), false, nil
+	lo, hi, exact = timecalc.DecimalInterval(s.form, places)
+	return lo, hi, exact, nil
 }
 
 // tempoLimit returns M + 1 for the Set Tempo limit M.
@@ -179,8 +159,8 @@ func stretchedTempo(op string, s timeSum, m, e *big.Rat, mode rounding.Mode) (MI
 	return MIDITempo{us: int32(low.Int64())}, nil
 }
 
-// productTempo rounds c*T*(S+E)/S once with mode for the exact seconds T and S
-// of two spans, both irrational.
+// productTempo rounds c*T*(S+E)/S once for the exact source-step time T
+// and weighted staircase time S, both irrational.
 func productTempo(op string, part span, stretch timeSum, c, e *big.Rat, mode rounding.Mode) (MIDITempo, error) {
 	eval := func(places int) (lo, hi *big.Rat, exact bool, err error) {
 		tLo, tHi, tExact, err := part.halfUpInterval(places)
@@ -231,42 +211,15 @@ type timeSum struct {
 	constant *big.Rat // rational contribution when parts contain irrational times
 }
 
-func (s timeSum) compare(op string, y *big.Rat) (int, error) {
+func (s timeSum) compare(_ string, y *big.Rat) (int, error) {
 	if s.exact != nil {
 		return s.exact.Cmp(y), nil
 	}
-	// Rational fragments need no synthetic bounded address. Move their exact
-	// contribution to the comparison threshold before invoking the log kernel.
-	y = new(big.Rat).Sub(y, s.constant)
-	if y.Sign() <= 0 {
-		return 1, nil
+	form := timecalc.Constant(s.constant)
+	for _, p := range s.parts {
+		form = timecalc.Add(form, timecalc.Scale(p.source.form, p.weight))
 	}
-	terms := make([]tempomap.WeightedInterval, len(s.parts))
-	for i, p := range s.parts {
-		terms[i] = tempomap.WeightedInterval{From: p.source.from, To: p.source.to, Weight: p.weight}
-	}
-	m := s.parts[0].source.m
-	d, err := m.WeightedBetweenSteps(terms, y, rounding.Down)
-	if err != nil {
-		if errors.Is(err, tempomap.ErrOutOfRange) && errors.Is(err, fraction.ErrNotRepresentable) {
-			return 1, nil
-		}
-		return 0, dependencyError(op, err)
-	}
-	if d == 0 {
-		return -1, nil
-	}
-	u, err := m.WeightedBetweenSteps(terms, y, rounding.Up)
-	if err != nil {
-		if errors.Is(err, tempomap.ErrOutOfRange) && errors.Is(err, fraction.ErrNotRepresentable) {
-			return 1, nil
-		}
-		return 0, dependencyError(op, err)
-	}
-	if u >= 2 {
-		return 1, nil
-	}
-	return 0, nil
+	return timecalc.CompareLog(form, y), nil
 }
 
 func (s timeSum) halfUpInterval(places int) (lo, hi *big.Rat, exact bool, err error) {
