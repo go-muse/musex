@@ -10,6 +10,7 @@ import (
 	"github.com/go-muse/musex/duration"
 	"github.com/go-muse/musex/format/ticks"
 	"github.com/go-muse/musex/measure"
+	"github.com/go-muse/musex/meter"
 	"github.com/go-muse/musex/tempomap"
 
 	"github.com/stretchr/testify/assert"
@@ -131,6 +132,29 @@ func TestMIDIMeterMapOfNonBinaryExplicitLength(t *testing.T) {
 				must, mustLosses := ticks.MustMIDIMeterMapOf(g, res(d), click, ticks.Strict, ticks.IrregularSkip)
 				assert.True(t, must.Equal(got))
 				assert.Nil(t, mustLosses)
+			})
+		})
+	}
+}
+
+// WithMark accepts MaxInt on an open grid (measure 4.4). Section 4.14
+// visits bars in order: the first 4/3 meter must fail conversion before
+// anything after the final mark is considered. No full traversal of the
+// MaxInt-sized grid is required to establish this early error.
+func TestMIDIMeterMapOfFirstErrorBeforeMaxIntMark(t *testing.T) {
+	t.Parallel()
+	g, err := measure.MustNew(meter.MustNew(4, 3)).WithMark(math.MaxInt, meter.FourFour())
+	require.NoError(t, err, "the far mark is a valid grid input")
+	for _, policy := range []ticks.IrregularBars{ticks.IrregularEvent, ticks.IrregularSkip} {
+		t.Run(policy.String(), func(t *testing.T) {
+			t.Parallel()
+			click := ticks.MustClickEvery(dur(1, 4))
+			got, losses, err := ticks.MIDIMeterMapOf(g, res(480), click, ticks.Strict, policy)
+			requireTicksError(t, err, ticks.ErrMeterNotMIDI)
+			assert.Equal(t, ticks.MIDIMeterMap{}, got)
+			assert.Nil(t, losses)
+			requireMustPanic(t, err, ticks.ErrMeterNotMIDI, func() {
+				ticks.MustMIDIMeterMapOf(g, res(480), click, ticks.Strict, policy)
 			})
 		})
 	}
