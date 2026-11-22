@@ -82,6 +82,9 @@ func (t *Track) Split(at Place, offset duration.Duration, g Groups) (Proposal, e
 	if err != nil {
 		x := issue(err, at)
 		x.Amount = offset
+		if detail, ok := errors.AsType[*notationPartError](err); ok {
+			x.Amount = detail.amount
+		}
 		return Proposal{}, &Problems{[]Issue{x}}
 	}
 	return t.spliceProposal(at.Voice, at.Bar, at.Index, 1, es)
@@ -194,7 +197,7 @@ func (t *Track) PackRests(v VoiceID, first, last int) (Proposal, error) {
 	var groups [][]Entry
 	for _, run := range runs {
 		var entries []Entry
-		for b := run.First; b <= run.Last; b++ {
+		for b := run.First; ; b++ {
 			es, err := t.Entries(v, b)
 			if err != nil {
 				return Proposal{}, err
@@ -209,6 +212,9 @@ func (t *Track) PackRests(v VoiceID, first, last int) (Proposal, error) {
 				return Proposal{}, &Problems{[]Issue{x}}
 			}
 			entries = append(entries, e)
+			if b == run.Last {
+				break
+			}
 		}
 		lastEntry := entries[len(entries)-1]
 		e, err := event.New(event.RestContent(), event.MustMeasureDuration(run.Last-run.First+1), lastEntry.Event.MustMarks())
@@ -216,8 +222,8 @@ func (t *Track) PackRests(v VoiceID, first, last int) (Proposal, error) {
 			return Proposal{}, err
 		}
 		edits = append(edits, BarEdit{v, run.First, []*event.Event{e}})
-		for b := run.First + 1; b <= run.Last; b++ {
-			edits = append(edits, BarEdit{v, b, nil})
+		for _, entry := range entries[1:] {
+			edits = append(edits, BarEdit{v, entry.Place.Bar, nil})
 		}
 		groups = append(groups, entries)
 	}
