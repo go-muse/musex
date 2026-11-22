@@ -99,7 +99,7 @@ Definitions may differ from conventional ones.
 
 **[Scale choice](guide/packages/problemsolving/scalechoice.md)** supports a composer's choice of pitch collection: inspect compatible modal readings, common and missing notes, possible continuations, and the consequences of one trial replacement in a set or a phrase. The caller chooses the scope, comparison, condition, and optional center.
 
-**[Voice leading](#analyze-voice-leading)** compares existing melodic lines: written and chromatic intervals, kinds of two-part motion, perfect parallels, consecutive perfect families, direct arrivals, crossings, and overlaps. A separate, explicit assessment checks one Open Music Theory first-species rule. This package is **unreleased**.
+**[Voice leading](#analyze-voice-leading)** compares existing melodic lines: written and chromatic intervals, kinds of two-part motion, perfect parallels, consecutive perfect families, direct arrivals, crossings, and overlaps. A separate, explicit assessment checks one Open Music Theory first-species rule.
 
 **Chord** is a group of notes that sound together. It keeps the notes in their order of record, repeats included, and has no duration and no harmonic name.
 
