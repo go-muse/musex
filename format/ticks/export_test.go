@@ -29,11 +29,11 @@ import (
 //	step 3: 585481.970033184036…
 //
 // The fermata stretch of the last step (hold E = 1 s at position 1, L = 1/4)
-// uses S = 12·ln(26.25/25) = 0.585481970033184036… s and multiplies the step
-// tempo by (S + E)/S:
+// uses the time S of the base step, and multiplies its tempo by (S + E)/S.
+// A quarter-long step has m = 10⁶·S, so its tempo increases by exactly 10⁶:
 //
-//	StepStart:     (15·10⁶/26.25)·(S+1)/S = 1547425.443537517691…
-//	StepEnd:       600000·(S+1)/S         = 1624796.715714393575…
+//	StepStart:     4000000/7 + 1000000 = 11000000/7 µs
+//	StepEnd:       600000 + 1000000 = 1600000 µs
 //	StepEqualTime: 10⁶·S·(S+1)/S = 10⁶·(S+1) = 1585481.970033184036…
 //
 // The gradual change from quarter = 4 to quarter = 3 over one whole note lasts
@@ -111,6 +111,20 @@ func TestExportOptions(t *testing.T) {
 	_, ok = skipped.MustStretchLength()
 	assert.False(t, ok)
 	assert.False(t, stretched.Equal(o.MustWithHoldsStretched(dur(1, 2))))
+
+	// Non-Must variants must reset exactly the same fields as their wrappers.
+	reset, err := withPositions.WithExactPositions()
+	require.NoError(t, err)
+	assert.Equal(t, o, reset)
+	reset, err = withSteps.WithoutSteps()
+	require.NoError(t, err)
+	assert.Equal(t, o, reset)
+	reset, err = stretched.WithHoldsRefused()
+	require.NoError(t, err)
+	assert.Equal(t, o, reset)
+	assert.True(t, ticks.MustParseExportOptions(o.String()).Equal(o))
+	_, err = ticks.ParseExportOptions("invalid")
+	requireMustPanic(t, err, ticks.ErrInvalidText, func() { ticks.MustParseExportOptions("invalid") })
 
 	// Enumerations of 4.10.
 	for _, tt := range []struct {
@@ -405,7 +419,7 @@ func TestMIDITempoMapOfStretchOnGradualSteps(t *testing.T) {
 				0, 500000,
 				480, int(irrationalIndex(mode, 521739, false)),
 				960, int(irrationalIndex(mode, 545454, true)),
-				1440, int(irrationalIndex(mode, 1547425, false)),
+				1440, int(irrationalIndex(mode, 1571428, true)),
 				1920, 600000,
 			), tempoChanges(t, mm))
 
@@ -414,7 +428,7 @@ func TestMIDITempoMapOfStretchOnGradualSteps(t *testing.T) {
 				0, int(irrationalIndex(mode, 521739, false)),
 				480, int(irrationalIndex(mode, 545454, true)),
 				960, int(irrationalIndex(mode, 571428, true)),
-				1440, int(irrationalIndex(mode, 1624796, true)),
+				1440, 1600000,
 				1920, 600000,
 			), tempoChanges(t, mm))
 
@@ -471,10 +485,8 @@ func TestMIDITempoMapOfTempoLimit(t *testing.T) {
 		requireTicksError(t, err, ticks.ErrFormatLimit)
 	}
 
-	// 5.2, fractional-linear target with an irrational S: the КП-15 map with
-	// a hold of 20 s at 1 stretched over L = 1/4. The last StepStart piece has
-	// m = 15·10⁶/26.25 ≈ 571428.57 µs and S = 12·ln(1.05) ≈ 0.5855 s, so
-	// m·(S+E)/S ≈ 2.01·10⁷ > 16777215 (the threshold y₀ = m·E/(M+1−m) ≈ 0.705 > S).
+	// The last StepStart piece has m = 4000000/7 µs and spans one
+	// quarter. A hold of 20 s adds 20000000 µs, exceeding the format limit.
 	ritHold := ritardandoMap().MustWithExtension(tempomap.MustNewExtension(at(1, 1), sec(20, 1)))
 	for _, mode := range allModes {
 		o := exportOptions(t, mode).MustWithSteps(dur(1, 4), ticks.StepStart).MustWithHoldsStretched(dur(1, 4))
@@ -601,5 +613,131 @@ func TestMIDITempoMapToMusex(t *testing.T) {
 			t.Parallel()
 			requireTicksError(t, tt.call(), tt.own, tt.deps...)
 		})
+	}
+}
+
+// TestMIDITempoMapStretchInheritsBaseStep checks KP-50: cutting a step
+// must preserve its base tempo before stretching, for all three methods.
+func TestMIDITempoMapStretchInheritsBaseStep(t *testing.T) {
+	t.Parallel()
+	m := ritardandoMap().MustWithExtension(tempomap.MustNewExtension(at(1, 1), sec(1, 1)))
+	for _, tt := range []struct {
+		name                     string
+		method                   ticks.StepMethod
+		first, second, stretched int
+		seconds                  tempo.Seconds
+	}{
+		{name: "start", method: ticks.StepStart, first: 500000, second: 545455, stretched: 1545455, seconds: sec(309091, 100000)},
+		{name: "end", method: ticks.StepEnd, first: 545455, second: 600000, stretched: 1600000, seconds: sec(329091, 100000)},
+		{name: "equal time", method: ticks.StepEqualTime, first: 522068, second: 571861, stretched: 1571861, seconds: sec(1593929, 500000)},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			o := exportOptions(t, rounding.HalfUp).MustWithSteps(dur(1, 2), tt.method)
+			base, _ := requireExport(t, ritardandoMap(), res(480), o)
+			got, skipped := requireExport(t, m, res(480), o.MustWithHoldsStretched(dur(1, 4)))
+			assert.Nil(t, skipped)
+			assert.Equal(t, changeTexts(0, tt.first, 960, tt.second, 1440, tt.stretched, 1920, 600000), tempoChanges(t, got))
+			assertSeconds(t, tt.seconds, got.MustSeconds(1920))
+			assertSeconds(t, sec(1, 1), got.MustSeconds(1920).MustSub(base.MustSeconds(1920)))
+			assertSeconds(t, sec(1, 1), got.MustSeconds(2400).MustSub(base.MustSeconds(2400)))
+		})
+	}
+}
+
+// TestMIDITempoMapStretchUsesFinalTickGrid checks KP-51 and the order of
+// failures in 4.16: positions, then collapsed stretches, then tempo limits.
+func TestMIDITempoMapStretchUsesFinalTickGrid(t *testing.T) {
+	t.Parallel()
+	m := holdMap(pos(5, 16), sec(1, 1))
+	o := exportOptions(t, rounding.HalfUp).MustWithPositionMode(rounding.Down).MustWithHoldsStretched(dur(1, 8))
+	got, skipped := requireExport(t, m, res(1), o)
+	assert.Nil(t, skipped)
+	// The split at 3/16 shares tick zero with the initial event.
+	assert.Equal(t, changeTexts(0, 2000000, 0, 2000000, 1, 1000000), tempoChanges(t, got))
+	assertSeconds(t, sec(2, 1), got.MustSeconds(1))
+	assertSeconds(t, sec(3, 1), got.MustSeconds(2))
+
+	for _, tt := range []struct {
+		name string
+		m    tempomap.Map
+		o    ticks.ExportOptions
+		own  error
+	}{
+		{name: "collapsed stretch", m: holdMap(pos(1, 8), sec(1, 1)), o: o.MustWithHoldsStretched(dur(1, 16)), own: ticks.ErrNotConvertible},
+		{name: "positions precede collapse", m: holdMap(pos(1, 8), sec(1, 1)), o: o.MustWithExactPositions().MustWithHoldsStretched(dur(1, 16)), own: ticks.ErrNotRepresentable},
+		{name: "collapse precedes overflowing tempo", m: tempomap.MustNew(quarterTempo(3, 1)).MustWithExtension(tempomap.MustNewExtension(at(1, 8), sec(1, 1))), o: o.MustWithHoldsStretched(dur(1, 16)), own: ticks.ErrNotConvertible},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, skipped, err := ticks.MIDITempoMapOf(tt.m, res(1), tt.o)
+			requireTicksError(t, err, tt.own)
+			assert.False(t, got.IsSet())
+			assert.Nil(t, skipped)
+			requireMustPanic(t, err, tt.own, func() { ticks.MustMIDITempoMapOf(tt.m, res(1), tt.o) })
+		})
+	}
+}
+
+// TestMIDITempoMapStretchIgnoresZeroTickFragments checks 4.10: all
+// coincident changes survive, but only effective positive tick lengths
+// contribute to S. Every change at a tick inside [u,v) is stretched.
+func TestMIDITempoMapStretchIgnoresZeroTickFragments(t *testing.T) {
+	t.Parallel()
+	m := constantMap(60).
+		MustWithChange(tempomap.MustNewMain(at(1, 8), quarterTempo(30, 1))).
+		MustWithChange(tempomap.MustNewMain(at(3, 8), quarterTempo(20, 1))).
+		MustWithExtension(tempomap.MustNewExtension(at(9, 16), sec(1, 1)))
+	o := exportOptions(t, rounding.HalfEven).MustWithPositionMode(rounding.Down).MustWithHoldsStretched(dur(1, 2))
+	got, skipped := requireExport(t, m, res(1), o)
+	assert.Nil(t, skipped)
+	// Positions 0,1/16,1/8 share tick zero. The effective base fragments
+	// have tempos 2000000 and 3000000, each for one tick: S=5 s.
+	// The multiplier 6/5 also applies to both zero-length 1000000 changes.
+	assert.Equal(t, changeTexts(0, 1200000, 0, 1200000, 0, 2400000, 1, 3600000, 2, 3000000), tempoChanges(t, got))
+	assertSeconds(t, sec(12, 5), got.MustSeconds(1))
+	assertSeconds(t, sec(6, 1), got.MustSeconds(2))
+	assertSeconds(t, sec(9, 1), got.MustSeconds(3))
+}
+
+// TestMIDITempoMapStretchAcrossBaseSteps checks a sum of effective base
+// fragments, including the two-form EqualTime case. At step 1/2, cutting
+// at 1/4 leaves one quarter of the first step and half of the second:
+// S=(m0+2*m1)/10^6, and the final tempos are mi*(S+1)/S.
+// Independent exact/85-digit Decimal expectations are:
+// start: m0=500000, final=(5700000/7,68400000/77);
+// end: m0=6000000/11, final=(9437500/11,943750);
+// equal time: m0=6000000*ln(12/11), m1=6000000*ln(11/10),
+// final=(835473.991613169695...,915158.213988253610...).
+func TestMIDITempoMapStretchAcrossBaseSteps(t *testing.T) {
+	t.Parallel()
+	m := ritardandoMap().MustWithExtension(tempomap.MustNewExtension(at(1, 1), sec(1, 1)))
+	for _, tt := range []struct {
+		name                                   string
+		method                                 ticks.StepMethod
+		base, first, second                    int64
+		baseUp, firstUp, secondUp, secondExact bool
+	}{
+		{name: "start", method: ticks.StepStart, base: 500000, first: 814285, second: 888311, firstUp: true, secondUp: true},
+		{name: "end", method: ticks.StepEnd, base: 545454, first: 857954, second: 943750, baseUp: true, firstUp: true, secondExact: true},
+		{name: "equal time", method: ticks.StepEqualTime, base: 522068, first: 835473, second: 915158, firstUp: true},
+	} {
+		for _, mode := range allModes {
+			t.Run(tt.name+"/"+mode.String(), func(t *testing.T) {
+				t.Parallel()
+				base := tt.base
+				if tt.method != ticks.StepStart {
+					base = irrationalIndex(mode, tt.base, tt.baseUp)
+				}
+				second := tt.second
+				if !tt.secondExact {
+					second = irrationalIndex(mode, tt.second, tt.secondUp)
+				}
+				o := exportOptions(t, mode).MustWithSteps(dur(1, 2), tt.method).MustWithHoldsStretched(dur(3, 4))
+				got, skipped := requireExport(t, m, res(480), o)
+				assert.Nil(t, skipped)
+				assert.Equal(t, changeTexts(0, int(base), 480, int(irrationalIndex(mode, tt.first, tt.firstUp)), 960, int(second), 1920, 600000), tempoChanges(t, got))
+			})
+		}
 	}
 }

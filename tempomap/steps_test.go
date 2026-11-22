@@ -507,3 +507,249 @@ func TestStepsConcurrentCalls(t *testing.T) {
 		assert.Equal(t, 2187, <-results)
 	}
 }
+
+// TestWeightedBetweenStepsExact checks 14.6: round the sum once, without
+// rounding its terms; repeated, overlapping and unordered terms are valid.
+func TestWeightedBetweenStepsExact(t *testing.T) {
+	t.Parallel()
+	m := tempomap.MustNew(quarter(60))
+	terms := []tempomap.WeightedInterval{
+		{From: at(0, 1), To: at(1, 4), Weight: big.NewRat(1, 3)},
+		{From: at(1, 4), To: at(1, 2), Weight: big.NewRat(2, 3)},
+	}
+	for _, mode := range allRoundingModes {
+		t.Run(mode.String(), func(t *testing.T) {
+			t.Parallel()
+			got, err := m.WeightedBetweenSteps(terms, big.NewRat(2, 3), mode)
+			require.NoError(t, err)
+			assert.Equal(t, stepTieIndex(mode, 1, false), got)
+			assert.Equal(t, got, m.MustWeightedBetweenSteps(terms, big.NewRat(2, 3), mode))
+			assert.Equal(t, stepTieIndex(mode, 0, true), m.MustWeightedBetweenSteps(terms, big.NewRat(2, 1), mode))
+			assert.Equal(t, got, m.MustWeightedBetweenSteps([]tempomap.WeightedInterval{terms[1], terms[0]}, big.NewRat(2, 3), mode))
+			// Two half-second contributions sum to an exact integer, even
+			// though rounding each would give 0 or 2 in several modes.
+			repeated := []tempomap.WeightedInterval{
+				{From: at(0, 1), To: at(1, 4), Weight: big.NewRat(1, 2)},
+				{From: at(0, 1), To: at(1, 4), Weight: big.NewRat(1, 2)},
+			}
+			assert.Equal(t, 1, m.MustWeightedBetweenSteps(repeated, big.NewRat(1, 1), mode))
+			overlapped := []tempomap.WeightedInterval{
+				{From: at(1, 4), To: at(1, 2), Weight: big.NewRat(1, 2)},
+				{From: at(0, 1), To: at(1, 2), Weight: big.NewRat(1, 4)},
+				{From: at(1, 1), To: at(1, 1), Weight: big.NewRat(13, 1)},
+			}
+			assert.Equal(t, 1, m.MustWeightedBetweenSteps(overlapped, big.NewRat(1, 1), mode))
+			assert.Zero(t, m.MustWeightedBetweenSteps(nil, big.NewRat(1, 1), mode))
+			assert.Zero(t, m.MustWeightedBetweenSteps([]tempomap.WeightedInterval{}, big.NewRat(1, 1), mode))
+		})
+	}
+}
+
+// TestWeightedBetweenStepsHolds checks Start(to)-Start(from): a hold at
+// from is included, one at to is excluded, and a zero interval is zero.
+func TestWeightedBetweenStepsHolds(t *testing.T) {
+	t.Parallel()
+	m := tempomap.MustNew(quarter(60))
+	for _, p := range []tempomap.Address{at(0, 1), at(1, 4), at(1, 2)} {
+		m = m.MustWithExtension(tempomap.MustNewExtension(p, sec(1, 1)))
+	}
+	for _, tt := range []struct {
+		name     string
+		from, to tempomap.Address
+		want     int
+	}{
+		{name: "left boundary", from: at(0, 1), to: at(1, 4), want: 2},
+		{name: "right boundary", from: at(1, 8), to: at(1, 4), want: 1},
+		{name: "interior and left holds", from: at(0, 1), to: at(1, 2), want: 4},
+		{name: "zero interval on a hold", from: at(1, 4), to: at(1, 4)},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			// Weight two, step two: the numerical index equals elapsed seconds.
+			// The half-second case instead uses step one to get an integral index.
+			step := big.NewRat(2, 1)
+			if tt.name == "right boundary" {
+				step = big.NewRat(1, 1)
+			}
+			got, err := m.WeightedBetweenSteps([]tempomap.WeightedInterval{{From: tt.from, To: tt.to, Weight: big.NewRat(2, 1)}}, step, rounding.HalfEven)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// TestWeightedBetweenStepsMixedExactSum uses an independent 85-digit
+// Decimal calculation: X = 4*ln(6/5)+2/5 = 1.1292862271758185048468721...
+func TestWeightedBetweenStepsMixedExactSum(t *testing.T) {
+	t.Parallel()
+	m := stepsRitardandoMap()
+	terms := []tempomap.WeightedInterval{
+		{From: at(0, 1), To: at(1, 1), Weight: big.NewRat(1, 3)},
+		{From: at(1, 1), To: at(5, 4), Weight: big.NewRat(2, 3)},
+	}
+	for _, mode := range allRoundingModes {
+		t.Run(mode.String(), func(t *testing.T) {
+			t.Parallel()
+			got, err := m.WeightedBetweenSteps(terms, big.NewRat(1, 1000000000000000000), mode)
+			require.NoError(t, err)
+			assert.Equal(t, stepInnerIndex(mode, 1129286227175818504, true), got)
+			assert.Equal(t, got, m.MustWeightedBetweenSteps([]tempomap.WeightedInterval{terms[1], terms[0]}, big.NewRat(1, 1000000000000000000), mode))
+		})
+	}
+}
+
+func TestWeightedBetweenStepsUnboundedRationals(t *testing.T) {
+	t.Parallel()
+	huge := new(big.Rat).SetInt(new(big.Int).Lsh(big.NewInt(1), 300))
+	tiny := new(big.Rat).Inv(huge)
+	for _, scale := range []*big.Rat{huge, tiny} {
+		terms := []tempomap.WeightedInterval{{From: at(0, 1), To: at(1, 4), Weight: scale}}
+		m := tempomap.MustNew(quarter(60))
+		assert.Equal(t, 1, m.MustWeightedBetweenSteps(terms, scale, rounding.HalfEven))
+		// Both the sum and the individual factors may exceed fraction;
+		// only the final integer index is bounded by int.
+		terms = append(terms, terms[0])
+		assert.Equal(t, 2, m.MustWeightedBetweenSteps(terms, scale, rounding.Down))
+		terms[0].To, terms[1].To = at(1, 1), at(0, 1)
+		assert.Equal(t, 2, stepsRitardandoMap().MustWeightedBetweenSteps(terms, scale, rounding.HalfEven))
+	}
+}
+
+// TestWeightedBetweenStepsErrors checks every validation stage of 14.6,
+// including precedence when several invalid inputs occur together.
+func TestWeightedBetweenStepsErrors(t *testing.T) {
+	t.Parallel()
+	m := tempomap.MustNew(quarter(60))
+	grid := measure.MustNew(meter.FourFour()).MustWithBarCount(1)
+	measured := tempomap.MustNewMeasured(grid, quarter(60))
+	unfinished := m.MustWithChange(tempomap.MustNewGradual(at(1, 1), tempomap.LinearSpeed))
+	one := big.NewRat(1, 1)
+	valid := tempomap.WeightedInterval{From: at(0, 1), To: at(1, 4), Weight: one}
+	for _, tt := range []struct {
+		name      string
+		m         tempomap.Map
+		terms     []tempomap.WeightedInterval
+		step      *big.Rat
+		mode      rounding.Mode
+		grids     []measure.Grid
+		own       error
+		deps, not []error
+	}{
+		{name: "unset map before other inputs", terms: []tempomap.WeightedInterval{{}}, own: tempomap.ErrUnset},
+		{name: "all addresses before weights", m: m, terms: []tempomap.WeightedInterval{{From: at(0, 1), To: at(1, 4)}, {}}, own: tempomap.ErrUnset},
+		{name: "unset from", m: m, terms: []tempomap.WeightedInterval{{To: at(1, 4), Weight: one}}, step: one, mode: rounding.Down, own: tempomap.ErrUnset},
+		{name: "unset to", m: m, terms: []tempomap.WeightedInterval{{From: at(0, 1), Weight: one}}, step: one, mode: rounding.Down, own: tempomap.ErrUnset},
+		{name: "nil weight", m: m, terms: []tempomap.WeightedInterval{{From: at(0, 1), To: at(1, 4)}}, step: one, mode: rounding.Down, own: tempomap.ErrInvalidArgument, not: []error{fraction.ErrInvalid, fraction.ErrOutOfRange}},
+		{name: "zero weight even on zero interval", m: m, terms: []tempomap.WeightedInterval{{From: at(0, 1), To: at(0, 1), Weight: big.NewRat(0, 1)}}, step: one, mode: rounding.Down, own: tempomap.ErrInvalidArgument},
+		{name: "negative weight", m: m, terms: []tempomap.WeightedInterval{{From: at(0, 1), To: at(1, 4), Weight: big.NewRat(-1, 1)}}, step: one, mode: rounding.Down, own: tempomap.ErrInvalidArgument},
+		{name: "weight before unset grid", m: measured, terms: []tempomap.WeightedInterval{{From: bar(1, 0, 1), To: bar(1, 1, 4)}}, grids: []measure.Grid{{}}, own: tempomap.ErrInvalidArgument, not: []error{measure.ErrUnset, rounding.ErrUnset}},
+		{name: "positional map rejects grid", m: m, terms: []tempomap.WeightedInterval{valid}, step: one, mode: rounding.Down, grids: []measure.Grid{grid}, own: tempomap.ErrInvalidArgument},
+		{name: "too many grids", m: measured, step: one, mode: rounding.Down, grids: []measure.Grid{grid, grid}, own: tempomap.ErrInvalidArgument},
+		{name: "measured map requires grid even when empty", m: measured, step: one, mode: rounding.Down, own: tempomap.ErrInvalidArgument},
+		{name: "grid before mode on empty list", m: measured, step: one, grids: []measure.Grid{{}}, own: tempomap.ErrInvalidArgument, deps: []error{measure.ErrUnset}, not: []error{rounding.ErrUnset}},
+		{name: "nil step", m: m, terms: []tempomap.WeightedInterval{valid}, mode: rounding.Down, own: tempomap.ErrInvalidArgument, not: []error{fraction.ErrInvalid}},
+		{name: "zero step", m: m, step: big.NewRat(0, 1), mode: rounding.Down, own: tempomap.ErrInvalidArgument},
+		{name: "negative step", m: m, step: big.NewRat(-1, 1), mode: rounding.Down, own: tempomap.ErrInvalidArgument},
+		{name: "step before mode", m: m, own: tempomap.ErrInvalidArgument, not: []error{rounding.ErrUnset}},
+		{name: "unset mode even when empty", m: m, step: one, own: tempomap.ErrInvalidArgument, deps: []error{rounding.ErrUnset}},
+		{name: "unknown mode", m: m, terms: []tempomap.WeightedInterval{valid}, step: one, mode: rounding.Mode(99), own: tempomap.ErrInvalidArgument, deps: []error{rounding.ErrUnknownMode}},
+		{name: "mode before resolving addresses", m: measured, terms: []tempomap.WeightedInterval{{From: bar(2, 0, 1), To: bar(2, 1, 4), Weight: one}}, step: one, grids: []measure.Grid{grid}, own: tempomap.ErrInvalidArgument, deps: []error{rounding.ErrUnset}, not: []error{measure.ErrOutsideGrid}},
+		{name: "mismatched addressing", m: m, terms: []tempomap.WeightedInterval{{From: bar(1, 0, 1), To: bar(1, 1, 4), Weight: one}}, step: one, mode: rounding.Down, own: tempomap.ErrInvalidArgument},
+		{name: "from outside grid", m: measured, terms: []tempomap.WeightedInterval{{From: bar(2, 0, 1), To: bar(1, 1, 4), Weight: one}}, step: one, mode: rounding.Down, grids: []measure.Grid{grid}, own: tempomap.ErrInvalidAddress, deps: []error{measure.ErrOutsideGrid}},
+		{name: "to outside grid", m: measured, terms: []tempomap.WeightedInterval{{From: bar(1, 0, 1), To: bar(2, 0, 1), Weight: one}}, step: one, mode: rounding.Down, grids: []measure.Grid{grid}, own: tempomap.ErrInvalidAddress, deps: []error{measure.ErrOutsideGrid}},
+		{name: "reverse interval", m: m, terms: []tempomap.WeightedInterval{{From: at(1, 4), To: at(0, 1), Weight: one}}, step: one, mode: rounding.Down, own: tempomap.ErrInvalidArgument},
+		{name: "unfinished interval", m: unfinished, terms: []tempomap.WeightedInterval{{From: at(0, 1), To: at(2, 1), Weight: one}}, step: one, mode: rounding.Down, own: tempomap.ErrUnfinished},
+		{name: "zero interval in unfinished tail", m: unfinished, terms: []tempomap.WeightedInterval{{From: at(2, 1), To: at(2, 1), Weight: one}}, step: one, mode: rounding.Down, own: tempomap.ErrUnfinished},
+		{name: "all interval order checks before unfinished", m: unfinished, terms: []tempomap.WeightedInterval{{From: at(0, 1), To: at(2, 1), Weight: one}, {From: at(1, 4), To: at(0, 1), Weight: one}}, step: one, mode: rounding.Down, own: tempomap.ErrInvalidArgument, not: []error{tempomap.ErrUnfinished}},
+		{name: "final index exceeds int", m: m, terms: []tempomap.WeightedInterval{{From: at(0, 1), To: at(1, 4), Weight: new(big.Rat).SetInt(new(big.Int).Lsh(big.NewInt(1), 63))}}, step: one, mode: rounding.Down, own: tempomap.ErrOutOfRange, deps: []error{fraction.ErrNotRepresentable}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := tt.m.WeightedBetweenSteps(tt.terms, tt.step, tt.mode, tt.grids...)
+			requireTempomapError(t, err, tt.own, tt.deps...)
+			assert.Zero(t, got)
+			for _, absent := range tt.not {
+				assert.NotErrorIs(t, err, absent)
+			}
+			requirePanicError(t, err, tt.own, func() { tt.m.MustWeightedBetweenSteps(tt.terms, tt.step, tt.mode, tt.grids...) })
+		})
+	}
+	// Empty terms do not touch an unfinished part of the map.
+	assert.Zero(t, unfinished.MustWeightedBetweenSteps(nil, one, rounding.Down))
+	assert.Equal(t, 1, unfinished.MustWeightedBetweenSteps([]tempomap.WeightedInterval{valid}, one, rounding.Down))
+	assert.Zero(t, measured.MustWeightedBetweenSteps(nil, one, rounding.Down, grid))
+	assert.Equal(t, 1, measured.MustWeightedBetweenSteps([]tempomap.WeightedInterval{{From: bar(1, 0, 1), To: bar(1, 1, 4), Weight: one}}, one, rounding.Down, grid))
+	// A valid measured address can resolve outside fraction even when its
+	// offset and the meter fit individually: their denominators multiply.
+	max := fraction.MaxComponentBig()
+	offset := duration.MustPositionFromFraction(fraction.MustFromBigInt(new(big.Int).Sub(max, big.NewInt(1)), max))
+	wideGrid := measure.MustNew(meter.MustNew(1<<62, (1<<62)-1))
+	wideMap := tempomap.MustNewMeasured(wideGrid, quarter(60))
+	a := tempomap.MustAtBar(measure.MustNewAddress(2, offset))
+	k, err := wideMap.WeightedBetweenSteps([]tempomap.WeightedInterval{{From: a, To: a, Weight: one}}, one, rounding.Down, wideGrid)
+	requireTempomapError(t, err, tempomap.ErrOutOfRange, fraction.ErrOutOfRange)
+	assert.Zero(t, k)
+}
+
+func TestWeightedBetweenStepsOwnershipAndConcurrency(t *testing.T) {
+	t.Parallel()
+	m := tempomap.MustNew(quarter(60))
+	before := m.String()
+	weight, step := big.NewRat(1, 3), big.NewRat(2, 3)
+	term := tempomap.WeightedInterval{From: at(0, 1), To: at(1, 4), Weight: weight}
+	terms := []tempomap.WeightedInterval{term, term, term}
+	copyOfTerm := term
+	assert.True(t, term == copyOfTerm, "copy shares the weight pointer")
+	numericallyEqual := term
+	numericallyEqual.Weight = big.NewRat(1, 3)
+	assert.False(t, term == numericallyEqual, "pointer identity is not numerical weight equality")
+	assert.Zero(t, term.Weight.Cmp(numericallyEqual.Weight))
+
+	got := m.MustWeightedBetweenSteps(terms, step, rounding.HalfEven)
+	assert.Equal(t, 2, got)
+	for _, input := range terms {
+		assert.True(t, input.From.Equal(term.From))
+		assert.True(t, input.To.Equal(term.To))
+		assert.Same(t, weight, input.Weight)
+		assert.Equal(t, "1/3", input.Weight.RatString())
+	}
+	assert.Equal(t, "2/3", step.RatString())
+	_, err := m.WeightedBetweenSteps(terms, step, rounding.Mode(0))
+	requireTempomapError(t, err, tempomap.ErrInvalidArgument, rounding.ErrUnset)
+	assert.Equal(t, "1/3", weight.RatString())
+	assert.Equal(t, "2/3", step.RatString())
+	assert.Equal(t, before, m.String())
+
+	// The same read-only slice and big.Rats can be shared by callers.
+	results := make(chan int, 16)
+	for range 16 {
+		go func() { results <- m.MustWeightedBetweenSteps(terms, step, rounding.HalfEven) }()
+	}
+	for range 16 {
+		assert.Equal(t, 2, <-results)
+	}
+	// All workers have joined before the caller mutates its records.
+	weight.SetInt64(3)
+	step.SetInt64(2)
+	terms[0] = tempomap.WeightedInterval{}
+	assert.Equal(t, "3", copyOfTerm.Weight.RatString())
+	assert.Equal(t, 2, got, "returned index is independent of later input mutation")
+	assert.Equal(t, before, m.String())
+	assert.Equal(t, 1, m.MustWeightedBetweenSteps([]tempomap.WeightedInterval{numericallyEqual}, big.NewRat(1, 3), rounding.Down))
+}
+
+func TestWeightedBetweenStepsIndexBoundary(t *testing.T) {
+	t.Parallel()
+	m := tempomap.MustNew(quarter(60))
+	max := int(^uint(0) >> 1)
+	weight := new(big.Rat).SetInt64(int64(max))
+	terms := []tempomap.WeightedInterval{{From: at(0, 1), To: at(1, 4), Weight: weight}}
+	assert.Equal(t, max, m.MustWeightedBetweenSteps(terms, big.NewRat(1, 1), rounding.Up))
+	// The exact sum can exceed int before rounding; a final index that
+	// still fits is accepted. max+1/2 rounds down to max, up to max+1.
+	weight.Add(weight, big.NewRat(1, 2))
+	assert.Equal(t, max, m.MustWeightedBetweenSteps(terms, big.NewRat(1, 1), rounding.Down))
+	got, err := m.WeightedBetweenSteps(terms, big.NewRat(1, 1), rounding.Up)
+	requireTempomapError(t, err, tempomap.ErrOutOfRange, fraction.ErrNotRepresentable)
+	assert.Zero(t, got)
+}

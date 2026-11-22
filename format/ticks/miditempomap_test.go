@@ -405,3 +405,43 @@ func TestMIDITempoMapReturnedSlicesAreIndependent(t *testing.T) {
 	assert.Equal(t, []string{"0:500000", "5:600000"}, tempoChanges(t, copied))
 	assert.Len(t, edited.MustChanges(), 3)
 }
+
+// TestMIDITempoMapMusicalTimeline checks KP-49 and IT-12 at musical
+// positions, including positions whose tick coordinate is fractional.
+func TestMIDITempoMapMusicalTimeline(t *testing.T) {
+	t.Parallel()
+	a := ticks.MustNewMIDITempoMap(res(480), tchange(480, 600000))
+	b := ticks.MustNewMIDITempoMap(res(960), tchange(960, 600000))
+	c := ticks.MustNewMIDITempoMap(res(960), tchange(1920, 600000))
+	for _, p := range []duration.Position{pos(1, 1921), pos(1, 4), pos(1, 2), pos(2, 1)} {
+		assertSeconds(t, a.MustPositionSeconds(p), b.MustPositionSeconds(p))
+	}
+	assertSeconds(t, sec(1, 2), a.MustPositionSeconds(pos(1, 4)))
+	assertSeconds(t, sec(11, 10), b.MustPositionSeconds(pos(1, 2)))
+	assertSeconds(t, sec(1, 1), c.MustPositionSeconds(pos(1, 2)))
+
+	for _, tt := range []struct {
+		name string
+		a, b ticks.MIDITempoMap
+		want bool
+	}{
+		{name: "KP-49 rescaled ticks", a: a, b: b, want: true},
+		{name: "KP-49 moved change", a: a, b: c},
+		{name: "KP-49 constant tempos", a: ticks.MustNewMIDITempoMap(res(480)), b: ticks.MustNewMIDITempoMap(res(960)).MustWithInitial(mtempo(600000))},
+		{name: "redundant changes with a different initial record", a: a, b: b.MustWithInitial(mtempo(1)).MustWithChange(tchange(0, 500000)).MustWithChange(tchange(1920, 600000)), want: true},
+		// Both give 1 s at 1/2 and thereafter, but differ inside [0,1/2).
+		{name: "equal endpoint is insufficient", a: ticks.MustNewMIDITempoMap(res(480)), b: ticks.MustNewMIDITempoMap(res(960), tchange(0, 250000), tchange(960, 750000), tchange(1920, 500000))},
+		// Same seconds per tick, different seconds per musical position.
+		{name: "tick slope is insufficient", a: ticks.MustNewMIDITempoMap(res(480)), b: ticks.MustNewMIDITempoMap(res(960)).MustWithInitial(mtempo(1000000))},
+		{name: "written quarter and resolution both change", a: a, b: ticks.MustNewMIDITempoMap(resQ(1440, 16), tchange(720, 1200000)).MustWithInitial(mtempo(1000000)), want: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := tt.a.EqualTimeline(tt.b)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.want, tt.b.MustEqualTimeline(tt.a), "symmetry")
+			assert.False(t, tt.a.Equal(tt.b), "record equality remains separate")
+		})
+	}
+}
