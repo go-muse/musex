@@ -6,7 +6,6 @@ import (
 
 	"github.com/go-muse/musex/common/fraction"
 	"github.com/go-muse/musex/common/rounding"
-	"github.com/go-muse/musex/tempo"
 	"github.com/go-muse/musex/tempomap"
 )
 
@@ -73,26 +72,10 @@ type span struct {
 	from, to tempomap.Address
 }
 
-func secondsStep(op string, step *big.Rat) (tempo.Seconds, error) {
-	f, err := fraction.FromBigRat(step)
-	if err != nil {
-		return tempo.Seconds{}, rangeError(op, "step outside common/fraction")
-	}
-	s, err := tempo.SecondsFromFraction(f)
-	if err != nil {
-		return tempo.Seconds{}, dependencyError(op, err)
-	}
-	return s, nil
-}
-
-// steps returns k = mode(S/step). An index outside int is reported by the
-// error of tempomap in overflow, not as a failure.
+// steps uses the unbounded rational step API so intermediate ratios never
+// acquire the representability limits of public seconds values.
 func (s span) steps(op string, step *big.Rat, mode rounding.Mode) (k int, overflow, err error) {
-	h, err := secondsStep(op, step)
-	if err != nil {
-		return 0, nil, err
-	}
-	k, err = s.m.BetweenSteps(s.from, s.to, h, mode)
+	k, err = s.m.WeightedBetweenSteps([]tempomap.WeightedInterval{{From: s.from, To: s.to, Weight: big.NewRat(1, 1)}}, step, mode)
 	if err != nil {
 		if errors.Is(err, tempomap.ErrOutOfRange) && errors.Is(err, fraction.ErrNotRepresentable) {
 			return 0, err, nil
@@ -100,43 +83,6 @@ func (s span) steps(op string, step *big.Rat, mode rounding.Mode) (k int, overfl
 		return 0, nil, dependencyError(op, err)
 	}
 	return k, nil, nil
-}
-
-// compare returns the sign of S - y for the exact seconds S of the span and a
-// rational y > 0.
-func (s span) compare(op string, y *big.Rat) (int, error) {
-	d, overflow, err := s.steps(op, y, rounding.Down)
-	if err != nil {
-		return 0, err
-	}
-	if overflow != nil {
-		return 1, nil
-	}
-	if d == 0 {
-		return -1, nil
-	}
-	u, overflow, err := s.steps(op, y, rounding.Up)
-	if err != nil {
-		return 0, err
-	}
-	if overflow != nil || u >= 2 {
-		return 1, nil
-	}
-	return 0, nil
-}
-
-// interval returns the seconds of the span rounded to places down and up, and
-// whether they are exact.
-func (s span) interval(op string, places int) (lo, hi *big.Rat, err error) {
-	down, err := s.m.Between(s.from, s.to, places, rounding.Down)
-	if err != nil {
-		return nil, nil, dependencyError(op, err)
-	}
-	up, err := s.m.Between(s.from, s.to, places, rounding.Up)
-	if err != nil {
-		return nil, nil, dependencyError(op, err)
-	}
-	return ratOfSeconds(down.MustValue()), ratOfSeconds(up.MustValue()), nil
 }
 
 // halfUpInterval returns the interval of the exact seconds from the result of
@@ -194,54 +140,34 @@ func boundary(mode rounding.Mode, j *big.Int) (*big.Rat, bool) {
 
 // stretchedTempo rounds f(S) = m + m*E/S once with mode for the exact seconds
 // S of the span, a rational tempo m > 0 and a hold E > 0.
-func stretchedTempo(op string, s span, m, e *big.Rat, mode rounding.Mode) (MIDITempo, error) {
+func stretchedTempo(op string, s timeSum, m, e *big.Rat, mode rounding.Mode) (MIDITempo, error) {
 	limitError := func() error { return newError(ErrFormatLimit, op, "tempo outside 1..16777215 microseconds") }
-	upper := tempoLimit()
-	if m.Cmp(upper) >= 0 {
-		return MIDITempo{}, limitError()
-	}
-	f := func(seconds *big.Rat) *big.Rat {
-		v := new(big.Rat).Mul(m, e)
-		v.Quo(v, seconds)
-		return v.Add(v, m)
-	}
-	y0 := new(big.Rat).Mul(m, e)
-	y0.Quo(y0, new(big.Rat).Sub(upper, m))
-	sign, err := s.compare(op, y0)
-	if err != nil {
-		return MIDITempo{}, err
-	}
-	if sign <= 0 {
-		return MIDITempo{}, limitError()
-	}
-	lo, hi, err := s.interval(op, placesSchedule[0])
-	if err != nil {
-		return MIDITempo{}, err
-	}
-	if lo.Cmp(y0) < 0 {
-		lo = y0
-	}
-	nLo, err := mode.RatInt(f(hi))
-	if err != nil {
-		panic(err)
-	}
-	nHi, err := mode.RatInt(f(lo))
-	if err != nil {
-		panic(err)
-	}
-	// Binary search for the first boundary that f(S) does not pass.
-	low, high := new(big.Int).Set(nLo), new(big.Int).Set(nHi)
-	for low.Cmp(high) < 0 {
-		mid := new(big.Int).Add(low, high)
-		mid.Rsh(mid, 1)
-		b, tieUp := boundary(mode, mid)
-		y := new(big.Rat).Mul(m, e)
-		y.Quo(y, new(big.Rat).Sub(b, m))
+	// Compare m*(S+E)/S with a rational boundary. Only one logarithmic
+	// form is involved, so every decision uses the exact weighted kernel.
+	compare := func(b *big.Rat) (int, error) {
+		if b.Cmp(m) <= 0 {
+			return 1, nil
+		}
+		y := new(big.Rat).Quo(new(big.Rat).Mul(m, e), new(big.Rat).Sub(b, m))
 		sign, err := s.compare(op, y)
+		return -sign, err
+	}
+	sign, err := compare(tempoLimit())
+	if err != nil {
+		return MIDITempo{}, err
+	}
+	if sign >= 0 {
+		return MIDITempo{}, limitError()
+	}
+	low, high := big.NewInt(0), big.NewInt(MaxMicrosecondsPerQuarter+1)
+	for low.Cmp(high) < 0 {
+		mid := new(big.Int).Rsh(new(big.Int).Add(low, high), 1)
+		b, tieUp := boundary(mode, mid)
+		sign, err := compare(b)
 		if err != nil {
 			return MIDITempo{}, err
 		}
-		if sign < 0 || (sign == 0 && tieUp) {
+		if sign > 0 || (sign == 0 && tieUp) {
 			low.Add(mid, big.NewInt(1))
 		} else {
 			high.Set(mid)
@@ -255,7 +181,7 @@ func stretchedTempo(op string, s span, m, e *big.Rat, mode rounding.Mode) (MIDIT
 
 // productTempo rounds c*T*(S+E)/S once with mode for the exact seconds T and S
 // of two spans, both irrational.
-func productTempo(op string, part, stretch span, c, e *big.Rat, mode rounding.Mode) (MIDITempo, error) {
+func productTempo(op string, part span, stretch timeSum, c, e *big.Rat, mode rounding.Mode) (MIDITempo, error) {
 	eval := func(places int) (lo, hi *big.Rat, exact bool, err error) {
 		tLo, tHi, tExact, err := part.halfUpInterval(places)
 		if err != nil {
@@ -292,4 +218,67 @@ func productTempo(op string, part, stretch span, c, e *big.Rat, mode rounding.Mo
 		return MIDITempo{}, newError(ErrFormatLimit, op, "tempo rounded to zero")
 	}
 	return MIDITempo{us: int32(n.Int64())}, nil
+}
+
+// weightedSpan is a positive contribution to the base time on the final tick grid.
+type weightedSpan struct {
+	source span
+	weight *big.Rat
+}
+type timeSum struct {
+	parts []weightedSpan
+	exact *big.Rat
+}
+
+func (s timeSum) compare(op string, y *big.Rat) (int, error) {
+	if s.exact != nil {
+		return s.exact.Cmp(y), nil
+	}
+	terms := make([]tempomap.WeightedInterval, len(s.parts))
+	for i, p := range s.parts {
+		terms[i] = tempomap.WeightedInterval{From: p.source.from, To: p.source.to, Weight: p.weight}
+	}
+	m := s.parts[0].source.m
+	d, err := m.WeightedBetweenSteps(terms, y, rounding.Down)
+	if err != nil {
+		if errors.Is(err, tempomap.ErrOutOfRange) && errors.Is(err, fraction.ErrNotRepresentable) {
+			return 1, nil
+		}
+		return 0, dependencyError(op, err)
+	}
+	if d == 0 {
+		return -1, nil
+	}
+	u, err := m.WeightedBetweenSteps(terms, y, rounding.Up)
+	if err != nil {
+		if errors.Is(err, tempomap.ErrOutOfRange) && errors.Is(err, fraction.ErrNotRepresentable) {
+			return 1, nil
+		}
+		return 0, dependencyError(op, err)
+	}
+	if u >= 2 {
+		return 1, nil
+	}
+	return 0, nil
+}
+
+func (s timeSum) halfUpInterval(places int) (lo, hi *big.Rat, exact bool, err error) {
+	if s.exact != nil {
+		return new(big.Rat).Set(s.exact), new(big.Rat).Set(s.exact), true, nil
+	}
+	lo, hi = new(big.Rat), new(big.Rat)
+	exact = true
+	for _, p := range s.parts {
+		l, h, x, err := p.source.halfUpInterval(places)
+		if err != nil {
+			return nil, nil, false, err
+		}
+		if l.Sign() < 0 {
+			l = new(big.Rat)
+		}
+		lo.Add(lo, new(big.Rat).Mul(p.weight, l))
+		hi.Add(hi, new(big.Rat).Mul(p.weight, h))
+		exact = exact && x
+	}
+	return lo, hi, exact, nil
 }

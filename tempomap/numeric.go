@@ -269,7 +269,7 @@ func (e expForm) separationLog2(y *big.Rat) *big.Rat {
 		return new(big.Rat).SetInt64(int64(ceilLog2Rat(new(big.Rat).Inv(bound))))
 	}
 	delta := e.delta(y)
-	h := logSeparation(delta)
+	h := new(big.Rat).Mul(big.NewRat(2, 1), logSeparation(delta))
 	factor := new(big.Rat).Mul(new(big.Rat).Abs(e.b), r)
 	return h.Add(h, new(big.Rat).Sub(big.NewRat(1, 1), new(big.Rat).SetInt64(int64(floorLog2Rat(factor)))))
 }
@@ -298,7 +298,7 @@ func (e logExpression) isZeroAt(y *big.Rat) bool {
 	return logFormIsZero(logFormSub(e.form, rationalLogForm(y)))
 }
 func (e logExpression) separationLog2(y *big.Rat) *big.Rat {
-	return logSeparation(logFormSub(e.form, rationalLogForm(y)))
+	return new(big.Rat).Mul(big.NewRat(2, 1), logSeparation(logFormSub(e.form, rationalLogForm(y))))
 }
 
 func ceilLog2Rat(value *big.Rat) int {
@@ -341,40 +341,36 @@ func ceilRat(value *big.Rat) int {
 	return int(q.Int64())
 }
 
-func ceilRatPrecision(value *big.Rat) uint {
+func ceilRatPrecision(value *big.Rat) *big.Int {
 	q, r := new(big.Int), new(big.Int)
 	q.QuoRem(value.Num(), value.Denom(), r)
 	if r.Sign() > 0 {
 		q.Add(q, big.NewInt(1))
 	}
-	if !q.IsUint64() {
-		panic("precision bound does not fit uint")
-	}
-	return uint(q.Uint64())
+	return q
 }
 
 func initialPrecision(places, bits int) uint {
 	return uint(128 + 4*(places+4) + 2*bits)
 }
 
-func precisionLimit(expression numericExpression, y *big.Rat, places int) uint {
+func precisionLimit(expression numericExpression, y *big.Rat, places int) *big.Int {
 	return precisionLimitFrom(expression, y, initialPrecision(places, expression.inputBits()))
 }
 
 // precisionLimitFrom is the computable Pmax of a comparison with y whose
 // starting precision is initial.
-func precisionLimitFrom(expression numericExpression, y *big.Rat, initial uint) uint {
+func precisionLimitFrom(expression numericExpression, y *big.Rat, initial uint) *big.Int {
 	u := expression.upperBound(y)
 	onePlusU := new(big.Rat).Add(big.NewRat(1, 1), u)
 	logU := ceilLog2Rat(onePlusU)
 	l := expression.separationLog2(y)
 	l2 := ceilRatPrecision(new(big.Rat).Mul(big.NewRat(2, 1), new(big.Rat).Add(big.NewRat(int64(2+logU), 1), l)))
 	c := uint(expression.exponentialJ() + 80)
-	limit := initial
-	for _, candidate := range []uint{c, 4, l2 + 64} {
-		if candidate > limit {
-			limit = candidate
-		}
+	limit := new(big.Int).SetUint64(uint64(max(initial, c, 4)))
+	candidate := new(big.Int).Add(l2, big.NewInt(64))
+	if candidate.Cmp(limit) > 0 {
+		limit.Set(candidate)
 	}
 	return limit
 }
@@ -434,18 +430,18 @@ func roundExpressionSteps(expression numericExpression, step *big.Rat, mode roun
 		}
 
 		maxPrecision := precisionLimitFrom(expression, lowerNode, initial)
-		if upperLimit := precisionLimitFrom(expression, upperNode, initial); upperLimit > maxPrecision {
+		if upperLimit := precisionLimitFrom(expression, upperNode, initial); upperLimit.Cmp(maxPrecision) > 0 {
 			maxPrecision = upperLimit
 		}
 		if midpoint != nil {
-			if midpointLimit := precisionLimitFrom(expression, midpoint, initial); midpointLimit > maxPrecision {
+			if midpointLimit := precisionLimitFrom(expression, midpoint, initial); midpointLimit.Cmp(maxPrecision) > 0 {
 				maxPrecision = midpointLimit
 			}
 		}
-		if precision >= maxPrecision {
+		if new(big.Int).SetUint64(uint64(precision)).Cmp(maxPrecision) >= 0 {
 			panic("tempomap: certified precision limit did not select a rounding node")
 		}
-		k, usedPrecision, _, ok := roundStepWithLimit(step, mode, precision, maxPrecision, eval)
+		k, usedPrecision, _, ok := roundStepWithBound(step, mode, precision, maxPrecision, eval)
 		if ok {
 			return k
 		}
@@ -459,7 +455,7 @@ func compareLogForm(form logForm, y *big.Rat) int {
 	}
 	expression := logExpression{form: form}
 	precision := initialPrecision(0, expression.inputBits())
-	var limit uint
+	var limit *big.Int
 	for {
 		value := expression.interval(precision)
 		if ratOfFloat(value.hi).Cmp(y) < 0 {
@@ -468,13 +464,17 @@ func compareLogForm(form logForm, y *big.Rat) int {
 		if ratOfFloat(value.lo).Cmp(y) > 0 {
 			return 1
 		}
-		if limit == 0 {
+		if limit == nil {
 			limit = precisionLimit(expression, y, 0)
 		}
-		if precision >= limit {
+		if new(big.Int).SetUint64(uint64(precision)).Cmp(limit) >= 0 {
 			panic("tempomap: certified precision limit did not determine a comparison")
 		}
-		precision *= 2
+		next := new(big.Int).Lsh(new(big.Int).SetUint64(uint64(precision)), 1)
+		if next.Cmp(limit) > 0 {
+			next.Set(limit)
+		}
+		precision = uint(next.Uint64())
 	}
 }
 

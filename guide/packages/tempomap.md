@@ -49,6 +49,8 @@ Calculations use exact rational arithmetic and directed arbitrary-precision inte
 
 Seconds and positions can also be rounded to a multiple of any positive step instead of to decimal places: a MIDI tick, a video frame, a millisecond, or a microsecond. The result is the number of whole steps, chosen once from the exact value by the caller's rounding mode. The guarantee is stronger than for decimal places: the choice is always correct, even when the exact value is not a fraction or lies exactly halfway between two steps, and there is no precision limit at which the calculation gives up. This is what allows exact export of tempo maps to MIDI ticks and microseconds.
 
+The library can also round a whole weighted sum of time intervals at once. For example, assigning one third of a one-second interval and two thirds of another one-second interval gives exactly one second before the final rounding. Intervals may overlap or repeat. Their positive weights and the chosen step have unrestricted rational precision; only the resulting whole-step count must fit the machine integer range. The call leaves the input list and numbers unchanged. The caller must keep them unchanged while a concurrent calculation reads them.
+
 ## Text, unset values, and concurrency
 
 Changes, holds, maps, laws, addresses, and both result types have canonical text with round-trip parsing. Exact and approximate results use different forms, so an approximation cannot silently be read as exact. Diagnostic placeholder strings for unset values are rejected by parsers.
