@@ -109,6 +109,8 @@ Definitions may differ from conventional ones.
 
 **[Track](guide/packages/track.md)** is a part assigned to one live instrument: parallel voices written in a finite measure grid, atomic edits, tied sounds, explicit layout and rebar proposals, optional seconds, and conversion to and from melodic lines.
 
+**[Score](guide/packages/score.md)** is an immutable ensemble of tracks with one common start and positional tempo map. It supports record and sounding slices, shared seconds, full-map extraction, strict meter changes, and common barlines across independent grids.
+
 **[Event](guide/packages/event.md)** is one written element of a voice. It combines a note, chord, or rest with a duration and any ties, fermata, arpeggio, or grace sign.
 
 **Degree** is an ordinal number with an optional note. It is not tied to a tonic or mode: its number can be formatted and parsed, and circular operations count positions with an explicit cycle count.
