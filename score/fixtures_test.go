@@ -51,6 +51,19 @@ func assertPos(t *testing.T, want, got duration.Position) {
 	t.Helper()
 	assert.True(t, want.Equal(got), "position: want %s, got %s", want, got)
 }
+
+func assertKey[T comparable](t *testing.T, want, got T) {
+	t.Helper()
+	assert.True(t, want == got, "keys must have the same identity: want %v, got %v", want, got)
+}
+
+func assertKeys[T comparable](t *testing.T, want, got []T) {
+	t.Helper()
+	require.Len(t, got, len(want))
+	for i, key := range want {
+		assert.True(t, key == got[i], "key at index %d must have the same identity", i)
+	}
+}
 func assertEvent(t *testing.T, want, got *event.Event) {
 	t.Helper()
 	require.NotNil(t, got)

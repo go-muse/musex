@@ -35,8 +35,8 @@ func TestVerticalSlices(t *testing.T) {
 			got, err := s.At(pos(tc.n, tc.d), score.Selection{Part: ids[1]}, score.Selection{Part: ids[0]})
 			require.NoError(t, err)
 			require.Len(t, got, 2)
-			assert.Equal(t, ids[0], got[0].Part)
-			assert.Equal(t, ids[1], got[1].Part)
+			assertKey(t, ids[0], got[0].Part)
+			assertKey(t, ids[1], got[1].Part)
 			for i, want := range []*event.Event{tc.a, tc.b} {
 				require.Len(t, got[i].Voices, 1)
 				assert.True(t, got[i].Voices[0].Found)
@@ -62,7 +62,7 @@ func TestTiesDuplicateParticipationsAndVoiceOrdering(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, sounds, 3)
 	for i, sound := range sounds {
-		assert.Equal(t, ids[i], sound.Part)
+		assertKey(t, ids[i], sound.Part)
 		assertPos(t, pos(0, 1), sound.Sound.Time.Start)
 		assertPos(t, pos(1, 1), sound.Sound.Time.End)
 	}
@@ -84,12 +84,12 @@ func TestTiesDuplicateParticipationsAndVoiceOrdering(t *testing.T) {
 	p = p.MustSplice(v1, 1, 0, 0, tone(p, "D4", 1, 4, event.Marks{}))
 	x, xids := assemble(clock60(), p)
 	selected := x.MustAt(pos(0, 1), score.Selection{Part: xids[0], Voices: []track.VoiceID{v2, v1}})
-	assert.Equal(t, v1, selected[0].Voices[0].Voice)
-	assert.Equal(t, v2, selected[0].Voices[1].Voice)
+	assertKey(t, v1, selected[0].Voices[0].Voice)
+	assertKey(t, v2, selected[0].Voices[1].Voice)
 	ordered := x.MustSounds(score.Selection{Part: xids[0], Voices: []track.VoiceID{v2, v1}})
 	require.Len(t, ordered, 2)
-	assert.Equal(t, v1, ordered[0].Sound.Parts[0].Place.Voice)
-	assert.Equal(t, v2, ordered[1].Sound.Parts[0].Place.Voice)
+	assertKey(t, v1, ordered[0].Sound.Parts[0].Place.Voice)
+	assertKey(t, v2, ordered[1].Sound.Parts[0].Place.Voice)
 }
 
 // K-5: silence is not an inserted rest, and a short grid has ended.
@@ -136,7 +136,7 @@ func TestPartialChordTiePreservesOccurrencesAndAttacks(t *testing.T) {
 	got := s.MustSounds()
 	require.Len(t, got, 4)
 	for _, sound := range got {
-		assert.Equal(t, ids[0], sound.Part)
+		assertKey(t, ids[0], sound.Part)
 	}
 	assertPos(t, pos(1, 2), got[0].Sound.Time.End)
 	assertPos(t, pos(1, 1), got[1].Sound.Time.End)
