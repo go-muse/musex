@@ -4,7 +4,6 @@ import (
 	"math/big"
 	"slices"
 
-	"github.com/go-muse/musex/common/rounding"
 	"github.com/go-muse/musex/measure"
 	"github.com/go-muse/musex/tempomap"
 )
@@ -125,41 +124,6 @@ func (e *exporter) segmentAt(q *big.Rat) exportSegment {
 	return current
 }
 
-// stretchAt returns the hold whose stretched segment contains q.
-func (e *exporter) stretchAt(q *big.Rat) (exportHold, bool) {
-	if e.length == nil {
-		return exportHold{}, false
-	}
-	for _, h := range e.holds {
-		start := new(big.Rat).Sub(h.p, e.length)
-		if start.Cmp(q) <= 0 && q.Cmp(h.p) < 0 {
-			return h, true
-		}
-	}
-	return exportHold{}, false
-}
-
-// irrational reports whether the seconds of [from, to) involve a gradual
-// segment with different end speeds.
-func (e *exporter) irrational(from, to *big.Rat) bool {
-	for _, s := range e.segments {
-		if !s.gradual {
-			continue
-		}
-		left, right := s.a, s.b
-		if from.Cmp(left) > 0 {
-			left = from
-		}
-		if to.Cmp(right) < 0 {
-			right = to
-		}
-		if left.Cmp(right) < 0 {
-			return true
-		}
-	}
-	return false
-}
-
 func (e *exporter) span(from, to *big.Rat) span {
 	return span{m: e.bare, from: at(from), to: at(to)}
 }
@@ -255,62 +219,102 @@ func (e *exporter) tick(q *big.Rat) (int, error) {
 
 func (e *exporter) microseconds(speed *big.Rat) *big.Rat { return microsecondsOfSpeed(speed, e.w) }
 
-// tempo returns the tempo of the change at q, rounded once from its exact
-// value.
-func (e *exporter) tempo(q *big.Rat) (MIDITempo, error) {
-	mode := e.o.tempoMode
+// baseTempo retains an original source step, even after hold boundaries split
+// it. A rational tempo is stored directly; otherwise the tempo is c*T.
+type baseTempo struct {
+	exact *big.Rat
+	part  span
+	c     *big.Rat
+}
+
+func (e *exporter) base(q, next *big.Rat) baseTempo {
 	s := e.segmentAt(q)
-	var exact *big.Rat // the exact tempo, or nil for the equal-time tempo c*T
-	var part span
-	var c *big.Rat
 	if !s.gradual {
-		exact = e.microseconds(s.sa)
-	} else {
-		offset := new(big.Rat).Sub(q, s.a)
-		steps := new(big.Rat).Quo(offset, e.h)
-		k := new(big.Int).Quo(steps.Num(), steps.Denom())
-		q1 := new(big.Rat).Add(s.a, new(big.Rat).Mul(new(big.Rat).SetInt(k), e.h))
-		q2 := new(big.Rat).Add(q1, e.h)
-		if q2.Cmp(s.b) > 0 {
-			q2 = s.b
+		var part span
+		if next != nil {
+			part = e.span(q, next)
 		}
-		switch e.o.method {
-		case StepStart:
-			exact = e.microseconds(s.speed(q1))
-		case StepEnd:
-			exact = e.microseconds(s.speed(q2))
-		default:
-			c = new(big.Rat).Mul(big.NewRat(1000000, 1), e.w)
-			c.Quo(c, new(big.Rat).Sub(q2, q1))
-			part = e.span(q1, q2)
+		return baseTempo{exact: e.microseconds(s.sa), part: part}
+	}
+	offset := new(big.Rat).Sub(q, s.a)
+	steps := new(big.Rat).Quo(offset, e.h)
+	k := new(big.Int).Quo(steps.Num(), steps.Denom())
+	q1 := new(big.Rat).Add(s.a, new(big.Rat).Mul(new(big.Rat).SetInt(k), e.h))
+	q2 := new(big.Rat).Add(q1, e.h)
+	if q2.Cmp(s.b) > 0 {
+		q2 = s.b
+	}
+	switch e.o.method {
+	case StepStart:
+		return baseTempo{exact: e.microseconds(s.speed(q1))}
+	case StepEnd:
+		return baseTempo{exact: e.microseconds(s.speed(q2))}
+	default:
+		c := new(big.Rat).Quo(new(big.Rat).Mul(big.NewRat(1000000, 1), e.w), new(big.Rat).Sub(q2, q1))
+		return baseTempo{part: e.span(q1, q2), c: c}
+	}
+}
+
+type exportPoint struct {
+	position *big.Rat
+	tick     int
+	base     baseTempo
+}
+type tickStretch struct {
+	from, to int
+	extra    *big.Rat
+	time     timeSum
+}
+
+// baseTime integrates the effective, unrounded staircase on the final tick
+// grid. Zero-tick fragments contribute nothing; the last change wins.
+func (e *exporter) baseTime(points []exportPoint, from, to int) timeSum {
+	sum := timeSum{exact: new(big.Rat)}
+	irrational := false
+	for i, p := range points[:len(points)-1] {
+		length := min(to, points[i+1].tick) - max(from, p.tick)
+		if length <= 0 {
+			continue
+		}
+		scale := new(big.Rat).Quo(ratInt(length), new(big.Rat).Mul(ratInt(e.r.d), big.NewRat(1000000, 1)))
+		if p.base.exact != nil {
+			sum.exact.Add(sum.exact, new(big.Rat).Mul(scale, p.base.exact))
+			if e.o.method == StepEqualTime {
+				// Here a rational tempo is a constant source interval. Its source
+				// duration yields the same tempo with the ordinary equal-time factor.
+				delta := new(big.Rat).Sub(points[i+1].position, p.position)
+				weight := new(big.Rat).Quo(new(big.Rat).Mul(ratInt(length), e.w), new(big.Rat).Mul(ratInt(e.r.d), delta))
+				sum.parts = append(sum.parts, weightedSpan{source: p.base.part, weight: weight})
+			}
+		} else {
+			irrational = true
+			sum.parts = append(sum.parts, weightedSpan{source: p.base.part, weight: new(big.Rat).Mul(scale, p.base.c)})
 		}
 	}
-	hold, stretched := e.stretchAt(q)
-	if !stretched {
-		if exact != nil {
-			return midiTempoOfRat(e.op, exact, mode)
-		}
-		return linearTempo(e.op, part, c, mode)
+	if irrational {
+		sum.exact = nil
 	}
-	from := new(big.Rat).Sub(hold.p, e.length)
-	stretch := e.span(from, hold.p)
-	if !e.irrational(from, hold.p) {
-		result, err := e.bare.Between(stretch.from, stretch.to, 0, rounding.Down)
-		if err != nil {
-			return MIDITempo{}, dependencyError(e.op, err)
+	return sum
+}
+
+func (e *exporter) roundedTempo(b baseTempo, stretch *tickStretch) (MIDITempo, error) {
+	if stretch == nil {
+		if b.exact != nil {
+			return midiTempoOfRat(e.op, b.exact, e.o.tempoMode)
 		}
-		seconds := ratOfSeconds(result.MustValue())
-		factor := new(big.Rat).Add(seconds, hold.e)
-		factor.Quo(factor, seconds)
-		if exact != nil {
-			return midiTempoOfRat(e.op, exact.Mul(exact, factor), mode)
+		return linearTempo(e.op, b.part, b.c, e.o.tempoMode)
+	}
+	if stretch.time.exact != nil {
+		factor := new(big.Rat).Quo(new(big.Rat).Add(stretch.time.exact, stretch.extra), stretch.time.exact)
+		if b.exact != nil {
+			return midiTempoOfRat(e.op, new(big.Rat).Mul(b.exact, factor), e.o.tempoMode)
 		}
-		return linearTempo(e.op, part, c.Mul(c, factor), mode)
+		return linearTempo(e.op, b.part, new(big.Rat).Mul(b.c, factor), e.o.tempoMode)
 	}
-	if exact != nil {
-		return stretchedTempo(e.op, stretch, exact, hold.e, mode)
+	if b.exact != nil {
+		return stretchedTempo(e.op, stretch.time, b.exact, stretch.extra, e.o.tempoMode)
 	}
-	return productTempo(e.op, part, stretch, c, hold.e, mode)
+	return productTempo(e.op, b.part, stretch.time, b.c, stretch.extra, e.o.tempoMode)
 }
 
 // MIDITempoMapOf converts the musex tempo map m to a MIDI tempo map of the
@@ -351,15 +355,21 @@ func MIDITempoMapOf(m tempomap.Map, r Resolution, o ExportOptions, grid ...measu
 	if err != nil {
 		return MIDITempoMap{}, nil, err
 	}
-	var changes []MIDITempoChange
-	for _, q := range e.points() {
-		s := e.segmentAt(q)
-		if s.gradual && s.a.Cmp(q) == 0 && e.h == nil {
+	positions := e.points()
+	// Source conversion policies precede tick representability checks.
+	for _, s := range e.segments {
+		if s.gradual && e.h == nil {
 			return MIDITempoMap{}, nil, newError(ErrNotConvertible, op, "gradual change without steps")
 		}
+	}
+	for _, q := range positions {
 		if err := e.holdError(q); err != nil {
 			return MIDITempoMap{}, nil, err
 		}
+	}
+	points := make([]exportPoint, len(positions))
+	tickAt := make(map[string]int, len(positions))
+	for i, q := range positions {
 		if err := e.checkClock(q); err != nil {
 			return MIDITempoMap{}, nil, err
 		}
@@ -367,11 +377,44 @@ func MIDITempoMapOf(m tempomap.Map, r Resolution, o ExportOptions, grid ...measu
 		if err != nil {
 			return MIDITempoMap{}, nil, err
 		}
-		t, err := e.tempo(q)
+		points[i] = exportPoint{position: q, tick: tick}
+		tickAt[q.RatString()] = tick
+	}
+	var stretches []tickStretch
+	if o.holds == HoldsStretch {
+		for _, h := range e.holds {
+			from := tickAt[new(big.Rat).Sub(h.p, e.length).RatString()]
+			to := tickAt[h.p.RatString()]
+			if from == to {
+				return MIDITempoMap{}, nil, newError(ErrNotConvertible, op, "positive hold collapsed to one tick")
+			}
+			stretches = append(stretches, tickStretch{from: from, to: to, extra: h.e})
+		}
+	}
+	for i, q := range positions {
+		var next *big.Rat
+		if i+1 < len(positions) {
+			next = positions[i+1]
+		}
+		points[i].base = e.base(q, next)
+	}
+	for i := range stretches {
+		stretches[i].time = e.baseTime(points, stretches[i].from, stretches[i].to)
+	}
+	var changes []MIDITempoChange
+	for _, p := range points {
+		var stretch *tickStretch
+		for i := range stretches {
+			if stretches[i].from <= p.tick && p.tick < stretches[i].to {
+				stretch = &stretches[i]
+				break
+			}
+		}
+		t, err := e.roundedTempo(p.base, stretch)
 		if err != nil {
 			return MIDITempoMap{}, nil, err
 		}
-		changes = append(changes, MIDITempoChange{Tick: tick, Tempo: t})
+		changes = append(changes, MIDITempoChange{Tick: p.tick, Tempo: t})
 	}
 	var skipped []tempomap.Extension
 	if o.holds == HoldsSkip {

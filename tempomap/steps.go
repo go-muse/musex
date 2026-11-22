@@ -256,3 +256,93 @@ func (s Segment) SecondsSteps(step tempo.Seconds, mode rounding.Mode) (int, bool
 func (s Segment) MustSecondsSteps(step tempo.Seconds, mode rounding.Mode) (int, bool) {
 	return must2(s.SecondsSteps(step, mode))
 }
+
+// WeightedInterval contributes Weight times the exact Between(From, To).
+// Weight must be non-nil and positive. Copying the record shares the weight
+// pointer; pointer equality does not mean numerical interval equality.
+type WeightedInterval struct {
+	From   Address
+	To     Address
+	Weight *big.Rat
+}
+
+// WeightedBetweenSteps rounds the complete sum of weighted exact Between
+// intervals once to the positive step in seconds and returns its integer
+// index. Intervals may overlap, repeat, or occur in any order. Empty input
+// gives zero after validation. Weights and step are not limited by fraction.
+// The call neither changes nor retains any input. Concurrent calls are safe
+// provided callers do not concurrently mutate the input slice or rationals.
+// Invalid weights or step return ErrInvalidArgument. An index outside int
+// returns ErrOutOfRange with fraction.ErrNotRepresentable.
+func (m Map) WeightedBetweenSteps(terms []WeightedInterval, step *big.Rat, mode rounding.Mode, grid ...measure.Grid) (int, error) {
+	const op = "Map.WeightedBetweenSteps"
+	if !m.IsSet() {
+		return 0, simpleError(ErrUnset, op, "receiver")
+	}
+	for _, term := range terms {
+		if !term.From.IsSet() {
+			return 0, simpleError(ErrUnset, op, "from address")
+		}
+		if !term.To.IsSet() {
+			return 0, simpleError(ErrUnset, op, "to address")
+		}
+	}
+	for _, term := range terms {
+		if term.Weight == nil || term.Weight.Sign() <= 0 {
+			return 0, simpleError(ErrInvalidArgument, op, "weight is not positive")
+		}
+	}
+	g, err := m.gridArgument(op, grid)
+	if err != nil {
+		return 0, err
+	}
+	if step == nil || step.Sign() <= 0 {
+		return 0, simpleError(ErrInvalidArgument, op, "step is not positive")
+	}
+	if !mode.IsValid() {
+		return 0, modeError(op, mode)
+	}
+	type bounds struct{ from, to duration.Position }
+	positions := make([]bounds, len(terms))
+	for i, term := range terms {
+		from, err := addressPosition(op, term.From, m.addressing, g)
+		if err != nil {
+			return 0, err
+		}
+		to, err := addressPosition(op, term.To, m.addressing, g)
+		if err != nil {
+			return 0, err
+		}
+		if from.Compare(to) > 0 {
+			return 0, simpleError(ErrInvalidArgument, op, "from follows to")
+		}
+		positions[i] = bounds{from: from, to: to}
+	}
+	if len(terms) == 0 {
+		return 0, nil
+	}
+	idx, err := m.positionIndex(grid)
+	if err != nil {
+		return 0, err
+	}
+	form := zeroLogForm()
+	approximate := false
+	for i, p := range positions {
+		if unfinishedAt(idx, p.to) {
+			return 0, simpleError(ErrUnfinished, op, "unfinished gradual segment")
+		}
+		if p.from.Compare(p.to) == 0 {
+			continue
+		}
+		from, _ := startFormAt(idx, p.from, false)
+		to, _ := startFormAt(idx, p.to, false)
+		form = logFormAdd(form, logFormScale(logFormSub(to, from), terms[i].Weight))
+		approximate = approximate || approximateBetween(idx, p.from, p.to)
+	}
+	return formStepIndex(op, form, approximate, step, mode)
+}
+
+// MustWeightedBetweenSteps is like WeightedBetweenSteps but panics with its error.
+func (m Map) MustWeightedBetweenSteps(terms []WeightedInterval, step *big.Rat, mode rounding.Mode, grid ...measure.Grid) int {
+	return must(m.WeightedBetweenSteps(terms, step, mode, grid...))
+}

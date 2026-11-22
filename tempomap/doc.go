@@ -84,6 +84,12 @@
 // is ErrInvalidArgument, and an index greater than math.MaxInt is
 // ErrOutOfRange together with fraction.ErrNotRepresentable.
 //
+// WeightedBetweenSteps rounds a complete positive weighted sum of exact Between
+// intervals once. WeightedInterval is a caller-owned input record; weights and
+// the step are positive *big.Rat values unrestricted by common/fraction. Calls
+// do not change or retain those inputs. Callers must prevent concurrent writes
+// to the input slice and rationals while a calculation reads them.
+//
 // # Text
 //
 // String, MarshalText, and AppendText emit canonical text; the corresponding

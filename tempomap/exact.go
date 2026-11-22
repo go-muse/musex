@@ -86,24 +86,36 @@ func roundStepWithLimit(
 	initialPrecision, maxPrecision uint,
 	eval func(precision uint) (lower, upper *big.Rat),
 ) (k *big.Int, usedPrecision, refinements uint, ok bool) {
+	return roundStepWithBound(step, mode, initialPrecision, new(big.Int).SetUint64(uint64(maxPrecision)), eval)
+}
+
+// roundStepWithBound refines only as far as needed. The theoretical bound
+// may exceed uint even when the actual working precision is small.
+func roundStepWithBound(
+	step *big.Rat,
+	mode rounding.Mode,
+	initialPrecision uint,
+	maxPrecision *big.Int,
+	eval func(precision uint) (lower, upper *big.Rat),
+) (k *big.Int, usedPrecision, refinements uint, ok bool) {
 	precision := initialPrecision
 	for {
 		lower, upper := eval(precision)
-		attempt := makeStepAttempt(precision, maxPrecision, lower, upper, step, mode)
+		attempt := makeStepAttempt(precision, precision, lower, upper, step, mode)
 		if attempt.decided {
 			return new(big.Int).Set(attempt.lowerK), precision, refinements, true
 		}
-		if precision >= maxPrecision {
-			return nil, maxPrecision, refinements, false
+		current := new(big.Int).SetUint64(uint64(precision))
+		if current.Cmp(maxPrecision) >= 0 {
+			return nil, precision, refinements, false
 		}
-		next := maxPrecision
-		if precision <= maxPrecision/2 {
-			next = precision * 2
-			if next > maxPrecision {
-				next = maxPrecision
-			}
+		next := current.Lsh(current, 1)
+		if next.Cmp(maxPrecision) > 0 {
+			next.Set(maxPrecision)
 		}
-		precision = next
+		// The evaluator's resource contract requires actual working precisions
+		// to fit uint; no conversion of the theoretical bound is performed.
+		precision = uint(next.Uint64())
 		refinements++
 	}
 }
