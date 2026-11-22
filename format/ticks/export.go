@@ -227,14 +227,10 @@ type baseTempo struct {
 	c     *big.Rat
 }
 
-func (e *exporter) base(q, next *big.Rat) baseTempo {
+func (e *exporter) base(q *big.Rat) baseTempo {
 	s := e.segmentAt(q)
 	if !s.gradual {
-		var part span
-		if next != nil {
-			part = e.span(q, next)
-		}
-		return baseTempo{exact: e.microseconds(s.sa), part: part}
+		return baseTempo{exact: e.microseconds(s.sa)}
 	}
 	offset := new(big.Rat).Sub(q, s.a)
 	steps := new(big.Rat).Quo(offset, e.h)
@@ -279,19 +275,14 @@ func (e *exporter) baseTime(points []exportPoint, from, to int) timeSum {
 		scale := new(big.Rat).Quo(ratInt(length), new(big.Rat).Mul(ratInt(e.r.d), big.NewRat(1000000, 1)))
 		if p.base.exact != nil {
 			sum.exact.Add(sum.exact, new(big.Rat).Mul(scale, p.base.exact))
-			if e.o.method == StepEqualTime {
-				// Here a rational tempo is a constant source interval. Its source
-				// duration yields the same tempo with the ordinary equal-time factor.
-				delta := new(big.Rat).Sub(points[i+1].position, p.position)
-				weight := new(big.Rat).Quo(new(big.Rat).Mul(ratInt(length), e.w), new(big.Rat).Mul(ratInt(e.r.d), delta))
-				sum.parts = append(sum.parts, weightedSpan{source: p.base.part, weight: weight})
-			}
+
 		} else {
 			irrational = true
 			sum.parts = append(sum.parts, weightedSpan{source: p.base.part, weight: new(big.Rat).Mul(scale, p.base.c)})
 		}
 	}
 	if irrational {
+		sum.constant = sum.exact
 		sum.exact = nil
 	}
 	return sum
@@ -392,11 +383,7 @@ func MIDITempoMapOf(m tempomap.Map, r Resolution, o ExportOptions, grid ...measu
 		}
 	}
 	for i, q := range positions {
-		var next *big.Rat
-		if i+1 < len(positions) {
-			next = positions[i+1]
-		}
-		points[i].base = e.base(q, next)
+		points[i].base = e.base(q)
 	}
 	for i := range stretches {
 		stretches[i].time = e.baseTime(points, stretches[i].from, stretches[i].to)

@@ -226,13 +226,20 @@ type weightedSpan struct {
 	weight *big.Rat
 }
 type timeSum struct {
-	parts []weightedSpan
-	exact *big.Rat
+	parts    []weightedSpan
+	exact    *big.Rat
+	constant *big.Rat // rational contribution when parts contain irrational times
 }
 
 func (s timeSum) compare(op string, y *big.Rat) (int, error) {
 	if s.exact != nil {
 		return s.exact.Cmp(y), nil
+	}
+	// Rational fragments need no synthetic bounded address. Move their exact
+	// contribution to the comparison threshold before invoking the log kernel.
+	y = new(big.Rat).Sub(y, s.constant)
+	if y.Sign() <= 0 {
+		return 1, nil
 	}
 	terms := make([]tempomap.WeightedInterval, len(s.parts))
 	for i, p := range s.parts {
@@ -266,7 +273,7 @@ func (s timeSum) halfUpInterval(places int) (lo, hi *big.Rat, exact bool, err er
 	if s.exact != nil {
 		return new(big.Rat).Set(s.exact), new(big.Rat).Set(s.exact), true, nil
 	}
-	lo, hi = new(big.Rat), new(big.Rat)
+	lo, hi = new(big.Rat).Set(s.constant), new(big.Rat).Set(s.constant)
 	exact = true
 	for _, p := range s.parts {
 		l, h, x, err := p.source.halfUpInterval(places)
