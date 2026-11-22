@@ -1,6 +1,7 @@
 package score_test
 
 import (
+	"math"
 	"math/big"
 	"testing"
 
@@ -48,8 +49,8 @@ func TestPolymetricBarlines(t *testing.T) {
 			for i, p := range want {
 				assertPos(t, p, got[i].Position)
 				require.Len(t, got[i].Boundaries, 2)
-				assert.Equal(t, ids[0], got[i].Boundaries[0].Part)
-				assert.Equal(t, ids[1], got[i].Boundaries[1].Part)
+				assertKey(t, ids[0], got[i].Boundaries[0].Part)
+				assertKey(t, ids[1], got[i].Boundaries[1].Part)
 			}
 			for _, boundary := range got[0].Boundaries {
 				assert.Nil(t, boundary.PreviousBar)
@@ -141,7 +142,7 @@ func TestCommonBarlinesFollowIncompleteAndChangingBars(t *testing.T) {
 				assertPos(t, expected.position, got[i].Position)
 				require.Len(t, got[i].Boundaries, 2)
 				for part, boundary := range got[i].Boundaries {
-					assert.Equal(t, ids[part], boundary.Part)
+					assertKey(t, ids[part], boundary.Part)
 					for _, adjacent := range []struct {
 						want int
 						got  *int
@@ -184,7 +185,7 @@ func TestBarlinePeriodAdmissibility(t *testing.T) {
 			if tc.fail {
 				require.ErrorIs(t, err, score.ErrPeriod)
 				assert.False(t, got.IsSet())
-				assert.Equal(t, ids[0], problems(t, err).Issues[0].Part)
+				assertKey(t, ids[0], problems(t, err).Issues[0].Part)
 			} else {
 				require.NoError(t, err)
 				assert.True(t, got.IsSet())
@@ -237,8 +238,42 @@ func TestBarlinePeriodUsesExactLargeIntegers(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Greater(t, want.Num().BitLen(), 64)
-				assert.True(t, got.Equal(duration.MustParse(want.RatString())))
+				expected := duration.MustParse(want.Num().String() + "/" + want.Denom().String())
+				assert.True(t, got.Equal(expected))
 			}
+		})
+	}
+}
+
+func TestMaxIntFiniteGridBoundaries(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name string
+		grid measure.Grid
+	}{
+		{"last meter mark", grid(4, 4, math.MaxInt).MustWithMark(math.MaxInt, meter.MustNew(4, 4))},
+		{"last explicit full length", grid(4, 4, math.MaxInt).MustWithLength(math.MaxInt, dur(1, 1), measure.AlignStart)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			p := track.MustNew(instrument.MustNew(instrument.Piano()), tc.grid)
+			s, ids := assemble(clock60(), p, p)
+			t.Run("equal replacement", func(t *testing.T) {
+				var replaced *score.Score
+				var err error
+				require.NotPanics(t, func() { replaced, err = s.Replace(ids[0], p) })
+				require.NoError(t, err)
+				assert.True(t, replaced.MustPart(ids[0]).Equal(p))
+				assertKeys(t, ids, replaced.MustParts())
+				assertPos(t, pos(math.MaxInt, 1), replaced.MustEnd())
+			})
+			t.Run("constant full bar period", func(t *testing.T) {
+				var period duration.Duration
+				var err error
+				require.NotPanics(t, func() { period, err = s.BarlinePeriod(ids[0], ids[1]) })
+				require.NoError(t, err)
+				assert.True(t, period.Equal(dur(1, 1)))
+			})
+			assert.True(t, s.MustPart(ids[0]).Equal(p))
 		})
 	}
 }

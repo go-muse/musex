@@ -55,7 +55,7 @@ func assertRecord(t *testing.T, s *score.Score, id score.PartID, want map[int][]
 		got := p.MustEntries(p.MustVoices()[0], bar)
 		require.Len(t, got, len(expected), "bar %d", bar)
 		for i, e := range expected {
-			assert.Equal(t, e.Place, got[i].Place)
+			assertKey(t, e.Place, got[i].Place)
 			assert.Equal(t, e.Time, got[i].Time)
 			assertEvent(t, e.Event, got[i].Event)
 		}
@@ -192,7 +192,7 @@ func TestSecondVoiceEventShellIsolation(t *testing.T) {
 				*s.MustBarView(id, secondVoice, 1)[0].Source.Event = event.Event{}
 			}
 			for _, snapshot := range []*score.Score{s, proposal.Score} {
-				assert.Equal(t, []track.VoiceID{p.MustVoices()[0], secondVoice}, snapshot.MustPart(id).MustVoices())
+				assertKeys(t, []track.VoiceID{p.MustVoices()[0], secondVoice}, snapshot.MustPart(id).MustVoices())
 				assertEvent(t, &want, snapshot.MustPart(id).MustEntries(secondVoice, 1)[0].Event)
 				rows := snapshot.MustAt(pos(1, 4))
 				require.Len(t, rows[0].Voices, 2)
@@ -213,11 +213,11 @@ func TestNestedReturnedContainersAreIndependent(t *testing.T) {
 	s, ids := assemble(clock, p, p)
 	parts := s.MustParts()
 	parts[0] = score.PartID{}
-	assert.Equal(t, ids, s.MustParts())
+	assertKeys(t, ids, s.MustParts())
 	slice := s.MustAt(pos(0, 1))
 	slice[0].Voices[0].Voice = track.VoiceID{}
 	slice[0].Voices = nil
-	assert.Equal(t, p.MustVoices()[0], s.MustAt(pos(0, 1))[0].Voices[0].Voice)
+	assertKey(t, p.MustVoices()[0], s.MustAt(pos(0, 1))[0].Voices[0].Voice)
 	sounds := s.MustSounds()
 	sounds[0].Sound.Parts[0].Place.Bar = 999
 	assert.Equal(t, 1, s.MustSounds()[0].Sound.Parts[0].Place.Bar)
@@ -238,7 +238,7 @@ func TestNestedReturnedContainersAreIndependent(t *testing.T) {
 		}
 	}
 	repeated := s.MustChangeMeter(1, 1, meter.MustNew(4, 4))
-	assert.Equal(t, ids[0], repeated.Parts[0].Part)
+	assertKey(t, ids[0], repeated.Parts[0].Part)
 	assert.Equal(t, 2, *repeated.Marks[1].Bindings[0].AfterBar)
 	assert.True(t, repeated.Score.MustMap().Equal(clock))
 	lines := s.MustCommonBarlines(pos(0, 1), pos(2, 1), ids...)
@@ -252,8 +252,8 @@ func TestNestedReturnedContainersAreIndependent(t *testing.T) {
 	derived := s.MustWithMap(clock60())
 	*s = score.Score{}
 	assert.True(t, copyValue.IsSet())
-	assert.Equal(t, ids, copyValue.MustParts())
-	assert.Equal(t, ids, derived.MustParts())
+	assertKeys(t, ids, copyValue.MustParts())
+	assertKeys(t, ids, derived.MustParts())
 }
 
 func TestGraceAtBarlineIsOnlyInNotation(t *testing.T) {

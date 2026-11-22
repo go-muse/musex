@@ -40,9 +40,9 @@ func TestChangeMeterProposal(t *testing.T) {
 			require.NotNil(t, proposal.Score)
 			require.Len(t, proposal.Parts, 2)
 			require.Len(t, proposal.Marks, 3)
-			assert.Equal(t, ids, proposal.Score.MustParts())
+			assertKeys(t, ids, proposal.Score.MustParts())
 			for i, change := range proposal.Parts {
-				assert.Equal(t, ids[i], change.Part)
+				assertKey(t, ids[i], change.Part)
 				assert.True(t, change.Before.Equal(s.MustPart(ids[i])))
 				assert.True(t, change.After.Equal(proposal.Score.MustPart(ids[i])))
 				assertPos(t, pos(tc.movedN, tc.movedD), change.After.MustGrid().MustBarStart(2))
@@ -63,7 +63,7 @@ func TestChangeMeterProposal(t *testing.T) {
 				assertPos(t, pos(tc.movedN, tc.movedD), move.To)
 				require.Len(t, move.Bindings, 2)
 				for i, binding := range move.Bindings {
-					assert.Equal(t, ids[i], binding.Part)
+					assertKey(t, ids[i], binding.Part)
 					assert.Nil(t, binding.AfterBar)
 					assert.Equal(t, 2, binding.Address.MustBar())
 					assertPos(t, pos(0, 1), binding.Address.MustOffset())
@@ -93,7 +93,7 @@ func TestChangeMeterOverflowIsAtomicAndComplete(t *testing.T) {
 				require.ErrorIs(t, err, track.ErrOverflow)
 				assert.Zero(t, proposal)
 				i := problems(t, err).Issues[0]
-				assert.Equal(t, ids[0], i.Part)
+				assertKey(t, ids[0], i.Part)
 				assert.Equal(t, 1, i.Place.Bar)
 				require.NotNil(t, i.Detail)
 				assert.True(t, i.Detail.Amount.Equal(dur(1, 4)))
@@ -113,9 +113,9 @@ func TestChangeMeterOverflowIsAtomicAndComplete(t *testing.T) {
 	assert.Zero(t, proposal)
 	issues := problems(t, err).Issues
 	require.Len(t, issues, 3)
-	assert.Equal(t, ids[0], issues[0].Part)
-	assert.Equal(t, ids[1], issues[1].Part)
-	assert.Equal(t, ids[1], issues[2].Part)
+	assertKey(t, ids[0], issues[0].Part)
+	assertKey(t, ids[1], issues[1].Part)
+	assertKey(t, ids[1], issues[2].Part)
 	assert.Equal(t, 1, issues[1].Place.Bar)
 	assert.Equal(t, 2, issues[2].Place.Bar)
 }
@@ -132,7 +132,7 @@ func TestChangeMeterMapFailures(t *testing.T) {
 		issues := problems(t, err).Issues
 		require.Len(t, issues, 4)
 		for i, issue := range issues {
-			assert.Equal(t, ids[i%2], issue.Part)
+			assertKey(t, ids[i%2], issue.Part)
 			assertPos(t, pos(7, 8), issue.Position)
 			require.NotNil(t, issue.Mark)
 			assert.Equal(t, []score.MarkKind{score.TempoMark, score.TempoMark, score.ExtensionMark, score.ExtensionMark}[i], issue.Mark.Kind)
@@ -155,7 +155,7 @@ func TestChangeMeterMapFailures(t *testing.T) {
 		require.NotNil(t, issue.Mark)
 		require.Len(t, issue.Bindings, 2)
 		for i, want := range []duration.Position{pos(1, 2), pos(3, 4)} {
-			assert.Equal(t, ids[i], issue.Bindings[i].Part)
+			assertKey(t, ids[i], issue.Bindings[i].Part)
 			assert.Equal(t, 2, issue.Bindings[i].Address.MustBar())
 			assertPos(t, want, issue.Bindings[i].Position)
 		}
@@ -185,7 +185,7 @@ func TestChangeMeterMapFailures(t *testing.T) {
 			}
 			require.Len(t, issues, expected)
 			for i, issue := range issues {
-				assert.Equal(t, ids[i], issue.Part)
+				assertKey(t, ids[i], issue.Part)
 				assertPos(t, pos(n, 2), issue.Position)
 			}
 			assert.True(t, s.MustMap().Equal(clock))
@@ -201,7 +201,7 @@ func TestChangeMeterRequiresRangeInEveryPart(t *testing.T) {
 	require.Error(t, err)
 	assert.Zero(t, proposal)
 	issues := problems(t, err).Issues
-	assert.Equal(t, ids[1], issues[0].Part)
+	assertKey(t, ids[1], issues[0].Part)
 	assert.True(t, s.MustPart(ids[0]).Equal(a))
 	assert.True(t, s.MustPart(ids[1]).Equal(b))
 }
@@ -216,7 +216,7 @@ func TestChangeMeterTerminalAndStructuralRecords(t *testing.T) {
 		move := proposal.Marks[1]
 		assertPos(t, pos(7, 4), move.To)
 		for i, binding := range move.Bindings {
-			assert.Equal(t, ids[i], binding.Part)
+			assertKey(t, ids[i], binding.Part)
 			require.NotNil(t, binding.AfterBar)
 			assert.Equal(t, 2, *binding.AfterBar)
 			assert.False(t, binding.Address.IsSet())
@@ -251,11 +251,11 @@ func TestChangeMeterTerminalAndStructuralRecords(t *testing.T) {
 		require.ErrorIs(t, err, track.ErrMeasureRest)
 		assert.Zero(t, proposal)
 		issue := problems(t, err).Issues[0]
-		assert.Equal(t, ids[0], issue.Part)
+		assertKey(t, ids[0], issue.Part)
 		require.NotNil(t, issue.Detail)
 		assert.Equal(t, dependencyProblems.Issues[0], *issue.Detail)
-		assert.Equal(t, dependencyProblems.Issues[0].Place, issue.Place)
-		assert.Equal(t, p.MustVoices()[0], issue.Place.Voice)
+		assertKey(t, dependencyProblems.Issues[0].Place, issue.Place)
+		assertKey(t, p.MustVoices()[0], issue.Place.Voice)
 		assert.GreaterOrEqual(t, issue.Place.Bar, 1)
 		assert.LessOrEqual(t, issue.Place.Bar, 3)
 		assert.True(t, s.MustPart(ids[0]).Equal(p))
@@ -282,7 +282,7 @@ func TestChangeMeterTerminalAndStructuralRecords(t *testing.T) {
 		proposal, err := s.ChangeMeter(1, 1, meter.MustNew(4, 4))
 		require.Error(t, err)
 		assert.Zero(t, proposal)
-		assert.Equal(t, ids[0], problems(t, err).Issues[0].Part)
+		assertKey(t, ids[0], problems(t, err).Issues[0].Part)
 		assert.True(t, s.MustPart(ids[0]).Equal(p))
 	})
 }
