@@ -342,6 +342,42 @@ func TestNotationFailureReportsTheUnrepresentablePart(t *testing.T) {
 	})
 }
 
+func TestNotationFailureReportsAmountForQuantizeAndMerge(t *testing.T) {
+	t.Parallel()
+	t.Run("quantize to unnotatable third", func(t *testing.T) {
+		p, v := fixture(1)
+		q := tone("C4", duration.Quarter, event.Marks{})
+		p = p.MustSplice(v, 1, 0, 0, q)
+		at := track.Place{Voice: v, Bar: 1, Index: 0}
+		out, err := p.Quantize(v, 1, 1, length(1, 3), rounding.HalfUp, track.WithoutGroups)
+		is := noProposal(t, out, err, track.ErrNotation)
+		assertPlace(t, at, is[0].Place)
+		assertLength(t, 1, 3, is[0].Amount)
+		entries := p.MustEntries(v, 1)
+		require.Len(t, entries, 1)
+		assertEvent(t, q, entries[0].Event)
+		assertSpan(t, entries[0].Time, 0, 1, 1, 4)
+		assertPosition(t, 1, 4, p.MustVoiceEnd(v))
+	})
+	t.Run("merge to unnotatable five sixteenths", func(t *testing.T) {
+		p, v := fixture(1)
+		q := tone("C4", duration.Quarter, event.Marks{Ties: []int{0}})
+		s := tone("C4", duration.Sixteenth, event.Marks{})
+		p = p.MustSplice(v, 1, 0, 0, q, s)
+		out, err := p.Merge(v, 1, 0, 2, track.KeepGroups)
+		is := noProposal(t, out, err, track.ErrNotation)
+		assertPlace(t, track.Place{Voice: v, Bar: 1, Index: 0}, is[0].Place)
+		assertLength(t, 5, 16, is[0].Amount)
+		entries := p.MustEntries(v, 1)
+		require.Len(t, entries, 2)
+		assertEvent(t, q, entries[0].Event)
+		assertEvent(t, s, entries[1].Event)
+		assertSpan(t, entries[0].Time, 0, 1, 1, 4)
+		assertSpan(t, entries[1].Time, 1, 4, 5, 16)
+		assertPosition(t, 5, 16, p.MustVoiceEnd(v))
+	})
+}
+
 func TestPackRestsAtMaxIntFinalBar(t *testing.T) {
 	t.Parallel()
 	last := math.MaxInt
