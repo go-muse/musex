@@ -1,6 +1,7 @@
 package ticks
 
 import (
+	"math"
 	"math/big"
 	"slices"
 	"strconv"
@@ -509,9 +510,16 @@ func (m MIDIMeterMap) Grid() (measure.Grid, error) {
 		offset := new(big.Rat).Sub(p, barStart)
 		bars := new(big.Rat).Quo(offset, size)
 		whole := new(big.Int).Quo(bars.Num(), bars.Denom())
-		n := bar + int(whole.Int64())
+		barIndex := new(big.Int).Add(whole, big.NewInt(int64(bar)))
+		if !barIndex.IsInt64() {
+			return measure.Grid{}, intRangeError(op, "bar number outside int")
+		}
+		n := int(barIndex.Int64())
 		within := new(big.Rat).Sub(offset, new(big.Rat).Mul(new(big.Rat).SetInt(whole), size))
 		if within.Sign() != 0 {
+			if n == math.MaxInt {
+				return measure.Grid{}, intRangeError(op, "next bar number outside int")
+			}
 			length, err := durationOf(op, within)
 			if err != nil {
 				return measure.Grid{}, err
@@ -711,6 +719,9 @@ func desiredEvent(op string, g measure.Grid, bar int, r Resolution, click Click,
 		return event, losses, nil
 	}
 	l := ratOfDuration(length)
+	if _, ok := exponentOf(l.Denom()); !ok {
+		return MIDIMeter{}, nil, notMIDI(op, "bar length without a power-of-two denominator")
+	}
 	denominator := new(big.Int).Lsh(big.NewInt(1), uint(event.dd))
 	if l.Denom().Cmp(denominator) > 0 {
 		denominator = l.Denom()
@@ -736,6 +747,9 @@ func lastInterestingBar(op string, g measure.Grid) (int, error) {
 	}
 	for _, l := range g.MustLengths() {
 		last = max(last, l.Bar)
+	}
+	if last == math.MaxInt {
+		return last, nil
 	}
 	has, err := g.HasBar(last + 1)
 	if err != nil {
@@ -781,27 +795,31 @@ func MIDIMeterMapOf(g measure.Grid, r Resolution, click Click, f Fidelity, irreg
 	}
 	var changes []MIDIMeterChange
 	var losses []BarLoss
-	for bar := g.MustFirstBar(); bar <= last; bar++ {
+	for bar := g.MustFirstBar(); ; bar++ {
 		event, lost, err := desiredEvent(op, g, bar, r, click, f, irregular)
 		if err != nil {
 			return MIDIMeterMap{}, nil, err
 		}
-		if len(changes) != 0 && changes[len(changes)-1].Meter == event {
-			continue
+		if len(changes) == 0 || changes[len(changes)-1].Meter != event {
+			start, err := g.BarStart(bar)
+			if err != nil {
+				return MIDIMeterMap{}, nil, dependencyError(op, err)
+			}
+			tick, err := wholeTicks(op, r.unitsOf(ratOfPosition(start)))
+			if err != nil {
+				return MIDIMeterMap{}, nil, err
+			}
+			changes = append(changes, MIDIMeterChange{Tick: tick, Meter: event})
+			if len(lost) != 0 {
+				losses = append(losses, BarLoss{Bar: bar, Losses: lost})
+			}
 		}
-		start, err := g.BarStart(bar)
-		if err != nil {
-			return MIDIMeterMap{}, nil, dependencyError(op, err)
-		}
-		tick, err := wholeTicks(op, r.unitsOf(ratOfPosition(start)))
-		if err != nil {
-			return MIDIMeterMap{}, nil, err
-		}
-		changes = append(changes, MIDIMeterChange{Tick: tick, Meter: event})
-		if len(lost) != 0 {
-			losses = append(losses, BarLoss{Bar: bar, Losses: lost})
+		// Check before incrementing, including when the last bar is MaxInt.
+		if bar == last {
+			break
 		}
 	}
+
 	return MIDIMeterMap{r: r, changes: changes}, losses, nil
 }
 
