@@ -53,7 +53,7 @@
 - [x] **29. [`chord`](guide/packages/chord.md)** — chords as groups of notes that sound together, without durations or harmony: notes in their order of record with repeats, membership and equality by record, changes of the notes in place with independent copies, joining, intersecting, and subtracting chords, sorting, and moving all the notes by octaves.
 - [x] **29a. [`event`](guide/packages/event.md)** — voice elements with a note, chord, or rest, written or exact duration, rests in measures, and ties, fermatas, arpeggios, and grace notes.
 - [x] **29c. [`voice`](guide/packages/voice.md)** — melodic lines: monophonic sounds and rests with durations, names, and roles; positions without measures and seconds from a tempo map; melodic intervals, range, ambitus, and tessitura against a singing voice or an instrument; doubling, exact imitation, inversion, transposition, and retrograde.
-- [ ] **30. `track`** — parts as sequences of measures holding the events of each voice.
+- [x] **30. [`track`](guide/packages/track.md)** — instrument-assigned parts with parallel voices in finite measure grids, atomic edits, tied sounds, explicit layout and transformations, measured clocks, and melodic-line conversion.
 - [ ] **31. `score`** — tracks with a common start and one shared tempo map.
 
 ## 4. Problem Solving

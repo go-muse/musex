@@ -555,6 +555,8 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/instrument$
+            - github.com/go-muse/musex/common/rounding$
             - github.com/go-muse/musex/note$
             - github.com/go-muse/musex/common/fraction$
             - github.com/go-muse/musex/duration$

@@ -105,6 +105,8 @@ Definitions may differ from conventional ones.
 
 **Tempo map** is an immutable timeline of tempo changes and explicit fermata holds at positions or measure addresses. It distinguishes main and current tempo, supports jumps, gradual changes, a tempo, Tempo I, and metric modulation, and converts seconds to and from positions and measures, with one explicitly selected rounding for the complete result.
 
+**[Track](guide/packages/track.md)** is a part assigned to one live instrument: parallel voices written in a finite measure grid, atomic edits, tied sounds, explicit layout and rebar proposals, optional seconds, and conversion to and from melodic lines.
+
 **[Event](guide/packages/event.md)** is one written element of a voice. It combines a note, chord, or rest with a duration and any ties, fermata, arpeggio, or grace sign.
 
 **Degree** is an ordinal number with an optional note. It is not tied to a tonic or mode: its number can be formatted and parsed, and circular operations count positions with an explicit cycle count.
