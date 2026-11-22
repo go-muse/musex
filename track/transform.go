@@ -170,7 +170,9 @@ func (t *Track) Merge(v VoiceID, b, index, count int, g Groups) (Proposal, error
 		}
 		w, err = length.ToWritten(chain...)
 		if err != nil {
-			return Proposal{}, problem(errors.Join(ErrNotation, err), p)
+			x := issue(errors.Join(ErrNotation, err), p)
+			x.Amount = length
+			return Proposal{}, &Problems{[]Issue{x}}
 		}
 		d = event.MustWrittenDuration(w)
 	}
@@ -379,7 +381,9 @@ func (t *Track) Quantize(v VoiceID, first, last int, step duration.Duration, mod
 		if !length.Equal(en.Event.MustDuration().MustValue()) {
 			parts, err := lengthsToEvents(en.Event, []duration.Duration{length}, g, false)
 			if err != nil {
-				return Proposal{}, problem(err, en.Place)
+				x := issue(err, en.Place)
+				x.Amount = length
+				return Proposal{}, &Problems{[]Issue{x}}
 			}
 			if len(parts) == 1 {
 				items[i].e = parts[0]
