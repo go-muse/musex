@@ -536,7 +536,7 @@ func TestMIDITempoMapOfErrors(t *testing.T) {
 		{name: "unset grid", m: measured, r: r, o: o, grid: []measure.Grid{{}}, own: ticks.ErrInvalidArgument, deps: []error{measure.ErrUnset}},
 		{name: "grid is checked before the unfinished tail", m: unfinishedMap(), r: r, o: o, grid: []measure.Grid{grid}, own: ticks.ErrInvalidArgument, not: []error{tempomap.ErrUnfinished}},
 		{name: "unfinished tail before missing steps", m: ritardandoMap().MustWithChange(tempomap.MustNewGradual(at(2, 1), tempomap.LinearSpeed)), r: r, o: o, own: ticks.ErrNotConvertible, deps: []error{tempomap.ErrUnfinished}},
-		{name: "points are checked in position order", m: constantMap(120).MustWithChange(tempomap.MustNewMain(at(1, 7), quarterTempo(60, 1))).MustWithChange(tempomap.MustNewGradual(at(1, 1), tempomap.LinearSpeed)).MustWithChange(tempomap.MustNewMain(at(2, 1), quarterTempo(90, 1))), r: res(96), o: o, own: ticks.ErrNotRepresentable},
+		{name: "missing steps before an unrepresentable position", m: constantMap(120).MustWithChange(tempomap.MustNewMain(at(1, 7), quarterTempo(60, 1))).MustWithChange(tempomap.MustNewGradual(at(1, 1), tempomap.LinearSpeed)).MustWithChange(tempomap.MustNewMain(at(2, 1), quarterTempo(90, 1))), r: res(96), o: o, own: ticks.ErrNotConvertible},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
@@ -739,5 +739,72 @@ func TestMIDITempoMapStretchAcrossBaseSteps(t *testing.T) {
 				assert.Equal(t, changeTexts(0, int(base), 480, int(irrationalIndex(mode, tt.first, tt.firstUp)), 960, int(second), 1920, 600000), tempoChanges(t, got))
 			})
 		}
+	}
+}
+
+// TestMIDITempoMapStretchRationalFragmentWithWeightedLogTime checks 5.2:
+// a rational constant fragment is stretched using an irrational S from
+// multiple EqualTime steps with unequal weights. The source step tempos
+// are A=6000000*ln(12/11) and B=6000000*ln(11/10). The stretch [3/8,5/4)
+// retains 1/4 of the first source interval, all of the second, and a
+// quarter-long constant tail: S=(A/2+2*B+600000)/10^6.
+// Independent 100-digit Decimal evaluation gives S=2.004756288620787619...
+// and stretched tempos A'=782483.088867662403...,
+// B'=857113.247417161054..., C'=899288.249352634308... microseconds.
+// The rational tail must use exact fractional-linear comparisons; an
+// ErrOutOfRange from a finite interval fallback is not an allowed result.
+func TestMIDITempoMapStretchRationalFragmentWithWeightedLogTime(t *testing.T) {
+	t.Parallel()
+	m := ritardandoMap().MustWithExtension(tempomap.MustNewExtension(at(5, 4), sec(1, 1)))
+	for _, mode := range allModes {
+		t.Run(mode.String(), func(t *testing.T) {
+			t.Parallel()
+			o := exportOptions(t, mode).MustWithSteps(dur(1, 2), ticks.StepEqualTime).MustWithHoldsStretched(dur(7, 8))
+			got, skipped := requireExport(t, m, res(480), o)
+			assert.Nil(t, skipped)
+			assert.Equal(t, changeTexts(
+				0, int(irrationalIndex(mode, 522068, false)),
+				720, int(irrationalIndex(mode, 782483, false)),
+				960, int(irrationalIndex(mode, 857113, false)),
+				1920, int(irrationalIndex(mode, 899288, false)),
+				2400, 600000,
+			), tempoChanges(t, got))
+		})
+	}
+}
+
+// TestMIDITempoMapStretchWeightedLogTimeAtFormatLimit checks the same
+// fractional-linear path just above the Set Tempo limit M=16777215.
+// For this slower ramp A=684170.176404998524... and
+// B=2936915.488846336666...; S=(A/2+2*B+M)/10^6
+// =22.993131065895172595... s (independent 100-digit Decimal calculation).
+// E=10^-7 s gives f(S)=M+0.072966204349980843..., so 0<M*E/S<1/2.
+// Thus f(S) is strictly between M and M+1/2: only Up/AwayFromZero
+// select M+1 (E-5); every other mode selects M, without an E-8 fallback.
+func TestMIDITempoMapStretchWeightedLogTimeAtFormatLimit(t *testing.T) {
+	t.Parallel()
+	m := tempomap.MustNew(quarterTempo(120, 1)).
+		MustWithChange(tempomap.MustNewGradual(at(0, 1), tempomap.LinearSpeed).MustWithSlot(tempomap.SlotSecond)).
+		MustWithChange(tempomap.MustNewMain(at(1, 1), quarterTempo(60000000, 16777215))).
+		MustWithExtension(tempomap.MustNewExtension(at(5, 4), sec(1, 10000000)))
+	for _, mode := range allModes {
+		t.Run(mode.String(), func(t *testing.T) {
+			t.Parallel()
+			o := exportOptions(t, mode).MustWithSteps(dur(1, 2), ticks.StepEqualTime).MustWithHoldsStretched(dur(7, 8))
+			got, skipped, err := ticks.MIDITempoMapOf(m, res(480), o)
+			if mode == rounding.Up || mode == rounding.AwayFromZero {
+				requireTicksError(t, err, ticks.ErrFormatLimit)
+				assert.False(t, got.IsSet())
+				assert.Nil(t, skipped)
+				requireMustPanic(t, err, ticks.ErrFormatLimit, func() { ticks.MustMIDITempoMapOf(m, res(480), o) })
+				return
+			}
+			require.NoError(t, err)
+			assert.Nil(t, skipped)
+			assert.Equal(t, 16777215, got.MustTempoAt(1920).MustMicroseconds())
+			assert.Equal(t, 16777215, got.MustTempoAt(2400).MustMicroseconds())
+			must, _ := ticks.MustMIDITempoMapOf(m, res(480), o)
+			assert.True(t, got.Equal(must))
+		})
 	}
 }
