@@ -2,6 +2,7 @@ package voiceleading_test
 
 import (
 	"reflect"
+	"slices"
 	"sync"
 	"testing"
 
@@ -93,14 +94,18 @@ func TestAnalysisOwnsInputsAndReturnedData(t *testing.T) {
 	assert.True(t, a.Equal(same))
 	copyOfAnalysis := *a
 	assert.True(t, copyOfAnalysis.Equal(a))
+	previousPairs := a.MustPairs()
 	pairs := a.MustPairs()
 	pairs[0] = voiceleading.Pair{First: 19, Second: 20}
+	assert.Equal(t, []voiceleading.Pair{pair}, previousPairs)
 	assert.Equal(t, []voiceleading.Pair{pair}, a.MustPairs())
+	previousVerticals := a.MustVerticals(pair)
 	verticals := a.MustVerticals(pair)
 	verticals[0].Chromatic = 999
 	verticals[0].First.Index = 99
 	verticals[0].Specific = interval.Interval{}
 	verticals[0].Start = duration.Position{}
+	assertResult(t, same.MustVerticals(pair), previousVerticals)
 	assertResult(t, same.MustVerticals(pair), a.MustVerticals(pair))
 	v, ok := a.MustVerticalAt(pair, pos(0, 1))
 	require.True(t, ok)
@@ -111,9 +116,11 @@ func TestAnalysisOwnsInputsAndReturnedData(t *testing.T) {
 	require.NoError(t, n.Unbind())
 	require.NoError(t, n.ReplaceWithPitch(voiceNotePitch(t, "F", 5)))
 	assert.True(t, a.Equal(same))
+	previousTransitions := a.MustTransitions(pair)
 	transitions := a.MustTransitions(pair)
 	transitions[0].Motion = voiceleading.MotionUnclassified
 	transitions[0].To.Second.Index = 88
+	assertResult(t, same.MustTransitions(pair), previousTransitions)
 	assertResult(t, same.MustTransitions(pair), a.MustTransitions(pair))
 	for _, get := range []func() []voiceleading.Transition{func() []voiceleading.Transition { return a.MustFindMotion(voiceleading.MotionParallel) }, func() []voiceleading.Transition {
 		return a.MustFindParallels(voiceleading.ParallelOptions{Perfect: voiceleading.PerfectBoth})
@@ -121,20 +128,26 @@ func TestAnalysisOwnsInputsAndReturnedData(t *testing.T) {
 		return a.MustFindDirect(voiceleading.PerfectBoth, voiceleading.AnyOrigin)
 	}} {
 		before := get()
+		expected := slices.Clone(before)
 		changed := get()
 		require.NotEmpty(t, changed)
 		changed[0].From.Chromatic = 777
 		changed[0].First = interval.Interval{}
-		assertResult(t, before, get())
+		assertResult(t, expected, before)
+		assertResult(t, expected, get())
 	}
-	assessment := a.MustCheckOMTFirstSpecies(pair)
 	before := a.MustCheckOMTFirstSpecies(pair)
+	require.NotNil(t, before)
+	expectedAssessment := copyAssessment(before)
+	assessment := a.MustCheckOMTFirstSpecies(pair)
+	require.NotNil(t, assessment)
 	assessment.Rule = "changed"
 	assessment.Scope = "changed"
 	assessment.Applicable = false
 	assessment.Violations[0].Reason = "changed"
 	assessment.Violations[0].Transition.To.Chromatic = 888
-	assertResult(t, before, a.MustCheckOMTFirstSpecies(pair))
+	assertResult(t, expectedAssessment, before)
+	assertResult(t, expectedAssessment, a.MustCheckOMTFirstSpecies(pair))
 	assert.True(t, copyOfAnalysis.Equal(same))
 }
 
@@ -142,32 +155,41 @@ func TestNestedResultsAreIndependent(t *testing.T) {
 	t.Parallel()
 	crossed := analyze(t, []string{"F4", "G4"}, []string{"D4", "E4"})
 	before := crossed.MustFindCrossings()
+	expectedCrossings := copyCrossings(before)
 	xs := crossed.MustFindCrossings()
 	require.Len(t, xs, 1)
 	xs[0].Verticals[0].First.Index = 999
 	xs[0].Pair = voiceleading.Pair{}
 	xs[0].Start = duration.Position{}
-	assertResult(t, before, crossed.MustFindCrossings())
+	assertResult(t, expectedCrossings, before)
+	assertResult(t, expectedCrossings, crossed.MustFindCrossings())
 	overlap := analyze(t, []string{"C4", "F4"}, []string{"E4", "G4"})
 	os := overlap.MustFindOverlaps()
 	require.Len(t, os, 1)
 	old := overlap.MustFindOverlaps()
+	expectedOverlaps := slices.Clone(old)
 	os[0].FirstAbovePreviousSecond = false
 	os[0].Transition.From.Chromatic = 99
-	assertResult(t, old, overlap.MustFindOverlaps())
+	assertResult(t, expectedOverlaps, old)
+	assertResult(t, expectedOverlaps, overlap.MustFindOverlaps())
 	async := voiceleading.MustAnalyze([]*voice.Line{voice.MustNew(sound(t, "C", 4, 1, 2, nil)), line(t, "G4", "A4")}, voiceleading.Options{System: system.Traditional()})
-	expected := async.MustCheckOMTFirstSpecies(pair)
+	previousAssessment := async.MustCheckOMTFirstSpecies(pair)
+	require.NotNil(t, previousAssessment)
+	expected := copyAssessment(previousAssessment)
 	result := async.MustCheckOMTFirstSpecies(pair)
+	require.NotNil(t, result)
 	require.NotEmpty(t, result.Issues)
 	result.Issues[0].Reason = "changed"
 	result.Issues[0].Vertical.First.Index = 999
+	assertResult(t, expected, previousAssessment)
 	assertResult(t, expected, async.MustCheckOMTFirstSpecies(pair))
 	// DTO assignment shares only the caller-owned slice, as documented.
 	caller := crossed.MustFindCrossings()
 	assigned := caller[0]
 	assigned.Verticals[0].Chromatic = 123
 	assert.Equal(t, system.Step(123), caller[0].Verticals[0].Chromatic)
-	assertResult(t, before, crossed.MustFindCrossings())
+	assertResult(t, expectedCrossings, before)
+	assertResult(t, expectedCrossings, crossed.MustFindCrossings())
 }
 
 func voiceNotePitch(t *testing.T, name string, octave int) (p pitch.Pitch) {
@@ -223,7 +245,8 @@ func TestEqualSnapshotSemantics(t *testing.T) {
 	emptyWithout := voiceleading.MustAnalyze([]*voice.Line{line(t), line(t)}, voiceleading.Options{})
 	emptyWith := voiceleading.MustAnalyze([]*voice.Line{line(t), line(t)}, voiceleading.Options{System: system.Traditional()})
 	assert.False(t, emptyWith.Equal(emptyWithout))
-	// Source identity is retained through Element.Equal, while Equal never rereads it.
+	// Element.Equal compares note records independently of source identity.
+	// Analysis.Equal must likewise avoid reading either live source.
 	src := &testSource{current: settings.Standard()}
 	inputs := []*voice.Line{voice.MustNew(sound(t, "C", 4, 1, 4, src)), voice.MustNew(sound(t, "G", 4, 1, 4, src))}
 	left := voiceleading.MustAnalyze(inputs, voiceleading.Options{})
@@ -231,6 +254,14 @@ func TestEqualSnapshotSemantics(t *testing.T) {
 	src.reset(nil)
 	assert.True(t, left.Equal(right))
 	assert.Zero(t, src.count())
+	otherSource := &testSource{current: settings.Standard()}
+	otherInputs := []*voice.Line{voice.MustNew(sound(t, "C", 4, 1, 4, otherSource)), voice.MustNew(sound(t, "G", 4, 1, 4, otherSource))}
+	other := voiceleading.MustAnalyze(otherInputs, voiceleading.Options{System: system.Traditional()})
+	otherSource.reset(nil)
+	assert.True(t, left.Equal(other))
+	assert.True(t, other.Equal(left))
+	assert.Zero(t, src.count())
+	assert.Zero(t, otherSource.count())
 }
 
 func TestConcurrentReadOperations(t *testing.T) {
@@ -266,4 +297,21 @@ func TestConcurrentReadOperations(t *testing.T) {
 			}
 		}
 	}
+}
+
+// The copied DTOs retain immutable domain values, but share no caller-owned
+// slices or Assessment object with the result whose independence is tested.
+func copyAssessment(a *voiceleading.Assessment) *voiceleading.Assessment {
+	result := *a
+	result.Issues = slices.Clone(a.Issues)
+	result.Violations = slices.Clone(a.Violations)
+	return &result
+}
+
+func copyCrossings(xs []voiceleading.Crossing) []voiceleading.Crossing {
+	result := slices.Clone(xs)
+	for i := range result {
+		result[i].Verticals = slices.Clone(xs[i].Verticals)
+	}
+	return result
 }
