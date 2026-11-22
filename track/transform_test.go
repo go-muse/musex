@@ -1,6 +1,7 @@
 package track_test
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/go-muse/musex/common/rounding"
@@ -32,10 +33,96 @@ func assertReport(t *testing.T, old *track.Track, p track.Proposal) {
 				require.GreaterOrEqual(t, entry.Place.Index, 0)
 				require.Less(t, entry.Place.Index, len(actual))
 				got := actual[entry.Place.Index]
-				assert.True(t, entry.Event.Equal(got.Event))
+				assertEvent(t, entry.Event, got.Event)
 				assert.True(t, entry.Time.Start.Equal(got.Time.Start))
 				assert.True(t, entry.Time.End.Equal(got.Time.End))
 			}
+		}
+	}
+}
+
+// Compare the complete unions of both sides without specifying how Change
+// groups a split or a merge. Each individual side must remain in place order.
+func assertChanges(t *testing.T, old *track.Track, p track.Proposal, from, to []track.Entry) {
+	t.Helper()
+	assertReport(t, old, p)
+	ranks := map[track.VoiceID]int{}
+	for i, v := range old.MustVoices() {
+		ranks[v] = i
+	}
+	less := func(a, b track.Place) bool {
+		if a.Voice != b.Voice {
+			return ranks[a.Voice] < ranks[b.Voice]
+		}
+		if a.Bar != b.Bar {
+			return a.Bar < b.Bar
+		}
+		return a.Index < b.Index
+	}
+	var previous track.Place
+	for i, c := range p.Changes {
+		entries := c.From
+		if len(entries) == 0 {
+			entries = c.To
+		}
+		require.NotEmpty(t, entries, "empty change has no provenance")
+		anchor := entries[0].Place
+		if i > 0 {
+			assert.False(t, less(anchor, previous), "changes out of place order")
+		}
+		previous = anchor
+	}
+	for side, want := range [][]track.Entry{from, to} {
+		union := map[track.Place]track.Entry{}
+		for _, change := range p.Changes {
+			entries := change.From
+			if side == 1 {
+				entries = change.To
+			}
+			for i, e := range entries {
+				if i > 0 {
+					assert.True(t, less(entries[i-1].Place, e.Place), "report side out of order")
+				}
+				if previous, ok := union[e.Place]; ok {
+					assertEvent(t, previous.Event, e.Event)
+					assert.True(t, previous.Time.Start.Equal(e.Time.Start))
+					assert.True(t, previous.Time.End.Equal(e.Time.End))
+				}
+				union[e.Place] = e
+			}
+		}
+		require.Len(t, union, len(want), "incomplete or extraneous report entries on side %d", side)
+		for _, e := range want {
+			got, ok := union[e.Place]
+			require.True(t, ok, "missing report place %+v", e.Place)
+			assertEvent(t, e.Event, got.Event)
+			assert.True(t, e.Time.Start.Equal(got.Time.Start))
+			assert.True(t, e.Time.End.Equal(got.Time.End))
+		}
+	}
+}
+
+func assertNoInputs(t *testing.T, p track.Proposal) {
+	t.Helper()
+	for _, c := range p.Changes {
+		assert.Empty(t, c.Input)
+	}
+}
+
+func assertInputs(t *testing.T, p track.Proposal, sources map[track.Place]int) {
+	t.Helper()
+	for _, c := range p.Changes {
+		want := []int{}
+		for _, e := range c.To {
+			if input, ok := sources[e.Place]; ok && !slices.Contains(want, input) {
+				want = append(want, input)
+			}
+		}
+		slices.Sort(want)
+		if len(want) == 0 {
+			assert.Empty(t, c.Input)
+		} else {
+			assert.Equal(t, want, c.Input)
 		}
 	}
 }
@@ -52,6 +139,14 @@ func TestWriteEventsSplitsAcrossBarsAndReportsInputs(t *testing.T) {
 	proposal, err := p.WriteEvents(v, address(1, 0, 1), input, track.WriteOptions{})
 	require.NoError(t, err)
 	assertReport(t, p, proposal)
+	quarterFirst := tone("D4", duration.Quarter, event.Marks{Ties: []int{0}})
+	quarterLast := tone("D4", duration.Quarter, event.Marks{Fermata: true})
+	wantTo := []track.Entry{
+		expectedEntry(v, 1, 0, q, 0, 1, 1, 4), expectedEntry(v, 1, 1, q, 1, 4, 1, 2), expectedEntry(v, 1, 2, q, 1, 2, 3, 4),
+		expectedEntry(v, 1, 3, quarterFirst, 3, 4, 1, 1), expectedEntry(v, 2, 0, quarterLast, 1, 1, 5, 4),
+	}
+	assertChanges(t, p, proposal, nil, wantTo)
+	assertInputs(t, proposal, map[track.Place]int{wantTo[0].Place: 0, wantTo[1].Place: 1, wantTo[2].Place: 2, wantTo[3].Place: 3, wantTo[4].Place: 3})
 	require.NotEmpty(t, proposal.Changes)
 	next := proposal.Track
 	e1 := next.MustEntries(v, 1)
@@ -193,28 +288,39 @@ func TestSplitMergePreserveMarksSourcesAndNotation(t *testing.T) {
 	p, v := fixture(1)
 	c, e := parsed("C4"), parsed("E4")
 	original := chordEvent(written(duration.Half, 0), event.Marks{Arpeggio: true, Fermata: true}, c, e)
-	p = p.MustSplice(v, 1, 0, 0, original)
+	tail := tone("G4", duration.Quarter, event.Marks{})
+	p = p.MustSplice(v, 1, 0, 0, original, tail)
 	out := p.MustSplit(track.Place{Voice: v, Bar: 1, Index: 0}, length(1, 4), track.KeepGroups)
 	assertReport(t, p, out)
+	wantFrom := []track.Entry{expectedEntry(v, 1, 0, original, 0, 1, 1, 2), expectedEntry(v, 1, 1, tail, 1, 2, 3, 4)}
+	wantTo := []track.Entry{
+		expectedEntry(v, 1, 0, chordEvent(written(duration.Quarter, 0), event.Marks{Arpeggio: true, Ties: []int{0, 1}}, c, e), 0, 1, 1, 4),
+		expectedEntry(v, 1, 1, chordEvent(written(duration.Quarter, 0), event.Marks{Fermata: true}, c, e), 1, 4, 1, 2),
+		expectedEntry(v, 1, 2, tail, 1, 2, 3, 4),
+	}
+	assertChanges(t, p, out, wantFrom, wantTo)
+	assertNoInputs(t, out)
 	es := out.Track.MustEntries(v, 1)
-	require.Len(t, es, 2)
+	require.Len(t, es, 3)
 	assert.Equal(t, []int{0, 1}, es[0].Event.MustMarks().Ties)
 	assert.True(t, es[0].Event.MustMarks().Arpeggio)
 	assert.False(t, es[0].Event.MustMarks().Fermata)
 	assert.Empty(t, es[1].Event.MustMarks().Ties)
 	assert.False(t, es[1].Event.MustMarks().Arpeggio)
 	assert.True(t, es[1].Event.MustMarks().Fermata)
-	for _, entry := range es {
+	for _, entry := range es[:2] {
 		for i, n := range entry.Event.MustContent().MustNotes() {
 			assertNote(t, []note.Note{c, e}[i], n)
 		}
 	}
 	merged := out.Track.MustMerge(v, 1, 0, 2, track.KeepGroups)
 	assertReport(t, out.Track, merged)
+	assertChanges(t, out.Track, merged, wantTo, wantFrom)
+	assertNoInputs(t, merged)
 	got := merged.Track.MustEntries(v, 1)
-	require.Len(t, got, 1)
+	require.Len(t, got, 2)
 	assert.True(t, original.Equal(got[0].Event))
-	assert.Len(t, p.MustEntries(v, 1), 1)
+	assert.Len(t, p.MustEntries(v, 1), 2)
 	for _, tc := range []struct {
 		name        string
 		first, last *event.Event
@@ -304,6 +410,10 @@ func TestPackUnpackRestsAndFermataBarrier(t *testing.T) {
 		}
 		require.NoError(t, err)
 		assertReport(t, p, out)
+		wantFrom := []track.Entry{expectedEntry(v, 1, 0, measureRest(1, false), 0, 1, 1, 1), expectedEntry(v, 2, 0, measureRest(1, true), 1, 1, 2, 1)}
+		wantTo := []track.Entry{expectedEntry(v, 1, 0, measureRest(2, true), 0, 1, 2, 1)}
+		assertChanges(t, p, out, wantFrom, wantTo)
+		assertNoInputs(t, out)
 		e := out.Track.MustEntries(v, 1)
 		require.Len(t, e, 1)
 		assert.Equal(t, 2, e[0].Event.MustDuration().MustMeasureCount())
@@ -312,6 +422,8 @@ func TestPackUnpackRestsAndFermataBarrier(t *testing.T) {
 		assert.Equal(t, []int{1}, out.Track.MustFermataBars())
 		back := out.Track.MustUnpackRest(e[0].Place)
 		assertReport(t, out.Track, back)
+		assertChanges(t, out.Track, back, wantTo, wantFrom)
+		assertNoInputs(t, back)
 		assert.True(t, p.Equal(back.Track))
 	}
 	g := grid(4).MustWithMark(3, meter.MustNew(3, 4))
@@ -337,6 +449,11 @@ func TestRebarPreservesSoundAndReportsRestMaterialization(t *testing.T) {
 	g := measure.MustNew(meter.MustNew(3, 4)).MustWithBarCount(2)
 	out := p.MustRebar(g, track.KeepGroups)
 	assertReport(t, p, out)
+	q := tone("C4", duration.Quarter, event.Marks{})
+	assertChanges(t, p, out,
+		[]track.Entry{expectedEntry(v, 1, 0, measureRest(1, false), 0, 1, 1, 1), expectedEntry(v, 2, 0, q, 1, 1, 5, 4)},
+		[]track.Entry{expectedEntry(v, 1, 0, rest(value(3, 4), false), 0, 1, 3, 4), expectedEntry(v, 2, 0, rest(value(1, 4), false), 3, 4, 1, 1), expectedEntry(v, 2, 1, q, 1, 1, 5, 4)})
+	assertNoInputs(t, out)
 	e1, e2 := out.Track.MustEntries(v, 1), out.Track.MustEntries(v, 2)
 	require.Len(t, e1, 1)
 	require.Len(t, e2, 2)
@@ -374,6 +491,16 @@ func TestQuantizeSharedBoundariesTiesAndEmptyTail(t *testing.T) {
 		p = p.MustSplice(v, 1, 0, 0, first, second).MustSplice(w, 1, 0, 0, tone("D3", duration.Whole, event.Marks{}))
 		out := p.MustQuantize(v, 1, 1, length(1, 8), rounding.HalfUp, track.KeepGroups)
 		assertReport(t, p, out)
+		oldEndN, oldEndD := 1, 2
+		newSecond := rest(value(1, 4), false)
+		if tied {
+			oldEndN, oldEndD = 3, 8
+			newSecond = tone("C4", duration.Eighth, event.Marks{})
+		}
+		assertChanges(t, p, out,
+			[]track.Entry{expectedEntry(v, 1, 0, first, 0, 1, 3, 16), expectedEntry(v, 1, 1, second, 3, 16, oldEndN, oldEndD)},
+			[]track.Entry{expectedEntry(v, 1, 0, tone("C4", duration.Quarter, marks), 0, 1, 1, 4), expectedEntry(v, 1, 1, newSecond, 1, 4, oldEndN, oldEndD)})
+		assertNoInputs(t, out)
 		es := out.Track.MustEntries(v, 1)
 		require.Len(t, es, 2)
 		assertSpan(t, es[0].Time, 0, 1, 1, 4)

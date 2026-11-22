@@ -294,3 +294,32 @@ func TestNumericLineCrossingBecomesRepresentableWrittenTie(t *testing.T) {
 	assertPosition(t, 5, 4, back.Line.MustEnd())
 	assert.Equal(t, voice.DurationTied, back.Line.MustElement(1).MustDuration().Kind())
 }
+
+func TestWriteLineReportsElementIndicesAfterExpansion(t *testing.T) {
+	t.Parallel()
+	g := measure.MustNew(meter.MustNew(3, 4)).MustWithBarCount(2)
+	p := track.MustNew(piano(), g)
+	v := p.MustVoices()[0]
+	a, b := piano(), piano()
+	c, d := note.MustParse(a, "C4"), note.MustParse(b, "D4")
+	line := voice.MustNew(
+		voice.MustNewSound(c, voice.MustWrittenDuration(duration.MustNewWritten(duration.Half, 0))),
+		voice.MustNewSound(d, voice.MustWrittenDuration(duration.MustNewWritten(duration.Quarter, 0))),
+	)
+	out := p.MustWriteLine(v, address(1, 1, 2), line, track.WriteOptions{})
+	want := []track.Entry{
+		expectedEntry(v, 1, 0, rest(value(1, 2), false), 0, 1, 1, 2),
+		expectedEntry(v, 1, 1, sounded(c, written(duration.Quarter, 0), event.Marks{Ties: []int{0}}), 1, 2, 3, 4),
+		expectedEntry(v, 2, 0, sounded(c, written(duration.Quarter, 0), event.Marks{}), 3, 4, 1, 1),
+		expectedEntry(v, 2, 1, sounded(d, written(duration.Quarter, 0), event.Marks{}), 1, 1, 5, 4),
+	}
+	assertChanges(t, p, out, nil, want)
+	assertInputs(t, out, map[track.Place]int{want[1].Place: 0, want[2].Place: 0, want[3].Place: 1})
+	back := out.Track.MustExtractLine(v, track.Exact)
+	assert.Equal(t, 3, back.Line.MustLen())
+	assertNote(t, c, back.Line.MustNotes()[0])
+	assertNote(t, d, back.Line.MustNotes()[1])
+	assertPosition(t, 1, 1, back.Line.MustStartOf(2))
+	assertPosition(t, 5, 4, back.Line.MustEnd())
+	assertPosition(t, 3, 4, line.MustEnd())
+}
