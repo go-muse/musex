@@ -154,6 +154,57 @@ func TestOutputEventAndTrackShellIsolation(t *testing.T) {
 	}
 }
 
+func TestSecondVoiceEventShellIsolation(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{"Add", "Replace", "Part", "ExtractWithMap", "Before", "After", "At", "BarView.Event", "BarView.Source"} {
+		t.Run(source, func(t *testing.T) {
+			p := emptyPart(4, 4, 2)
+			p, secondVoice := p.MustAddVoice()
+			p = write(p, 1, tone(p, "C4", 1, 4, event.Marks{}))
+			second := tone(p, "E4", 1, 2, event.Marks{})
+			p = p.MustSplice(secondVoice, 1, 0, 0, second)
+			want := *second
+			s, ids := assemble(clock60(), p)
+			id := ids[0]
+			if source == "Replace" {
+				s, ids = assemble(clock60(), emptyPart(4, 4, 2))
+				id = ids[0]
+				s = s.MustReplace(id, p)
+			}
+			proposal := s.MustChangeMeter(1, 1, meter.MustNew(3, 4))
+			switch source {
+			case "Add", "Replace":
+				*p.MustEntries(secondVoice, 1)[0].Event = event.Event{}
+			case "Part":
+				*s.MustPart(id).MustEntries(secondVoice, 1)[0].Event = event.Event{}
+			case "ExtractWithMap":
+				*s.MustExtractWithMap(id).MustEntries(secondVoice, 1)[0].Event = event.Event{}
+			case "Before":
+				*proposal.Parts[0].Before.MustEntries(secondVoice, 1)[0].Event = event.Event{}
+			case "After":
+				*proposal.Parts[0].After.MustEntries(secondVoice, 1)[0].Event = event.Event{}
+			case "At":
+				rows := s.MustAt(pos(0, 1))
+				*rows[0].Voices[1].Entry.Event = event.Event{}
+			case "BarView.Event":
+				*s.MustBarView(id, secondVoice, 1)[0].Event = event.Event{}
+			case "BarView.Source":
+				*s.MustBarView(id, secondVoice, 1)[0].Source.Event = event.Event{}
+			}
+			for _, snapshot := range []*score.Score{s, proposal.Score} {
+				assert.Equal(t, []track.VoiceID{p.MustVoices()[0], secondVoice}, snapshot.MustPart(id).MustVoices())
+				assertEvent(t, &want, snapshot.MustPart(id).MustEntries(secondVoice, 1)[0].Event)
+				rows := snapshot.MustAt(pos(1, 4))
+				require.Len(t, rows[0].Voices, 2)
+				assert.True(t, rows[0].Voices[1].Found)
+				assertEvent(t, &want, rows[0].Voices[1].Entry.Event)
+				assertEvent(t, &want, snapshot.MustBarView(id, secondVoice, 1)[0].Source.Event)
+				assert.Len(t, snapshot.MustSounds(), 2)
+			}
+		})
+	}
+}
+
 func TestNestedReturnedContainersAreIndependent(t *testing.T) {
 	t.Parallel()
 	p := emptyPart(4, 4, 2)
