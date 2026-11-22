@@ -4,6 +4,7 @@ import (
 	"math/big"
 	"slices"
 
+	"github.com/go-muse/musex/internal/timecalc"
 	"github.com/go-muse/musex/measure"
 	"github.com/go-muse/musex/tempomap"
 )
@@ -38,10 +39,6 @@ func positionalMap(op string, m tempomap.Map, grid []measure.Grid) (tempomap.Map
 	return positional, nil
 }
 
-func at(position *big.Rat) tempomap.Address {
-	return tempomap.MustAt(must(positionOf("ticks.at", position)))
-}
-
 // exportSegment is a segment of a positional musex map.
 type exportSegment struct {
 	a, b    *big.Rat // b is nil for the open final segment
@@ -66,7 +63,6 @@ type exporter struct {
 	op       string
 	r        Resolution
 	o        ExportOptions
-	bare     tempomap.Map
 	segments []exportSegment
 	holds    []exportHold
 	w        *big.Rat
@@ -99,10 +95,8 @@ func newExporter(op string, pm tempomap.Map, r Resolution, o ExportOptions) (*ex
 		seg.gradual = s.MustChange().MustKind() == tempomap.ChangeGradual && seg.sa.Cmp(seg.sb) != 0
 		e.segments = append(e.segments, seg)
 	}
-	e.bare = pm
 	for _, x := range pm.MustExtensions() {
 		position, _ := x.MustAddress().MustPosition()
-		e.bare = e.bare.MustWithoutExtension(x.MustAddress())
 		seconds := ratOfSeconds(x.MustSeconds())
 		if seconds.Sign() == 0 {
 			continue
@@ -125,7 +119,8 @@ func (e *exporter) segmentAt(q *big.Rat) exportSegment {
 }
 
 func (e *exporter) span(from, to *big.Rat) span {
-	return span{m: e.bare, from: at(from), to: at(to)}
+	s := e.segmentAt(from)
+	return span{form: timecalc.LinearSpan(s.a, s.b, s.sa, s.sb, from, to)}
 }
 
 // points returns the sorted distinct positions of the changes to create and
