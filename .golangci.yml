@@ -413,6 +413,19 @@ linters:
             - github.com/go-muse/musex/alteration$
             - github.com/go-muse/musex/mode$
             - github.com/go-muse/musex/modal$
+        problemsolving-voiceleading:
+          list-mode: strict
+          files:
+            - "**/problemsolving/voiceleading/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/voice$
+            - github.com/go-muse/musex/duration$
+            - github.com/go-muse/musex/interval$
+            - github.com/go-muse/musex/system$
+            - github.com/go-muse/musex/note$
+            - github.com/go-muse/musex/pitch$
         common-fraction:
           list-mode: strict
           files:

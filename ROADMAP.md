@@ -59,6 +59,6 @@
 ## 4. Problem Solving
 
 - [x] **32. [`problemsolving/scalechoice`](guide/packages/problemsolving/scalechoice.md)** — choosing pitch collections and modal readings from notes, distinguishing alternatives with added notes, and comparing a replacement throughout a set or at one phrase position, including local written and chromatic motions.
-- [ ] **33. `problemsolving/voiceleading`** — voice leading over melodic lines: kinds of motion of two voices, parallel and hidden perfect consonances, crossings and overlaps, chord spacing and distances between voices, distributing chords among voices, leaps, and chord connections, with norms of a chosen tradition.
+- [x] **33. [`problemsolving/voiceleading`](README.md#analyze-voice-leading)** — first version (unreleased): pairwise verticals and transitions over melodic lines, written and chromatic measurements, motion, perfect parallels, consecutive perfect families, direct arrivals, crossings and overlaps, and an explicit OMT first-species consecutive-perfect-family assessment. Chord spacing, chord distribution, leap checking, and chord connections remain planned.
 
 Package order and scope are derived from the local research in `docs/package-roadmap.md`. That detailed source is excluded from Git; this file is the project-facing overview.
