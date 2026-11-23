@@ -326,3 +326,56 @@ func fromPartsASPN(o, class int) (Number, error) {
 
 	return Number{value: uint8(m), valid: true}, nil
 }
+
+// NumbersInOctave returns the valid MIDI note numbers of the positional
+// octave o as a sequence in ascending order. It does not consult a musical
+// system.
+//
+// The ordinary MIDI map covers the positional octaves with ASPN numbers -1
+// through 9. A full octave gives twelve numbers: ASPN -1 gives 0 through 11
+// and ASPN 4 gives 60 through 71. The top octave is partial: ASPN 9 gives
+// 120 through 127, ending at G9. A valid octave wholly outside the MIDI
+// range, with ASPN below -1 or above 9, gives an empty sequence and no
+// error; the bounds are checked before any arithmetic, so the smallest and
+// largest int ASPN numbers are safe.
+//
+// The invalid (zero) octave is not an empty result: NumbersInOctave returns
+// a nil sequence and an error that matches both [ErrUnset] and
+// [octave.ErrInvalid], the same convention as [FromParts].
+//
+// The sequence may be stopped early, as with break in a range loop, and may
+// be traversed any number of times, each time giving the same numbers. A
+// sequence may be traversed by multiple goroutines at once. NumbersInOctave
+// does not change o.
+func NumbersInOctave(o octave.Octave) (iter.Seq[Number], error) {
+	if !o.IsValid() {
+		return nil, fmt.Errorf("midi: numbers in octave: %w: %w", ErrUnset, octave.ErrInvalid)
+	}
+
+	aspn := o.MustASPN()
+	if aspn < -1 || aspn > 9 {
+		return func(func(Number) bool) {}, nil
+	}
+
+	first := classCount * (aspn + 1)
+	last := min(first+classCount-1, maxNumber)
+
+	return func(yield func(Number) bool) {
+		for value := first; value <= last; value++ {
+			if !yield(Number{value: uint8(value), valid: true}) {
+				return
+			}
+		}
+	}, nil
+}
+
+// MustNumbersInOctave calls NumbersInOctave and panics with the same error
+// if o is invalid.
+func MustNumbersInOctave(o octave.Octave) iter.Seq[Number] {
+	seq, err := NumbersInOctave(o)
+	if err != nil {
+		panic(err)
+	}
+
+	return seq
+}
