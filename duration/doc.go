@@ -147,18 +147,22 @@
 // [Readings] finds the exact rhythmic readings of an ordered sequence of
 // sounding durations: each duration gets one written value, in order, inside
 // its chain of groups; groups are filled exactly and use the allowed ratios;
-// durations that need no tuplet stay outside groups. By default a group holds
+// durations that can be written without a tuplet may stand outside groups,
+// and may also be read inside a group that they fill exactly. By default a
+// group holds
 // exactly the actual count of values; FreeContents lets it hold any number of
 // consecutive values whose written sum is the actual count times the unit,
 // and such a group may end anywhere in the sequence, the rest being read by
 // plain values and further groups. The unit of a nested group is written
 // under the chain of the enclosing group. The search finds every exact
 // reading within [ReadingsOptions], without repeats; the options bound the
-// ratios, the notation, the nesting depth (no nesting by default), and the
-// number of results, and the work of a call is bounded independently of the
-// result count, failing with [ErrTooManyParts] beyond it. A long sequence is
-// better read part by part, for example by measures. No reading is an empty
-// result, not an error.
+// ratios as a set, the notation, the nesting depth (no nesting by default),
+// and the number of results. A reading has one written value per duration,
+// so a sequence longer than MaxParts has none. Every step of the search,
+// including branches that find nothing, counts toward a fixed work bound;
+// exceeding it fails with [ErrSearchLimit]. A long sequence is better read
+// part by part, for example by measures. No reading is an empty result, not
+// an error.
 //
 // # Positions
 //
@@ -234,11 +238,11 @@
 //
 // # Errors
 //
-// Every error matches exactly one of eleven sentinels via [errors.Is]:
+// Every error matches exactly one of twelve sentinels via [errors.Is]:
 // [ErrUnset], [ErrInvalidArgument], [ErrNotPositive], [ErrNegativePosition],
 // [ErrNotNotatable], [ErrOutsideSeries], [ErrNoSubdivision],
-// [ErrQuantizedToZero], [ErrTooManyParts], [ErrInvalidText], and
-// [ErrOutOfRange]. When the cause is a failure of package common/fraction,
+// [ErrQuantizedToZero], [ErrTooManyParts], [ErrSearchLimit],
+// [ErrInvalidText], and [ErrOutOfRange]. When the cause is a failure of package common/fraction,
 // tuplet, or common/rounding, the error also wraps the sentinel of that
 // package: a zero denominator also matches fraction.ErrZeroDenominator, an
 // unset tuplet tuplet.ErrUnset, an unset or unknown mode rounding.ErrUnset or

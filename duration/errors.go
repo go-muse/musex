@@ -65,6 +65,10 @@ var (
 	// MaxParts parts.
 	ErrTooManyParts = errors.New("duration: too many tied parts")
 
+	// ErrSearchLimit indicates that the search for rhythmic readings exceeded
+	// its fixed work bound before it could find every reading.
+	ErrSearchLimit = errors.New("duration: search limit exceeded")
+
 	// ErrInvalidText indicates text that does not match the grammar of the
 	// operation, the string of an unset value, or an unknown base name.
 	ErrInvalidText = errors.New("duration: invalid text")
