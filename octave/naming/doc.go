@@ -12,9 +12,14 @@
 //
 //   - [Russian], [English] and [German] return the built-in catalogs.
 //   - [New] and [MustNew] create a catalog from a map of pairs.
+//   - [Catalog.WithAliases] and [Catalog.MustWithAliases] return a new
+//     catalog that also accepts additional input names, aliases, for its
+//     named octaves.
 //   - [Catalog.Name] returns the name of an octave by its ASPN number.
 //   - [Catalog.ASPN] and [Catalog.MustASPN] return the ASPN number of an
-//     octave by its name.
+//     octave by its name or alias.
+//   - [Catalog.Aliases] returns the aliases of an octave in ascending byte
+//     order.
 //   - [Catalog.Equal] reports whether two catalogs are the same.
 //   - [Catalog.All] returns the named octaves of a catalog in ascending
 //     order of their ASPN numbers.
@@ -70,11 +75,31 @@
 // inflected word forms; parsing and formatting of notation are outside this
 // package.
 //
+// # Aliases
+//
+// [Catalog.WithAliases] returns a new catalog that also accepts additional
+// exact input names for its named octaves, for example "первая октава" and
+// "FirstOctave" alongside the canonical "первая". The receiver is not
+// modified, successive calls accumulate, and an alias that already resolves
+// to the same octave is accepted as a no-op, so alias lists from several
+// sources can be merged. Aliases extend the lookup only: [Catalog.Name] and
+// [Catalog.All] keep returning the canonical names, and [Catalog.Aliases]
+// lists the aliases of an octave. The built-in catalogs have no aliases.
+//
+// An alias must resolve to exactly one octave: an alias equal to another
+// octave's canonical name or alias is an error. An alias for an octave
+// without a canonical name is an error too; empty alias strings are ignored,
+// as in [New]. [Catalog.Equal] compares the canonical names and the
+// alias-to-octave mapping, so equal catalogs accept the same input.
+//
 // [Catalog.ASPN] returns an error that matches [ErrUnknownName] when a name
-// is not in the catalog, and [New] returns an error that matches
-// [ErrDuplicateName] when two octaves are given the same name. Check errors
-// with [errors.Is]. [MustNew] and [Catalog.MustASPN] panic in the same cases
-// and work the same way otherwise. No other function or method panics.
+// is not in the catalog, [New] returns an error that matches
+// [ErrDuplicateName] when two octaves are given the same name, and
+// [Catalog.WithAliases] returns errors that match [ErrDuplicateName] for an
+// ambiguous alias and [ErrUnnamedOctave] for an alias of an unnamed octave.
+// Check errors with [errors.Is]. [MustNew], [Catalog.MustASPN] and
+// [Catalog.MustWithAliases] panic in the same cases and work the same way
+// otherwise. No other function or method panics.
 // An error quotes a name of up to 32 bytes in full. A longer name is
 // quoted by at most its first 32 bytes, without splitting a valid UTF-8
 // character, followed by its length in bytes, so the length of an error

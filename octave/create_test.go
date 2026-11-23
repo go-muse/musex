@@ -205,6 +205,27 @@ func TestFromNameRoundTrip(t *testing.T) {
 	}
 }
 
+// FromName accepts an alias of an extended naming catalog and finds the same
+// octave as by the canonical name; the name of that octave stays canonical.
+func TestFromNameAlias(t *testing.T) {
+	t.Parallel()
+
+	c := naming.MustNew(map[int]string{4: "первая"}).
+		MustWithAliases(map[int][]string{4: {"первая октава", "FirstOctave"}})
+
+	for _, name := range []string{"первая", "первая октава", "FirstOctave"} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := octave.FromName(name, c)
+			require.NoError(t, err)
+			assert.Equal(t, oct(4), got)
+			assert.Equal(t, got, octave.MustFromName(name, c))
+			assert.Equal(t, "первая", got.Name(c))
+		})
+	}
+}
+
 // K-20, E-1: a number skipped in the numbering gives number.ErrSkipped and
 // the invalid value; no nearby octave is substituted. The Must variant panics
 // with the same cause.
