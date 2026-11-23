@@ -62,8 +62,10 @@ func TestDoublingsKeepTheClass(t *testing.T) {
 				doubled := append(append([]note.Note(nil), ns...),
 					note.MustFromASPN(ns[tone].Spelling(), ns[tone].MustOctave().MustASPN()+oct, cents.Zero(), nil))
 				got := classifyOf(t, doubled)
-				// The group and the root survive any doubling; the bass
-				// and hence the subgroup follow the new voicing.
+				// The group and the root name survive any doubling. A
+				// doubling above the lowest occurrence of its class changes
+				// nothing; one below moves that occurrence, so the bass and
+				// hence the subgroup follow the new lowest voicing.
 				assert.Equal(t, want.group, got.group, "inversion %d tone %d octave %+d group", inv, tone, oct)
 				assert.Equal(t, want.root, got.root, "inversion %d tone %d octave %+d root", inv, tone, oct)
 			}
@@ -79,10 +81,11 @@ func TestDoublingsKeepTheClass(t *testing.T) {
 	for inv, ns := range seventhInversions {
 		want := classifyOf(t, ns)
 		for tone := range ns {
-			// A doubling never decides the root. It can move the bass or
-			// add a second or seventh between the doubled note and its
-			// neighbours, so the subgroup follows the new content while
-			// the group and the root stay.
+			// A doubling never decides the root and adds no interval to
+			// the classification: a second or seventh between the doubled
+			// note and its neighbours is not counted. A doubling below the
+			// lowest occurrence of its class moves the bass, so only the
+			// group and the root name are claimed here.
 			for _, oct := range []int{-1, 1} {
 				doubled := append(append([]note.Note(nil), ns...),
 					note.MustFromASPN(ns[tone].Spelling(), ns[tone].MustOctave().MustASPN()+oct, cents.Zero(), nil))
@@ -93,12 +96,14 @@ func TestDoublingsKeepTheClass(t *testing.T) {
 		}
 	}
 
-	t.Run("root doubled above the seventh gains a major second", func(t *testing.T) {
+	t.Run("root doubled above the seventh adds no major second", func(t *testing.T) {
 		t.Parallel()
+		// The major second B flat 4 - C5 comes from the doubling and is
+		// not counted, so the chord stays II.a like the undoubled seventh.
 		got := classifyOf(t, []note.Note{
 			n(spelling.C(), 4), n(spelling.E(), 4), n(spelling.G(), 4), n(spelling.BFlat(), 4), n(spelling.C(), 5),
 		})
-		assert.Equal(t, classOf{hindemith.GroupII, hindemith.SubB1, spelling.C(), spelling.C()}, got)
+		assert.Equal(t, classOf{hindemith.GroupII, hindemith.SubA, spelling.C(), spelling.C()}, got)
 	})
 
 	t.Run("reviewer voicings", func(t *testing.T) {
