@@ -486,11 +486,14 @@ func TestRelationFailures(t *testing.T) {
 	control := controlMode(t)
 	const maxInt, minInt = math.MaxInt, math.MinInt
 	type request struct {
-		name   string
-		run    func() (any, error)
-		must   func()
-		zero   any
-		causes []error
+		name string
+		run  func() (any, error)
+		must func()
+		zero any
+		// nilFunc marks a result of function type: Testify cannot compare
+		// function values, so such a result is checked with assert.Nil.
+		nilFunc bool
+		causes  []error
 	}
 	to := func(name string, m mode.Mode, from, target int, causes ...error) request {
 		return request{name: name, zero: modal.Relation{}, causes: causes,
@@ -503,7 +506,7 @@ func TestRelationFailures(t *testing.T) {
 			must: func() { modal.MustRelationsFrom(m, from) }}
 	}
 	table := func(name string, m mode.Mode, causes ...error) request {
-		return request{name: name, zero: iter.Seq[[]modal.Relation](nil), causes: causes,
+		return request{name: name, nilFunc: true, causes: causes,
 			run:  func() (any, error) { return modal.RelationTable(m) },
 			must: func() { modal.MustRelationTable(m) }}
 	}
@@ -556,7 +559,11 @@ func TestRelationFailures(t *testing.T) {
 			t.Parallel()
 			got, err := tt.run()
 			checkModalError(t, err, tt.causes...)
-			assert.Equal(t, tt.zero, got, "no partial result on failure")
+			if tt.nilFunc {
+				assert.Nil(t, got, "a nil iterator on failure")
+			} else {
+				assert.Equal(t, tt.zero, got, "no partial result on failure")
+			}
 			checkMustPanic(t, err, tt.must)
 		})
 	}
