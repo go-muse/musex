@@ -18,7 +18,19 @@ type LetterPlan struct {
 	Cycle   int
 }
 
-// Positions describes the sizes of a mode in a given musical system.
+// Positions describes the sizes of a mode in a given musical system. It is
+// ordinary data that callers can read and change.
+//
+// The offset methods DegreesAt, OccupiedSteps, OccupiedStepsBackward, StepsIn,
+// and StepsInBackward read only Degrees: the element at index i is the number
+// of degree i+1, its offset in positions of the system from degree 1. Adjacent,
+// Cycle, and HasCycle are neither used nor checked, and the value need not
+// match any mode; unsorted, repeated, and negative numbers are allowed. The
+// cycle boundary is never crossed: degrees of other cycles are not searched.
+// None of these methods fails. Every degree list they return, including each
+// list yielded by an iterator, is a new slice owned by the caller; an empty
+// list is a non-nil slice of length zero. The methods have value receivers, so
+// they can be called on a temporary result such as m.MustNumbers(sys).
 type Positions struct {
 	Degrees  []system.Step
 	Adjacent []system.Step
