@@ -376,3 +376,58 @@ func TestReadingsFreeContentsWorkBound(t *testing.T) {
 		assertExactReading(t, ds, reading)
 	}
 }
+
+// Readings returns all exact readings within the options. With FreeContents,
+// six sounding 1/12 under 3:2 and 6:4 without nesting have exactly six: one
+// group over all six values, 6:4 in eighths or 3:2 in quarters, or two groups
+// over three values each, each one 3:2 in eighths or 6:4 in sixteenths.
+func TestReadingsFreeContentsAcceptanceSet(t *testing.T) {
+	t.Parallel()
+
+	triplet := tuplet.Triplet()
+	sextuplet := tuplet.Sextuplet()
+	eighth := wr(duration.Eighth, 0)
+
+	eighths := func(n int, chain ...tuplet.Tuplet) []duration.Content {
+		contents := make([]duration.Content, n)
+		for i := range contents {
+			contents[i] = wcon(duration.Eighth, 0, chain...)
+		}
+
+		return contents
+	}
+
+	tripletHalf := gcon(triplet, eighth, eighths(3, triplet)...)
+	sextupletHalf := gcon(sextuplet, wr(duration.Sixteenth, 0), eighths(3, sextuplet)...)
+
+	want := [][]duration.Content{
+		{gcon(sextuplet, eighth, eighths(6, sextuplet)...)},
+		{gcon(triplet, wr(duration.Quarter, 0), eighths(6, triplet)...)},
+		{tripletHalf, tripletHalf},
+		{tripletHalf, sextupletHalf},
+		{sextupletHalf, tripletHalf},
+		{sextupletHalf, sextupletHalf},
+	}
+
+	ds := repeatDur(6, 1, 12)
+	readings, err := duration.Readings(ds, duration.ReadingsOptions{
+		Allowed:      []tuplet.Tuplet{triplet, sextuplet},
+		MaxReadings:  manyReadings,
+		FreeContents: true,
+	})
+	require.NoError(t, err)
+
+	for _, w := range want {
+		assert.True(t, hasReading(readings, w),
+			"missing reading %s among:\n%s", describeContents(w), describeReadings(readings))
+	}
+
+	for _, r := range readings {
+		got := r.MustContents()
+		assert.True(t, slices.ContainsFunc(want, func(w []duration.Content) bool { return contentsEqual(got, w) }),
+			"unexpected reading %s", describeContents(got))
+		assertExactReading(t, ds, r)
+	}
+
+	assert.Len(t, readings, len(want), "readings:\n%s", describeReadings(readings))
+}
