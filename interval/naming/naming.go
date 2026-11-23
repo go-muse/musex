@@ -41,6 +41,19 @@ func (e Entry) valid() bool {
 	return e.catalog.language != 0 && ((e.isGeneric && e.generic.IsValid()) || (!e.isGeneric && e.specific.IsValid()))
 }
 
+// IsGeneric reports whether the entry selects a generic size rather than a
+// specific interval. The zero entry reports false.
+func (e Entry) IsGeneric() bool { return e.isGeneric }
+
+// Generic returns the selected size, or the unset size for a specific entry
+// and for the zero entry.
+func (e Entry) Generic() interval.Generic { return e.generic }
+
+// Interval returns the selected specific interval, or the unset interval for
+// a generic entry and for the zero entry. The direction of the subject is
+// preserved; the dictionary names omit it.
+func (e Entry) Interval() interval.Interval { return e.specific }
+
 // genericName derives size words from the same dictionary as the legacy
 // names, so additions and corrections have a single source of truth.
 func (c Catalog) genericName(g interval.Generic) (string, bool, error) {
@@ -171,4 +184,72 @@ func (c Catalog) MustParseInterval(text string) interval.Interval {
 		panic(err)
 	}
 	return i
+}
+
+// Entries returns the whole vocabulary of the catalog as a new slice, in a
+// deterministic order: the generic sizes 1 to 15 in ascending order, then
+// the named specific intervals in ascending size; within one size the
+// qualities follow the order perfect, major, minor, neutral, then augmented
+// and diminished in multiplicity order 1, 2, 3, augmented before diminished
+// at each multiplicity. Only the entries with a full name in this language
+// are included, so the neutral third is present in Russian without a short
+// form, and the neutral second is present in English with both forms.
+//
+// Every returned entry has a full name (Entry.NameFull); its short form
+// (Entry.Name) is present exactly when the language gives one. The specific
+// subjects are ascending; direction belongs to the canonical interval text,
+// not to the dictionary. The enumeration agrees with the naming and parsing
+// APIs: ParseInterval of a full name returns the subject of the entry, and
+// ParseGeneric of a generic full name returns its size.
+//
+// Errors: interval.ErrUnset for the zero catalog.
+func (c Catalog) Entries() ([]Entry, error) {
+	if c.language == 0 {
+		return nil, interval.ErrUnset
+	}
+
+	out := make([]Entry, 0, 128)
+
+	for n := 1; n <= 15; n++ {
+		out = append(out, c.Generic(interval.MustNewGeneric(n)))
+	}
+
+	for n := 1; n <= 15; n++ {
+		for _, q := range []interval.Quality{interval.Perfect, interval.Major, interval.Minor, interval.Neutral} {
+			i, err := interval.New(q, n)
+			if err != nil {
+				continue
+			}
+
+			e := c.Specific(i)
+			if _, ok := e.MustNameFull(); ok {
+				out = append(out, e)
+			}
+		}
+
+		for mult := 1; mult <= 3; mult++ {
+			for _, q := range []interval.Quality{interval.Augmented, interval.Diminished} {
+				i, err := interval.NewMultiple(mult, q, n)
+				if err != nil {
+					continue
+				}
+
+				e := c.Specific(i)
+				if _, ok := e.MustNameFull(); ok {
+					out = append(out, e)
+				}
+			}
+		}
+	}
+
+	return out, nil
+}
+
+// MustEntries panics with the error returned by Entries.
+func (c Catalog) MustEntries() []Entry {
+	entries, err := c.Entries()
+	if err != nil {
+		panic(err)
+	}
+	return entries
 }
