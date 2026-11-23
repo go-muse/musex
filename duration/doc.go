@@ -135,19 +135,26 @@
 //
 // [Group] is a written tuplet group: a tuplet, a written unit, and contents
 // ([Content], a written duration or a nested group) whose sounding durations
-// fill at most the group span. [NewGroup] builds one; Span, Shortfall, and
-// Spans expose the total span, the unfilled part, and the half-open sounding
-// spans of the contents. Adjacent and nested groups stay distinguishable:
-// one 6:4 group is not two 3:2 groups over the same notes. The contents are
-// written durations; whether a value is a note or a rest belongs to package
-// event.
+// fill at most the group span. The contents are given under the chain of the
+// group — the chain of the unit extended by the tuplet — and [NewGroup]
+// rejects any other chain, so a group labeled 3:2 holds only values written
+// in 3:2. Span, Shortfall, and Spans expose the total span, the unfilled
+// part, and the half-open sounding spans of the contents. Adjacent and nested
+// groups stay distinguishable: one 6:4 group is not two 3:2 groups over the
+// same notes. The contents are written durations; whether a value is a note
+// or a rest belongs to package event.
 //
 // [Readings] finds the exact rhythmic readings of an ordered sequence of
 // sounding durations: each duration gets one written value, in order, inside
 // its chain of groups; groups are filled exactly and use the allowed ratios;
-// durations that need no tuplet stay outside groups. [ReadingsOptions] bounds
-// the ratios, the notation, the nesting depth (no nesting by default), and
-// the number of results. No reading is an empty result, not an error.
+// durations that need no tuplet stay outside groups. By default a group holds
+// exactly the actual count of values; FreeContents lets it hold any number
+// whose written sum is the actual count times the unit. The unit of a nested
+// group is written under the chain of the enclosing group.
+// [ReadingsOptions] bounds the ratios, the notation, the nesting depth (no
+// nesting by default), and the number of results; the work of a call is
+// bounded independently of the result count. No reading is an empty result,
+// not an error.
 //
 // # Positions
 //

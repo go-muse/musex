@@ -18,13 +18,20 @@ import (
 // [MaxParts]. MaxDepth is the largest nesting depth of groups; 0 (the default)
 // means no nesting. MaxReadings is the largest number of readings returned;
 // 0 means 256.
+//
+// FreeContents lets a group hold any number of values whose written sum is
+// the actual count times the unit, instead of exactly the actual count of
+// values. It is off by default. With it on, the set of readings grows: a
+// quarter and an eighth sounding 1/6 and 1/12 gain a 3:2 group in eighths,
+// and imported rhythms that do not split into equal parts gain readings.
 type ReadingsOptions struct {
-	Allowed     []tuplet.Tuplet
-	Longest     Base
-	MaxDots     int
-	MaxParts    int
-	MaxDepth    int
-	MaxReadings int
+	Allowed      []tuplet.Tuplet
+	Longest      Base
+	MaxDots      int
+	MaxParts     int
+	MaxDepth     int
+	MaxReadings  int
+	FreeContents bool
 }
 
 // Reading is one exact rhythmic reading of a sequence of sounding durations:
@@ -64,15 +71,15 @@ func (r Reading) Equal(other Reading) bool {
 			if !a.group.Equal(*b.group) {
 				return false
 			}
-		} else if a.written != b.written {
+		} else if !a.written.Equal(b.written) {
 			return false
 		}
 	}
 	return true
 }
 
-// maxSearchNodes bounds the work of one Readings call.
-const maxSearchNodes = 100000
+// maxSearchCovers bounds the number of covers produced by one Readings call.
+const maxSearchCovers = 100000
 
 // defaultMaxReadings is the result bound when MaxReadings is 0.
 const defaultMaxReadings = 256
@@ -81,18 +88,26 @@ const defaultMaxReadings = 256
 // durations ds under opts.
 //
 // A reading covers ds in order by items: a written value outside any group,
-// or a group of an allowed ratio. A group of ratio t covers exactly t.Actual()
-// consecutive input durations, one written value each under the chain extended
-// by t, and is filled exactly: the sum of their sounding durations is the
-// group span, and the written unit of the group is that sum divided by
-// t.Normal(), required to be one written sign. Durations that need no tuplet
-// stay outside groups. With MaxDepth > 0 an item of a group may be a nested
-// group over a consecutive part of the inputs, up to that depth.
+// or a group of an allowed ratio. By default a group of ratio t covers exactly
+// t.Actual() consecutive input durations, one written value each under the
+// chain extended by t; with FreeContents it covers any number of consecutive
+// durations whose written values sum to t.Actual() times the unit. A group is
+// filled exactly: the sum of the sounding durations of its contents is the
+// group span, and its written unit is that sum divided by t.Normal(), required
+// to be one written sign under the enclosing chain. Durations that need no
+// tuplet stay outside groups. With MaxDepth > 0 an item of a group may be a
+// nested group over a consecutive part of the inputs, up to that depth; the
+// unit of a nested group is written under the chain of the enclosing group.
 //
 // The readings are ordered deterministically: fewer groups first, then
 // lexicographically by item kind (written values before groups), ratio, unit,
 // and contents. At most MaxReadings readings are returned. No reading is an
 // empty result, not an error.
+//
+// The work of a call is bounded independently of the result count: covers
+// longer than MaxParts are pruned during the search, and at most a fixed
+// number of covers is produced; exceeding that bound fails with
+// ErrTooManyParts rather than exhausting time or memory.
 //
 // In order of checking, it returns an error wrapping ErrInvalidArgument for
 // an empty list, an unset duration, a negative MaxDots, MaxDepth or
@@ -133,17 +148,18 @@ func Readings(ds []Duration, opts ReadingsOptions) ([]Reading, error) {
 	}
 
 	s := &readingSearch{
-		ds:       ds,
-		allowed:  slices.Clone(opts.Allowed),
-		longest:  longest,
-		maxDots:  opts.MaxDots,
-		maxParts: maxParts,
-		maxDepth: opts.MaxDepth,
-		cache:    make(map[string][]coverResult),
+		ds:           ds,
+		allowed:      slices.Clone(opts.Allowed),
+		longest:      longest,
+		maxDots:      opts.MaxDots,
+		maxParts:     maxParts,
+		maxDepth:     opts.MaxDepth,
+		freeContents: opts.FreeContents,
+		cache:        make(map[string][]coverResult),
 	}
 
 	covers := s.coverAny(0, 0, nil)
-	if s.nodes > maxSearchNodes {
+	if s.exceeded {
 		return nil, simpleError(ErrTooManyParts, op)
 	}
 
@@ -166,14 +182,26 @@ func MustReadings(ds []Duration, opts ReadingsOptions) []Reading {
 }
 
 type readingSearch struct {
-	ds       []Duration
-	allowed  []tuplet.Tuplet
-	longest  Base
-	maxDots  int
-	maxParts int
-	maxDepth int
-	nodes    int
-	cache    map[string][]coverResult
+	ds           []Duration
+	allowed      []tuplet.Tuplet
+	longest      Base
+	maxDots      int
+	maxParts     int
+	maxDepth     int
+	freeContents bool
+	work         int
+	exceeded     bool
+	cache        map[string][]coverResult
+}
+
+// produced records one produced cover toward the work bound.
+func (s *readingSearch) produced() bool {
+	s.work++
+	if s.work > maxSearchCovers {
+		s.exceeded = true
+		return false
+	}
+	return true
 }
 
 type coverResult struct {
@@ -198,8 +226,7 @@ func (s *readingSearch) coverExactly(i, depth, n int, chain []tuplet.Tuplet) []c
 // items when n < 0. Each result records the inputs consumed and the written
 // values used. Covers are cached by position, depth, count, and chain.
 func (s *readingSearch) cover(i, depth, n int, chain []tuplet.Tuplet) []coverResult {
-	s.nodes++
-	if s.nodes > maxSearchNodes {
+	if s.exceeded {
 		return nil
 	}
 	if n < 0 {
@@ -225,6 +252,9 @@ func (s *readingSearch) cover(i, depth, n int, chain []tuplet.Tuplet) []coverRes
 	// One written value for ds[i] under chain, then the remaining items.
 	if w, ok := s.signFor(s.ds[i], chain); ok {
 		for _, rest := range s.cover(i+1, depth, n-1, chain) {
+			if 1+rest.parts > s.maxParts || !s.produced() {
+				continue
+			}
 			out = append(out, coverResult{
 				items: append([]Content{WrittenContent(w)}, rest.items...),
 				used:  1 + rest.used,
@@ -233,24 +263,33 @@ func (s *readingSearch) cover(i, depth, n int, chain []tuplet.Tuplet) []coverRes
 		}
 	}
 
-	// A group of an allowed ratio: one item of this cover, whose contents are
-	// exactly the actual count parts at depth+1. A group at depth d is nested
-	// d levels; MaxDepth bounds that level, so top-level groups are allowed
-	// with MaxDepth 0 and nesting needs MaxDepth > 0.
+	// A group of an allowed ratio: one item of this cover. Its contents are
+	// the actual count parts at depth+1, or any number of parts with
+	// FreeContents. A group at depth d is nested d levels; MaxDepth bounds
+	// that level, so top-level groups are allowed with MaxDepth 0 and nesting
+	// needs MaxDepth > 0.
 	if depth <= s.maxDepth {
 		for _, t := range s.allowed {
 			actual, normal := t.MustPair()
 			innerChain := append(slices.Clone(chain), t)
-			inner := s.coverExactly(i, depth+1, actual, innerChain)
+			var inner []coverResult
+			if s.freeContents {
+				inner = s.coverAny(i, depth+1, innerChain)
+			} else {
+				inner = s.coverExactly(i, depth+1, actual, innerChain)
+			}
 			for _, c := range inner {
-				if c.used == 0 {
+				if c.used == 0 || c.parts > s.maxParts {
 					continue
 				}
-				g, ok := s.groupOf(t, normal, i, c)
+				g, ok := s.groupOf(t, normal, i, c, chain)
 				if !ok {
 					continue
 				}
 				for _, rest := range s.cover(i+c.used, depth, n-1, chain) {
+					if c.parts+rest.parts > s.maxParts || !s.produced() {
+						continue
+					}
 					out = append(out, coverResult{
 						items: append([]Content{GroupContent(g)}, rest.items...),
 						used:  c.used + rest.used,
@@ -266,8 +305,10 @@ func (s *readingSearch) cover(i, depth, n int, chain []tuplet.Tuplet) []coverRes
 }
 
 // groupOf builds the exactly filled group of ratio t over the inputs consumed
-// by the content cover c, with the unit derived from their sounding sum.
-func (s *readingSearch) groupOf(t tuplet.Tuplet, normal, i int, c coverResult) (Group, bool) {
+// by the content cover c. The unit is derived from their sounding sum and
+// written under the enclosing chain, so a nested group carries the chain of
+// its parent.
+func (s *readingSearch) groupOf(t tuplet.Tuplet, normal, i int, c coverResult, chain []tuplet.Tuplet) (Group, bool) {
 	sum := fraction.FromInt(0)
 	for k := 0; k < c.used; k++ {
 		var err error
@@ -280,7 +321,19 @@ func (s *readingSearch) groupOf(t tuplet.Tuplet, normal, i int, c coverResult) (
 	if err != nil {
 		return Group{}, false
 	}
-	unit, ok := s.sign(unitValue, nil)
+	// unitValue is the sounding value of the unit under the enclosing chain;
+	// the sign search takes the plain written value.
+	coef, err := checkedCoefficient("Readings", chain)
+	if err != nil {
+		return Group{}, false
+	}
+	plain := ratOf(unitValue)
+	plain.Quo(plain, coef)
+	unitPlain, ok := fromRat(plain)
+	if !ok {
+		return Group{}, false
+	}
+	unit, ok := s.sign(unitPlain, chain)
 	if !ok {
 		return Group{}, false
 	}
