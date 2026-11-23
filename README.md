@@ -101,6 +101,10 @@ Definitions may differ from conventional ones.
 
 **[Voice leading](#analyze-voice-leading)** compares existing melodic lines: written and chromatic intervals, kinds of two-part motion, perfect parallels, consecutive perfect families, direct arrivals, crossings, and overlaps. A separate, explicit assessment checks one Open Music Theory first-species rule.
 
+**[Hindemith analysis](guide/packages/problemsolving/hindemith.md)** reads dyads, voiced chords, and progressions through Hindemith's harmonic theory: Series II positions and interval roots, the chord groups I-VI with subgroups, bass and root with the intra-chord intervals behind them, and harmonic fluctuation. The model and its twelve-tone equal-temperament assumption are documented; the result is an analysis under stated rules, not a heard center.
+
+**[Sonance](guide/packages/problemsolving/sonance.md)** scores the interval inventory of a pitch-class set or of actual pitch pairs under an explicit weight profile: Huron's published aggregate dyadic consonance weights, or caller-supplied weights that can distinguish a fourth from a fifth. Every contribution is exposed.
+
 **Chord** is a group of notes that sound together. It keeps the notes in their order of record, repeats included, and has no duration and no harmonic name.
 
 **Tempo map** is an immutable timeline of tempo changes and explicit fermata holds at positions or measure addresses. It distinguishes main and current tempo, supports jumps, gradual changes, a tempo, Tempo I, and metric modulation, and converts seconds to and from positions and measures, with one explicitly selected rounding for the complete result, to decimal places or to any step.
@@ -127,6 +131,8 @@ Definitions may differ from conventional ones.
 - **Choose a collection and try a change.** Use `problemsolving/scalechoice` to compare collection groups and readings, filter them by added notes, or branch into a replacement trial with observed-set differences and local written/chromatic motions. Analyses snapshot source contexts and preserve the original material.
 - **Write and analyze a melodic line.** Use `voice` to build a monophonic line of sounds and rests with a name and roles, read positions and the element at a moment without measures, get seconds from a tempo map, melodic intervals, the range, the ambitus, and the tessitura against a singing voice or an instrument, and build transpositions, doublings, exact imitations, inversions, and retrogrades.
 - **Inspect how parts move together.** Use `problemsolving/voiceleading` to analyze two or more existing lines on independent pairwise grids. Keep the original notes and element boundaries, choose interval-family filters explicitly, and supply nominal order when looking for crossings or overlaps.
+- **Classify chords and progressions by Hindemith.** Use `problemsolving/hindemith` to read a dyad's Series II position and root, a voiced chord's group, subgroup, bass, and root with its intra-chord evidence, and a progression's harmonic fluctuation. Doublings and listing order do not decide the root; groups V and VI report no root in isolation.
+- **Score consonance of sets and voicings.** Use `problemsolving/sonance` to score a pitch-class set's interval-class vector or the actual pitch pairs of a voicing under Huron's published weights or a caller-supplied profile, and inspect which intervals drive the value.
 
 ### Build a voice event
 

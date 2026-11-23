@@ -2,6 +2,11 @@
 // dictionaries. Dictionary names omit direction; interval.Parse and String
 // remain the directed canonical representation. Legacy interval name methods
 // retain their historical behavior.
+//
+// Catalog.Entries enumerates the whole dictionary in a documented
+// deterministic order, and Entry.IsGeneric, Entry.Generic and Entry.Interval
+// read the subject of an entry. Every enumerated entry has a full name; the
+// short form is present exactly when the language gives one.
 package naming
 
 import (

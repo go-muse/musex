@@ -1,9 +1,32 @@
 package hindemith
 
 import (
+	"sort"
+
 	"github.com/go-muse/musex/note"
 	"github.com/go-muse/musex/system"
 )
+
+// indeterminateTriad reports whether the distinct pitch classes are three
+// tones a major third or a perfect fourth apart, in any rotation: the
+// augmented triad and the perfect quartal triad of group V.
+func indeterminateTriad(pcs map[int]bool) bool {
+	if len(pcs) != 3 {
+		return false
+	}
+	for base := range pcs {
+		rels := make([]int, 0, 3)
+		for x := range pcs {
+			rels = append(rels, ((x-base)%12+12)%12)
+		}
+		sort.Ints(rels)
+		if (rels[0] == 0 && rels[1] == 4 && rels[2] == 8) ||
+			(rels[0] == 0 && rels[1] == 5 && rels[2] == 10) {
+			return true
+		}
+	}
+	return false
+}
 
 // AnalyzeDyad measures the interval from the note from to the note to in
 // sys and returns its Series II position and root. The tritone has no root.
@@ -11,8 +34,10 @@ import (
 //
 // Errors, in this order: ErrUnset for a nil or unset system or an unset
 // note; ErrUnsupportedSystem for a system that is not twelve classes with
-// chromatic unit 1; ErrNoOctave; ErrOutOfRange together with
-// system.ErrOutOfRange when the distance does not fit.
+// chromatic unit 1; ErrNoOctave; ErrInadmissible together with
+// system.ErrInadmissible for a name the system does not admit;
+// ErrOutOfRange together with system.ErrOutOfRange when the distance does
+// not fit.
 func AnalyzeDyad(sys *system.System, from, to note.Note) (Dyad, error) {
 	const op = "AnalyzeDyad"
 
@@ -20,6 +45,9 @@ func AnalyzeDyad(sys *system.System, from, to note.Note) (Dyad, error) {
 		return Dyad{}, err
 	}
 	if err := checkNotes(op, []note.Note{from, to}); err != nil {
+		return Dyad{}, err
+	}
+	if err := checkAdmitted(op, sys, []note.Note{from, to}); err != nil {
 		return Dyad{}, err
 	}
 
@@ -149,6 +177,22 @@ func (c Chord) HasRoot() bool { return c.hasRoot }
 // Root returns the chord root, or the unset note when there is none.
 func (c Chord) Root() note.Note { return c.root }
 
+// Equal reports whether c and other classify the same notes in the same
+// order to the same group, subgroup, bass and root. Two unset chords are
+// not equal, as for note.Note.Equal.
+func (c Chord) Equal(other Chord) bool {
+	if len(c.notes) != len(other.notes) || c.group != other.group || c.sub != other.sub ||
+		c.hasRoot != other.hasRoot || !c.bass.Equal(other.bass) || !c.root.Equal(other.root) {
+		return false
+	}
+	for i := range c.notes {
+		if !c.notes[i].Equal(other.notes[i]) {
+			return false
+		}
+	}
+	return true
+}
+
 // Value returns the position of the class in the fluctuation order I.1,
 // I.2, II.a, II.b1, II.b2, II.b3, III.1, III.2, IV.1, IV.2, V, VI: 1 to 12,
 // or 0 for an unset chord. Higher values mean higher harmonic tension.
@@ -187,8 +231,9 @@ func (c Chord) Value() int {
 //
 // Errors, in this order: ErrUnset for a nil or unset system;
 // ErrUnsupportedSystem; ErrTooFewNotes for fewer than two notes; ErrUnset
-// for an unset note; ErrNoOctave; ErrOutOfRange together with
-// system.ErrOutOfRange.
+// for an unset note; ErrNoOctave; ErrInadmissible together with
+// system.ErrInadmissible for a name the system does not admit;
+// ErrOutOfRange together with system.ErrOutOfRange.
 func AnalyzeChord(sys *system.System, notes []note.Note) (Chord, error) {
 	const op = "AnalyzeChord"
 
@@ -199,6 +244,9 @@ func AnalyzeChord(sys *system.System, notes []note.Note) (Chord, error) {
 		return Chord{}, opError(op, ErrTooFewNotes)
 	}
 	if err := checkNotes(op, notes); err != nil {
+		return Chord{}, err
+	}
+	if err := checkAdmitted(op, sys, notes); err != nil {
 		return Chord{}, err
 	}
 
@@ -218,11 +266,22 @@ func AnalyzeChord(sys *system.System, notes []note.Note) (Chord, error) {
 	}
 	out.bass = bass
 
-	var tritones int
+	// Pitch classes relative to the first note identify doublings and
+	// distinct tritones independently of the listing order.
+	rel := make([]int, len(notes))
+	pcs := make(map[int]bool, len(notes))
+	for i, n := range notes {
+		s, err := distance(op, sys, notes[0], n)
+		if err != nil {
+			return Chord{}, err
+		}
+		rel[i] = ((s % 12) + 12) % 12
+		pcs[rel[i]] = true
+	}
+
 	var seconds, sevenths, minorSeconds, majorSevenths, majorSeconds bool
-	var thirdsSixths bool
-	onlyThirdsSixths := true
 	onlyTritoneThirdsSixths := true
+	tritonePairs := make(map[[2]int]bool)
 
 	for i := range notes {
 		for j := i + 1; j < len(notes); j++ {
@@ -233,10 +292,7 @@ func AnalyzeChord(sys *system.System, notes []note.Note) (Chord, error) {
 			d := classify(notes[i], notes[j], s)
 			out.dyads = append(out.dyads, d)
 
-			class := d.entry.series
-			switch class {
-			case 13:
-				tritones++
+			switch d.entry.series {
 			case 11:
 				minorSeconds = true
 				seconds = true
@@ -255,12 +311,12 @@ func AnalyzeChord(sys *system.System, notes []note.Note) (Chord, error) {
 				semis = -semis
 			}
 			semis %= 12
-			switch semis {
-			case 4, 8:
-				thirdsSixths = true
-			case 0:
-			default:
-				onlyThirdsSixths = false
+			if semis == 6 {
+				a, b := rel[i], rel[j]
+				if a > b {
+					a, b = b, a
+				}
+				tritonePairs[[2]int{a, b}] = true
 			}
 			switch semis {
 			case 3, 6, 9:
@@ -270,9 +326,9 @@ func AnalyzeChord(sys *system.System, notes []note.Note) (Chord, error) {
 		}
 	}
 
-	hasTritone := tritones > 0
+	hasTritone := len(tritonePairs) > 0
 	switch {
-	case !hasTritone && onlyThirdsSixths && thirdsSixths:
+	case !hasTritone && indeterminateTriad(pcs):
 		out.group, out.sub = GroupV, SubNone
 	case !hasTritone && !seconds && !sevenths:
 		out.group = GroupI
@@ -292,15 +348,44 @@ func AnalyzeChord(sys *system.System, notes []note.Note) (Chord, error) {
 
 	best := Dyad{}
 	for _, d := range out.dyads {
-		if d.entry.series == 1 {
-			continue // unison pairs carry no root information
+		if d.entry.series <= 2 {
+			continue // unison and octave pairs are doublings: no root information
 		}
-		if !best.IsValid() || d.entry.series < best.entry.series {
+		if !best.IsValid() {
 			best = d
+			continue
 		}
+		if d.entry.series != best.entry.series {
+			if d.entry.series < best.entry.series {
+				best = d
+			}
+			continue
+		}
+		// Equal best intervals: the lower one decides, then the upper.
+		pl, _ := d.low.Pitch()
+		bl, _ := best.low.Pitch()
+		r, err := sys.Compare(pl, bl)
+		if err != nil {
+			return Chord{}, rangeError(op, err)
+		}
+		if r > 0 {
+			continue
+		}
+		if r == 0 {
+			pu, _ := d.up.Pitch()
+			bu, _ := best.up.Pitch()
+			r, err = sys.Compare(pu, bu)
+			if err != nil {
+				return Chord{}, rangeError(op, err)
+			}
+			if r >= 0 {
+				continue
+			}
+		}
+		best = d
 	}
 	if !best.IsValid() {
-		// Only unison pairs: the doubled note is its own root.
+		// Only doubling pairs: the doubled note is its own root.
 		out.best, out.root, out.hasRoot = out.dyads[0], bass, true
 	} else {
 		out.best, out.root, out.hasRoot = best, best.root, true
@@ -316,7 +401,7 @@ func AnalyzeChord(sys *system.System, notes []note.Note) (Chord, error) {
 	switch out.group {
 	case GroupII:
 		switch {
-		case tritones > 1:
+		case len(tritonePairs) > 1:
 			out.sub = SubB3
 		case !majorSeconds && rootInBass:
 			out.sub = SubA

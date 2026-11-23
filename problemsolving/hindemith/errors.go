@@ -24,6 +24,10 @@ var (
 	// ErrTooFewNotes indicates a chord of fewer than two notes.
 	ErrTooFewNotes = errors.New("hindemith: chord needs at least two notes")
 
+	// ErrInadmissible indicates a note name that the system does not admit,
+	// wrapping system.ErrInadmissible.
+	ErrInadmissible = errors.New("hindemith: inadmissible note name")
+
 	// ErrOutOfRange indicates a distance that does not fit, wrapping
 	// system.ErrOutOfRange.
 	ErrOutOfRange = errors.New("hindemith: result out of range")
@@ -35,6 +39,10 @@ func opError(op string, sentinel error) error {
 
 func rangeError(op string, cause error) error {
 	return fmt.Errorf("hindemith: %s: %w: %w", op, ErrOutOfRange, cause)
+}
+
+func inadmissibleError(op string, cause error) error {
+	return fmt.Errorf("hindemith: %s: %w: %w", op, ErrInadmissible, cause)
 }
 
 func must[T any](v T, err error) T {

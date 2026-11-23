@@ -18,7 +18,7 @@ func ExampleScoreSet() {
 	fmt.Printf("%.3f\n", s.Value())
 	for _, c := range s.Contributions() {
 		if c.Count() > 0 {
-			fmt.Printf("IC%d %d %.3f\n", c.IntervalClass(), c.Count(), c.Value())
+			fmt.Printf("IC%d %d %.3f\n", c.Interval(), c.Count(), c.Value())
 		}
 	}
 	// Output:
@@ -37,8 +37,29 @@ func ExampleScoreNotes() {
 		note.MustFromASPN(spelling.E(), 4, cents.Zero(), nil),
 		note.MustFromASPN(spelling.G(), 4, cents.Zero(), nil),
 	}
-	s := sonance.MustScoreNotes(system.Traditional(), ns, sonance.HuronProfile())
+	s := sonance.MustScoreNotes(system.Traditional(), ns, sonance.HuronPairProfile())
 	fmt.Printf("%.3f\n", s.Value())
 	// Output:
 	// 3.846
+}
+
+// A pair profile over the actual tempered interval distinguishes a fourth
+// from a fifth: here the fourth weighs 1 and the fifth 2.
+func ExampleNewPairProfile() {
+	weights := make([]float64, 12)
+	weights[5] = 1
+	weights[7] = 2
+	p := sonance.MustNewPairProfile(weights)
+	sys := system.Traditional()
+	fourth := sonance.MustScoreNotes(sys, []note.Note{
+		note.MustFromASPN(spelling.C(), 4, cents.Zero(), nil),
+		note.MustFromASPN(spelling.F(), 4, cents.Zero(), nil),
+	}, p)
+	fifth := sonance.MustScoreNotes(sys, []note.Note{
+		note.MustFromASPN(spelling.C(), 4, cents.Zero(), nil),
+		note.MustFromASPN(spelling.G(), 4, cents.Zero(), nil),
+	}, p)
+	fmt.Printf("%.3f %.3f\n", fourth.Value(), fifth.Value())
+	// Output:
+	// 1.000 2.000
 }

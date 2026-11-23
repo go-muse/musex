@@ -78,6 +78,15 @@ different system is not an equal shift. `TransposeNote` takes an explicit
 spelling even when moving by zero steps. A bound note must use an equal system.
 To measure a named interval, use `i.Chromatic(sys, start)`.
 
+`MeasureNotes(from, to)` and `MeasureNotesIn(sys, from, to)`, with Must
+variants, return both measurements at once: the written interval and the
+signed chromatic displacement of two notes with octaves. The bound form reads
+each distinct source once and uses the same snapshot for both results; the
+explicit-system form reads no sources. Cents do not take part; read the generic
+size from the written interval with `Generic()`. C4 to D#4 gives A2 and +3,
+C4 to E-flat4 gives m3 and +3, and D#4 to E-flat4 gives an ascending diminished
+second and 0.
+
 ## Choose quality or recover spelling
 
 `Generic` retains the complete letter size without choosing quality. Its
@@ -128,6 +137,15 @@ A valid but unavailable form returns `"", false, nil`. `ParseGeneric` and
 English short forms preserve the M/m distinction. Russian neutral thirds have
 only a full name; English neutral 2, 3, 6, 7, and 9 have both forms. Other
 fractional qualities have neither form. Sizes above 15 have no dictionary name.
+
+`Catalog.Entries()` (and `MustEntries`) enumerates the whole dictionary in a
+fixed order: the generic sizes 1 to 15, then the named specific intervals in
+ascending size, within a size perfect, major, minor, neutral, then augmented
+and diminished in multiplicity order 1 to 3. Every entry has a full name; the
+short form is present exactly when the language gives one, so the Russian
+neutral third is discoverable without a short form. `Entry.IsGeneric`,
+`Entry.Generic`, and `Entry.Interval` read the subject of an entry; the
+enumeration round-trips through `ParseGeneric` and `ParseInterval`.
 Use `interval.Parse` for directed canonical notation such as `-m3`.
 
 The historical `Interval.Name` still returns the full English name;

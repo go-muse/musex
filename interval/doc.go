@@ -105,6 +105,16 @@
 // and once when the record of the new note is replaced; if the settings of
 // the source change in between, the two reads see different settings.
 //
+// MeasureNotes and MeasureNotesIn return the written interval and the signed
+// chromatic displacement of two notes with octaves in one operation, with
+// Must variants. The bound form reads each distinct source once and uses the
+// same settings snapshot for both results; the explicit-system form reads no
+// sources. Cents do not take part, and the generic size is the size of the
+// written interval. The error order follows BetweenNotes and
+// ChromaticBetweenNotes: unset inputs, missing octaves, missing or unset
+// settings, different systems, inadmissible names, then an out-of-range
+// displacement.
+//
 // # Short notation and names
 //
 // Interval.String, Interval.MarshalText, and Interval.AppendText write the

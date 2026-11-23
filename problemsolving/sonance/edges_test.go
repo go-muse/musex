@@ -21,8 +21,8 @@ func TestDistanceOverflow(t *testing.T) {
 		note.MustFromASPN(spelling.C(), math.MaxInt, cents.Zero(), nil),
 		note.MustFromASPN(spelling.C(), math.MinInt, cents.Zero(), nil),
 	}
-	_, err := sonance.ScoreNotes(system.Traditional(), ns, sonance.HuronProfile())
+	_, err := sonance.ScoreNotes(system.Traditional(), ns, sonance.HuronPairProfile())
 	assert.ErrorIs(t, err, sonance.ErrOutOfRange)
 	assert.ErrorIs(t, err, system.ErrOutOfRange)
-	assert.Panics(t, func() { sonance.MustScoreNotes(system.Traditional(), ns, sonance.HuronProfile()) })
+	assert.Panics(t, func() { sonance.MustScoreNotes(system.Traditional(), ns, sonance.HuronPairProfile()) })
 }
