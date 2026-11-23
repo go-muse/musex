@@ -18,8 +18,10 @@ import (
 // The tests of this file pin the doubling rule: a chord is classified as if
 // it were reduced to the lowest note of every pitch class, so a repetition
 // of a present tone in unison or one or more octaves above its lowest
-// occurrence adds no interval to the classification. The doubled notes stay
-// only in the evidence: Notes and Dyads.
+// occurrence adds no interval to the classification. A pitch class is a
+// position in the system modulo 12, so a doubling may be spelled
+// differently; of two notes at one position the first input note stays.
+// The doubled notes stay only in the evidence: Notes and Dyads.
 
 // spelled formats notes for failure messages.
 func spelled(ns []note.Note) string {
@@ -335,6 +337,35 @@ func TestDoubledChordClasses(t *testing.T) {
 			[]note.Note{n(spelling.C(), 4), n(spelling.F(), 4), n(spelling.BFlat(), 4), n(spelling.F(), 5)},
 			hindemith.GroupV, hindemith.SubNone, n(spelling.C(), 4), note.Note{}, false, 11,
 		},
+		// Enharmonic doublings: the class of a tone is its position in the
+		// system modulo 12, not its spelling.
+		{
+			"diminished triad with the top doubled as F sharp an octave above",
+			[]note.Note{n(spelling.C(), 4), n(spelling.EFlat(), 4), n(spelling.GFlat(), 4), n(spelling.FSharp(), 5)},
+			hindemith.GroupVI, hindemith.SubNone, n(spelling.C(), 4), note.Note{}, false, 12,
+		},
+		{
+			// The octave argument of n counts positions from C, so B sharp
+			// with 5 is at the position of C5 and is written B♯4.
+			"major triad with the root doubled as B sharp",
+			[]note.Note{n(spelling.C(), 4), n(spelling.E(), 4), n(spelling.G(), 4), n(spelling.BSharp(), 5)},
+			hindemith.GroupI, hindemith.Sub1, n(spelling.C(), 4), n(spelling.C(), 4), true, 1,
+		},
+		{
+			"dominant seventh without fifth, seventh doubled as A sharp",
+			[]note.Note{n(spelling.C(), 3), n(spelling.E(), 3), n(spelling.BFlat(), 3), n(spelling.ASharp(), 4)},
+			hindemith.GroupII, hindemith.SubA, n(spelling.C(), 3), n(spelling.C(), 3), true, 3,
+		},
+		{
+			"minor seventh with the bass doubled as C double sharp above the seventh",
+			[]note.Note{n(spelling.D(), 3), n(spelling.C(), 4), n(spelling.CDoubleSharp(), 4)},
+			hindemith.GroupIII, hindemith.Sub1, n(spelling.D(), 3), n(spelling.D(), 3), true, 7,
+		},
+		{
+			"minor seventh with the bass doubled as E double flat above the seventh",
+			[]note.Note{n(spelling.D(), 3), n(spelling.C(), 4), n(spelling.EDoubleFlat(), 4)},
+			hindemith.GroupIII, hindemith.Sub1, n(spelling.D(), 3), n(spelling.D(), 3), true, 7,
+		},
 	}
 
 	for _, tc := range cases {
@@ -357,6 +388,39 @@ func TestDoubledChordClasses(t *testing.T) {
 			}
 			check(tc.notes)
 			permutations(tc.notes, check)
+		})
+	}
+}
+
+// TestEnharmonicUnisonKeepsTheFirstNote covers a unison of two spellings of
+// one position: it is one doubled tone, group I, and both the root and the
+// bass are the first input note, as for equal positions in Bass.
+func TestEnharmonicUnisonKeepsTheFirstNote(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name  string
+		notes []note.Note
+	}{
+		{"C sharp then D flat", []note.Note{n(spelling.CSharp(), 4), n(spelling.DFlat(), 4)}},
+		{"D flat then C sharp", []note.Note{n(spelling.DFlat(), 4), n(spelling.CSharp(), 4)}},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			c := analyzed(t, tc.notes)
+			first, second := tc.notes[0], tc.notes[1]
+			assert.Equal(t, hindemith.GroupI, c.Group())
+			assert.Equal(t, hindemith.Sub1, c.Subgroup())
+			assert.Equal(t, 1, c.Value())
+			assert.True(t, c.Bass().Equal(first), "bass %v, want %v", c.Bass(), first)
+			assert.False(t, c.Bass().Equal(second), "bass %v is the second note", c.Bass())
+			if assert.True(t, c.HasRoot()) {
+				assert.True(t, c.Root().Equal(first), "root %v, want %v", c.Root(), first)
+				assert.False(t, c.Root().Equal(second), "root %v is the second note", c.Root())
+			}
+			assertEvidence(t, c, tc.notes, spelled(tc.notes))
 		})
 	}
 }
