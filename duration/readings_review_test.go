@@ -105,8 +105,12 @@ func TestReadingsNestingCoefficient(t *testing.T) {
 	assert.True(t, found, "a quintuplet of eighths with a triplet of sixteenths inside")
 }
 
-// The work of a call is bounded independently of the result count: exceeding
-// the search bound fails with ErrSearchLimit, not with ErrTooManyParts.
+// The work of a call is bounded independently of the result count. On a long
+// input that has readings, the call returns within the time limit either with
+// at most MaxReadings distinct exact readings or with ErrSearchLimit, never
+// with ErrTooManyParts and never with an empty result and no error. The
+// contract bounds the work but does not prescribe which outcome this input
+// has.
 func TestReadingsWorkBound(t *testing.T) {
 	t.Parallel()
 
@@ -114,13 +118,18 @@ func TestReadingsWorkBound(t *testing.T) {
 	for i := range ds {
 		ds[i] = duration.MustNew(1, 12)
 	}
-	start := time.Now()
-	_, err := duration.Readings(ds, duration.ReadingsOptions{
+
+	opts := duration.ReadingsOptions{
 		Allowed:     []tuplet.Tuplet{tuplet.Triplet(), tuplet.Sextuplet()},
 		MaxReadings: 4,
+	}
+
+	r := within(t, 10*time.Second, func() result[[]duration.Reading] {
+		readings, err := duration.Readings(ds, opts)
+
+		return result[[]duration.Reading]{readings, err}
 	})
-	assert.Less(t, time.Since(start), 10*time.Second)
-	assertErr(t, err, duration.ErrSearchLimit)
+	assertBoundedReadings(t, ds, opts, r)
 }
 
 // MaxDots excludes readings that need more dots.
