@@ -20,7 +20,9 @@ apart from its inversion, a pair profile can distinguish a fourth from a
 fifth. `HuronPairProfile()` spreads the published class weights over both
 members of each class; `NewPairProfile(weights)` accepts any twelve finite
 weights. Both profiles are immutable copies with `Weights`, `Weight`,
-`IsValid`, and `Equal`; the zero value is unset.
+`IsValid`, and `Equal`; the zero value is unset. Two set profiles of one kind
+are equal when their weights are equal; two unset profiles are equal, and an
+unset profile equals no set profile, not even one of zero weights.
 
 ## Scores and contributions
 
