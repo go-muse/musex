@@ -337,8 +337,9 @@ func TestEqualIsEquivalenceOnSetValues(t *testing.T) {
 
 // twelveTone returns a system of twelve classes with the boundary letter C,
 // chromatic unit 1 and the integer alteration values, with the offsets of
-// the letters C D E F G A B. Every such system is admitted by the package
-// (ХН-П1), so the same notes may be classified differently in two of them.
+// the letters C D E F G A B. The package documentation admits any system
+// of twelve classes with chromatic unit 1, so the same notes may be
+// classified differently in two of them.
 func twelveTone(name string, offsets [letter.Count]int) *system.System {
 	return system.MustNew(system.Definition{
 		Name:        name,
@@ -420,9 +421,11 @@ func chordDiff(a, b hindemith.Chord) []string {
 	return diff
 }
 
-// TestEqualComparesTheClassification covers the criteria of Dyad.Equal and
-// Chord.Equal (ХН-П13) other than the notes. The same notes are analyzed in
-// two admitted twelve-tone systems in which exactly one criterion differs:
+// TestEqualComparesTheClassification covers the criteria of the equality
+// contract of Dyad.Equal and Chord.Equal (issue #151) other than the notes:
+// the Series II position, the group, the subgroup, the bass and the root.
+// The same notes are analyzed in two admitted twelve-tone systems in which
+// exactly one criterion differs:
 // for a dyad the Series II position or the root, for a chord the group, the
 // subgroup, the bass (with and without a root) or the root. Each case first
 // requires that exactly the named criterion differs and every other one
