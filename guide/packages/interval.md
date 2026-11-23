@@ -137,6 +137,7 @@ A valid but unavailable form returns `"", false, nil`. `ParseGeneric` and
 English short forms preserve the M/m distinction. Russian neutral thirds have
 only a full name; English neutral 2, 3, 6, 7, and 9 have both forms. Other
 fractional qualities have neither form. Sizes above 15 have no dictionary name.
+Use `interval.Parse` for directed canonical notation such as `-m3`.
 
 `Catalog.Entries()` (and `MustEntries`) enumerates the whole dictionary in a
 fixed order: the generic sizes 1 to 15, then the named specific intervals in
@@ -146,7 +147,6 @@ short form is present exactly when the language gives one, so the Russian
 neutral third is discoverable without a short form. `Entry.IsGeneric`,
 `Entry.Generic`, and `Entry.Interval` read the subject of an entry; the
 enumeration round-trips through `ParseGeneric` and `ParseInterval`.
-Use `interval.Parse` for directed canonical notation such as `-m3`.
 
 The historical `Interval.Name` still returns the full English name;
 `RussianName`, `RussianAbbreviation`, and `ParseName` also retain their released

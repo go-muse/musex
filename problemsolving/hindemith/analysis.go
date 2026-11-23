@@ -37,7 +37,8 @@ func indeterminateTriad(pcs map[int]bool) bool {
 // chromatic unit 1; ErrNoOctave; ErrInadmissible together with
 // system.ErrInadmissible for a name the system does not admit;
 // ErrOutOfRange together with system.ErrOutOfRange when the distance does
-// not fit.
+// not fit in int or is exactly math.MinInt steps, whose magnitude does not
+// fit in int.
 func AnalyzeDyad(sys *system.System, from, to note.Note) (Dyad, error) {
 	const op = "AnalyzeDyad"
 
@@ -163,8 +164,10 @@ func (c Chord) Dyads() []Dyad { return append([]Dyad(nil), c.dyads...) }
 
 // Best returns the dyad whose root is the chord root: the strongest pair of
 // the chord reduced to the lowest note of every pitch class. For a chord of
-// one doubled tone it is the first input pair of the bass. Best returns the
-// unset dyad for groups V and VI and for an unset chord.
+// one doubled tone it is the first input pair of the bass. It is always one
+// of the dyads returned by Dyads, measured in input order and equal to it
+// under Dyad.Equal. Best returns the unset dyad for groups V and VI and for
+// an unset chord.
 func (c Chord) Best() Dyad { return c.best }
 
 // Group returns the chord group, or the unset group.
@@ -253,7 +256,8 @@ func (c Chord) Value() int {
 // ErrUnsupportedSystem; ErrTooFewNotes for fewer than two notes; ErrUnset
 // for an unset note; ErrNoOctave; ErrInadmissible together with
 // system.ErrInadmissible for a name the system does not admit;
-// ErrOutOfRange together with system.ErrOutOfRange.
+// ErrOutOfRange together with system.ErrOutOfRange when the distance of a
+// pair of notes does not fit in int or is exactly math.MinInt steps.
 func AnalyzeChord(sys *system.System, notes []note.Note) (Chord, error) {
 	const op = "AnalyzeChord"
 
@@ -331,7 +335,9 @@ func AnalyzeChord(sys *system.System, notes []note.Note) (Chord, error) {
 
 	for x := range red {
 		for y := x + 1; y < len(red); y++ {
-			i, j := red[x], red[y]
+			// Measure the pair in input order so that it equals its
+			// element of the evidence returned by Chord.Dyads.
+			i, j := min(red[x], red[y]), max(red[x], red[y])
 			s := dist[i][j]
 			p := pair{dyad: classify(notes[i], notes[j], s), low: i, up: j}
 			if s < 0 {
@@ -397,20 +403,19 @@ func AnalyzeChord(sys *system.System, notes []note.Note) (Chord, error) {
 		out.best = out.dyads[max(bassIdx-1, 0)]
 	} else {
 		// The strongest interval decides; among equal best intervals the
-		// lower pair, then the upper. Positions in the reduced chord are
-		// all different, so the choice does not depend on the input order.
+		// pair with the lower bottom note. Two pairs of the reduced chord with
+		// one Series II position and one bottom note have their top notes in
+		// one pitch class, so they are the same pair: positions in the reduced
+		// chord all differ, and the choice does not depend on the input order.
 		best := pairs[0]
 		for _, p := range pairs[1:] {
-			switch {
-			case p.dyad.entry.series != best.dyad.entry.series:
+			if p.dyad.entry.series != best.dyad.entry.series {
 				if p.dyad.entry.series < best.dyad.entry.series {
 					best = p
 				}
-			case pos[p.low] != pos[best.low]:
-				if pos[p.low] < pos[best.low] {
-					best = p
-				}
-			case pos[p.up] < pos[best.up]:
+				continue
+			}
+			if pos[p.low] < pos[best.low] {
 				best = p
 			}
 		}

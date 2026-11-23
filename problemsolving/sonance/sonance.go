@@ -32,8 +32,9 @@ var (
 	// wrapping system.ErrInadmissible.
 	ErrInadmissible = errors.New("sonance: inadmissible note name")
 
-	// ErrOutOfRange indicates a distance that does not fit, wrapping
-	// system.ErrOutOfRange.
+	// ErrOutOfRange indicates a distance that does not fit in int, or a
+	// distance of exactly math.MinInt steps whose magnitude does not fit,
+	// wrapping system.ErrOutOfRange.
 	ErrOutOfRange = errors.New("sonance: result out of range")
 )
 
@@ -309,7 +310,9 @@ func MustScoreSet(s pcset.Set, p Profile) Score { return must(ScoreSet(s, p)) }
 // Errors, in this order: ErrUnset for an unset profile, a nil or unset
 // system or an unset note; ErrUnsupportedSystem; ErrNoOctave;
 // ErrInadmissible together with system.ErrInadmissible for a name the
-// system does not admit; ErrOutOfRange together with system.ErrOutOfRange.
+// system does not admit; ErrOutOfRange together with system.ErrOutOfRange
+// when the distance of a pair does not fit in int or is exactly math.MinInt
+// steps, whose magnitude does not fit in int.
 func ScoreNotes(sys *system.System, notes []note.Note, p PairProfile) (Score, error) {
 	const op = "ScoreNotes"
 
@@ -348,6 +351,9 @@ func ScoreNotes(sys *system.System, notes []note.Note, p PairProfile) (Score, er
 				return Score{}, rangeError(op, err)
 			}
 			d := int(s)
+			if d == math.MinInt {
+				return Score{}, rangeError(op, system.ErrOutOfRange)
+			}
 			if d < 0 {
 				d = -d
 			}
