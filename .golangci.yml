@@ -426,6 +426,25 @@ linters:
             - github.com/go-muse/musex/system$
             - github.com/go-muse/musex/note$
             - github.com/go-muse/musex/pitch$
+        problemsolving-hindemith:
+          list-mode: strict
+          files:
+            - "**/problemsolving/hindemith/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/note$
+            - github.com/go-muse/musex/system$
+        problemsolving-sonance:
+          list-mode: strict
+          files:
+            - "**/problemsolving/sonance/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/go-muse/musex/note$
+            - github.com/go-muse/musex/pcset$
+            - github.com/go-muse/musex/system$
         common-fraction:
           list-mode: strict
           files:

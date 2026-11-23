@@ -37,15 +37,26 @@ var octaveEntry = seriesEntry{"octave", 2, true, true}
 // and its root, when the interval has one. The zero Dyad is unset.
 type Dyad struct {
 	from, to note.Note
+	low, up  note.Note
 	entry    seriesEntry
 	root     note.Note
 }
 
-// From returns the lower input note of the measurement as given.
+// From returns the first argument of the measurement, which is the lower
+// note only when the interval ascends.
 func (d Dyad) From() note.Note { return d.from }
 
-// To returns the upper input note of the measurement as given.
+// To returns the second argument of the measurement, which is the upper
+// note only when the interval ascends.
 func (d Dyad) To() note.Note { return d.to }
+
+// Equal reports whether d and other measure the same ordered pair of notes
+// to the same Series II interval with the same root. Two unset dyads are
+// not equal, as for note.Note.Equal.
+func (d Dyad) Equal(other Dyad) bool {
+	return d.from.Equal(other.from) && d.to.Equal(other.to) &&
+		d.entry.series == other.entry.series && d.root.Equal(other.root)
+}
 
 // IsValid reports whether the dyad was analyzed.
 func (d Dyad) IsValid() bool { return d.entry.series != 0 }
@@ -91,6 +102,20 @@ func checkNotes(op string, ns []note.Note) error {
 	return nil
 }
 
+// checkAdmitted rejects note names that sys does not admit.
+func checkAdmitted(op string, sys *system.System, ns []note.Note) error {
+	for _, n := range ns {
+		ok, err := sys.Admits(n.Spelling())
+		if err != nil {
+			return opError(op, ErrUnset)
+		}
+		if !ok {
+			return inadmissibleError(op, system.ErrInadmissible)
+		}
+	}
+	return nil
+}
+
 // distance returns the signed distance in steps from a to b.
 func distance(op string, sys *system.System, a, b note.Note) (int, error) {
 	pa, _ := a.Pitch()
@@ -113,15 +138,15 @@ func classify(a, b note.Note, s int) Dyad {
 		entry = octaveEntry
 	}
 	out := Dyad{from: a, to: b, entry: entry}
+	out.low, out.up = a, b
+	if s < 0 {
+		out.low, out.up = b, a
+	}
 	if entry.hasRoot {
-		lower, upper := a, b
-		if s < 0 {
-			lower, upper = b, a
-		}
 		if entry.rootLow {
-			out.root = lower
+			out.root = out.low
 		} else {
-			out.root = upper
+			out.root = out.up
 		}
 	}
 	return out

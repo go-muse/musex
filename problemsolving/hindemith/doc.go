@@ -17,9 +17,12 @@
 //
 // Sources: the chord-group table and Series II figure reproduced at
 // https://digital.library.unt.edu/iiif/ark:/67531/metadc663498/m1/22/full/1200,/0/default.jpg
-// and the formalization in Apostolopoulos et al., "The ontocomc Ontology: A
-// Semantic Framework for Hindemith's Harmonic Theory" (CEUR Vol-4091,
-// paper 16), https://ceur-ws.org/Vol-4091/paper16.pdf.
+// the summary of the groups at
+// https://ux1.eiu.edu/~pdhesterman/old/analysis/hindemith.html (group V:
+// augmented triad and perfect quartal triad; group VI: diminished triad
+// and diminished seventh), and the formalization in Apostolopoulos et al.,
+// "The ontocomc Ontology: A Semantic Framework for Hindemith's Harmonic
+// Theory" (CEUR Vol-4091, paper 16), https://ceur-ws.org/Vol-4091/paper16.pdf.
 //
 // # Tuning assumptions
 //
@@ -38,21 +41,27 @@
 // perfect fourth, major third, minor sixth, minor third, major sixth, major
 // second, minor seventh, minor second, major seventh, tritone.
 //
-// A chord is classified by its intra-chord interval content: without a
-// tritone, content of only unisons/octaves, major thirds and minor sixths
-// with at least one third or sixth is group V; otherwise absence of seconds
+// A chord is classified by its intra-chord interval content, counted over
+// pairs of different pitch classes so that doublings add nothing: without
+// a tritone, three different tones a major third apart (the augmented
+// triad) or a perfect fourth apart (the perfect quartal triad), in any
+// voicing and with doublings, are group V; otherwise absence of seconds
 // and sevenths gives group I and their presence group III. A chord of one
-// doubled note is group I with that note as its root. With a tritone, content of only tritones, minor
-// thirds and major sixths is group VI; otherwise absence of minor seconds
-// and major sevenths gives group II and their presence group IV. Groups V
-// and VI have no root; in the other groups the root is the root of the
-// strongest interval, unison pairs ignored, ties broken by the first pair
-// in input order. Subgroups 1 and 2 mean root equal to the bass and root
-// above the bass; group II adds subgroup a (one tritone, no major second,
-// root in the bass) and subgroups b1, b2, b3 (one tritone with root in the
-// bass, one tritone with root above the bass, more than one tritone). A
-// group-II chord with neither a major second nor a minor seventh takes b1
-// or b2 by root position.
+// doubled note is group I with that note as its root. With a tritone,
+// content of only tritones, minor thirds and major sixths is group VI
+// (diminished triad, diminished seventh and the like); otherwise absence
+// of minor seconds and major sevenths gives group II and their presence
+// group IV. Groups V and VI have no root; in the other groups the root is
+// the root of the strongest interval between different tones, unison and
+// octave pairs ignored, ties between equal best intervals broken by the
+// lower pair first and then the upper, so the result does not depend on
+// the listing order. Tritones are counted as different pairs of pitch
+// classes, so a doubled tritone member is one tritone. Subgroups 1 and 2
+// mean root equal to the bass and root above the bass; group II adds
+// subgroup a (one tritone, no major second, root in the bass) and subgroups
+// b1, b2, b3 (one tritone with root in the bass, one tritone with root
+// above the bass, more than one tritone). A group-II chord with neither a
+// major second nor a minor seventh takes b1 or b2 by root position.
 //
 // Harmonic fluctuation orders the classes I.1, I.2, II.a, II.b1, II.b2,
 // II.b3, III.1, III.2, IV.1, IV.2, V, VI by rising tension; a step to a

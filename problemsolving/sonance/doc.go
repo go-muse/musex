@@ -1,5 +1,7 @@
 // Package sonance scores the tonal consonance of pitch-class sets and of
-// voiced note collections with explicit interval-class weight profiles.
+// voiced note collections with explicit weight profiles: interval-class
+// profiles for sets, profiles over the actual tempered interval for pairs
+// of pitches.
 //
 // # Model and sources
 //
@@ -29,13 +31,17 @@
 // always zero and repetitions of a pitch class add nothing.
 //
 // ScoreNotes counts actual pitch pairs: one count per unordered pair of
-// note positions, including unisons and octaves (IC0) and including pairs
-// of equal pitch classes at different octaves. The interval class of a
-// pair is its distance in semitones modulo 12, which assumes twelve-tone
-// equal temperament: the explicit system must have twelve classes and
-// chromatic unit 1. Cents do not take part.
+// note positions, including unisons and octaves (distance 0) and including
+// pairs of equal pitch classes at different octaves. A pair is counted at
+// its tempered distance modulo 12, 0 to 11 semitones, under a PairProfile
+// of twelve weights, so a profile can distinguish a fourth from a fifth.
+// HuronPairProfile spreads the published interval-class weights over both
+// members of each class; NewPairProfile accepts any twelve weights. The
+// distance assumes twelve-tone equal temperament: the explicit system
+// must have twelve classes and chromatic unit 1. Cents do not take part.
 //
-// Every score exposes its contributions: per interval class, the count,
-// the weight and their product, so a caller can see which intervals drive
-// the value.
+// Every score exposes its contributions: per counted interval (interval
+// class for a set score, tempered distance for a note-pair score), the
+// count, the weight and their product, so a caller can see which intervals
+// drive the value.
 package sonance
