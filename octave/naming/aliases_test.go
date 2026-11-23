@@ -264,6 +264,83 @@ func TestWithAliasesKeepsReceiver(t *testing.T) {
 	}
 }
 
+// A receiver that already has aliases stays unchanged after a successful
+// call that adds an alias, and after a failed call whose input also contains
+// a valid new alias: its aliases, lookup and equality are preserved.
+func TestWithAliasesKeepsExtendedReceiver(t *testing.T) {
+	t.Parallel()
+
+	t.Run("success", func(t *testing.T) {
+		t.Parallel()
+
+		c := naming.Russian().MustWithAliases(map[int][]string{4: {"x"}})
+		before := naming.Russian().MustWithAliases(map[int][]string{4: {"x"}})
+
+		extended, err := c.WithAliases(map[int][]string{4: {"y"}, 3: {"z"}})
+		require.NoError(t, err)
+
+		assert.Equal(t, []string{"x"}, c.Aliases(4))
+		assert.Empty(t, c.Aliases(3))
+		assert.Equal(t, 4, c.MustASPN("x"))
+
+		_, err = c.ASPN("y")
+		assert.ErrorIs(t, err, naming.ErrUnknownName)
+		_, err = c.ASPN("z")
+		assert.ErrorIs(t, err, naming.ErrUnknownName)
+
+		assert.True(t, c.Equal(before), "the receiver equals a catalog built the same way")
+		assert.Equal(t, []string{"x", "y"}, extended.Aliases(4))
+		assert.Equal(t, []string{"z"}, extended.Aliases(3))
+	})
+
+	t.Run("failure with a valid new alias in the input", func(t *testing.T) {
+		t.Parallel()
+
+		c := naming.Russian().MustWithAliases(map[int][]string{4: {"x"}})
+		before := naming.Russian().MustWithAliases(map[int][]string{4: {"x"}})
+
+		got, err := c.WithAliases(map[int][]string{3: {"z"}, 5: {"x"}})
+		require.Nil(t, got)
+		require.ErrorIs(t, err, naming.ErrDuplicateName)
+
+		assert.Equal(t, []string{"x"}, c.Aliases(4))
+		assert.Empty(t, c.Aliases(3))
+		assert.Equal(t, 4, c.MustASPN("x"))
+
+		_, err = c.ASPN("z")
+		assert.ErrorIs(t, err, naming.ErrUnknownName)
+
+		assert.True(t, c.Equal(before), "the receiver equals a catalog built the same way")
+	})
+}
+
+// WithAliases does not reorder the caller's alias slices: an unsorted list
+// keeps its order and contents after a successful call and after a failed
+// one.
+func TestWithAliasesDoesNotReorderInput(t *testing.T) {
+	t.Parallel()
+
+	t.Run("success", func(t *testing.T) {
+		t.Parallel()
+
+		list := []string{"b", "a"}
+		c, err := naming.Russian().WithAliases(map[int][]string{4: list})
+		require.NoError(t, err)
+		assert.Equal(t, []string{"b", "a"}, list)
+		assert.Equal(t, []string{"a", "b"}, c.Aliases(4))
+	})
+
+	t.Run("failure", func(t *testing.T) {
+		t.Parallel()
+
+		list := []string{"b", "a"}
+		got, err := naming.Russian().WithAliases(map[int][]string{4: list, 5: {"малая"}})
+		require.Nil(t, got)
+		require.ErrorIs(t, err, naming.ErrDuplicateName)
+		assert.Equal(t, []string{"b", "a"}, list)
+	})
+}
+
 // WithAliases does not retain the input: later changes to the map or its
 // slices do not affect the new catalog.
 func TestWithAliasesDoesNotRetainInput(t *testing.T) {
@@ -492,12 +569,13 @@ func TestWithAliasesCopy(t *testing.T) {
 	assert.Equal(t, []string{"FirstOctave", "первая октава"}, cp.Aliases(4))
 }
 
-// WithAliases on a shared catalog and reads of it are safe for concurrent
-// use: the receiver is immutable.
+// WithAliases on a shared catalog that already has aliases, and reads of it,
+// are safe for concurrent use: the receiver is immutable, so every call
+// copies its alias map instead of writing into it.
 func TestWithAliasesConcurrent(t *testing.T) {
 	t.Parallel()
 
-	ru := naming.Russian()
+	shared := naming.Russian().MustWithAliases(map[int][]string{4: {"x"}})
 
 	const workers = 8
 	var wg sync.WaitGroup
@@ -507,14 +585,14 @@ func TestWithAliasesConcurrent(t *testing.T) {
 			defer wg.Done()
 
 			for range 20 {
-				c, err := ru.WithAliases(map[int][]string{4: {"x"}})
-				if err != nil || c.MustASPN("x") != 4 {
+				c, err := shared.WithAliases(map[int][]string{4: {"y"}, 3: {"z"}})
+				if err != nil || c.MustASPN("y") != 4 || c.MustASPN("x") != 4 {
 					t.Error(err)
 
 					return
 				}
 
-				if ru.MustASPN("первая") != 4 || len(ru.Aliases(4)) != 0 {
+				if shared.MustASPN("первая") != 4 || len(shared.Aliases(4)) != 1 || len(shared.Aliases(3)) != 0 {
 					t.Error("the shared receiver changed")
 
 					return
