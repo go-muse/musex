@@ -86,6 +86,14 @@ Splitting notes at bar lines and beats is the job of the measure packages, not o
 
 A plain value divides normally into two notes one step shorter, and a dotted value into three: a quarter into two eighths, a dotted quarter into three eighths, a dotted half into three quarters, and a quarter in a triplet into two eighths of the same triplet. A value with two or more dots has no normal subdivision, and the 1024th has none because its parts would be shorter than the series allows.
 
+A written duration can also be divided into the parts of a tuplet, keeping any enclosing chain: a quarter in 3:2 gives three eighths sounding 1/12 each, and a dotted quarter in 2:3 gives two eighths sounding 3/16 each. The part may carry dots; when the equal part cannot be written as one sign, the operation reports that no notation exists.
+
+## Groups and readings
+
+A **group** is a written tuplet with its contents: a tuplet, a written unit, and written durations or nested groups whose sounding lengths fill at most the group's span. The group exposes its total span, any shortfall, and the half-open sounding spans of its contents — a 3:2 group in eighths holding a quarter and an eighth spans [0, 1/6) and [1/6, 1/4). One 6:4 group stays distinguishable from two 3:2 groups over the same six notes. The contents are written durations; whether a value is a note or a rest belongs to [event](event.md), not here.
+
+**Readings** answer how a sequence of sounding durations can be written exactly: each duration gets one written value, in order, inside its chain of groups; every group is filled exactly and uses an allowed ratio; durations that need no tuplet stay outside groups. Six sounding 1/12 over a half note with 3:2 and 6:4 allowed give two readings — two triplets of written eighths, or one sextuplet of written eighths. The caller bounds the ratios, the notation, the nesting depth (no nesting by default), and the number of results; no reading is an empty result, not an error.
+
 ## Positions and their origin
 
 A **position** is an offset of at least zero from an origin chosen by whoever uses it — the start of a voice, of a measure, or of a whole piece. Zero is the origin itself and is a valid position, unlike a zero length, which is not a duration at all. Starting from the origin and adding a quarter, an eighth, an eighth, and a half gives the positions `1/4`, `3/8`, `1/2`, and `1`.
