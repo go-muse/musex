@@ -46,6 +46,11 @@
 // result in a particular denominator, use the denominator modes of package
 // common/fraction.
 //
+// [ApplyChain] and [UnapplyChain] apply and undo a whole chain of tuplets:
+// a sounding 1/15 under an outer 5:4 and an inner 3:2 recovers the written
+// 1/8. An empty chain preserves the value. [ChainCoefficient] returns the
+// total coefficient of the chain.
+//
 // # Notation, equality, and order
 //
 // The pair is stored as given: 3:2 and 6:4 are different notations with equal
@@ -133,8 +138,23 @@
 // returns the default tuplet. [ParseName] accepts the English, alternative
 // English, and Russian names in lower case. The unset tuplet prints as
 // "Tuplet(unset)", which Parse rejects. Parse(t.String()) returns t for every
-// set tuplet. The French "pour" notation, LilyPond n/m, abc (p:q:r, MusicXML,
-// and MEI are not parsed; the pair maps directly to their numbers.
+// set tuplet. The French "pour" notation, MusicXML, and MEI are not parsed;
+// the pair maps directly to their numbers.
+//
+// ABC and LilyPond markers are parsed at the token level, without a score
+// parser. [ParseABCMarker] reads "(p", "(p:q", "(p:q:r", and "(p::r" in the
+// meter context of a [Division] (Binary for a simple meter such as 4/4,
+// Ternary for a compound meter such as 6/8) and returns an [ABCMarker] with
+// the tuplet and the event count. The short-form defaults are those of the
+// ABC 2.1 standard, not [Default]: "(5" gives 5:2 in Binary and 5:3 in
+// Ternary. [FormatABCMarker] omits the parts the parser restores in the same
+// context, so parsing a formatted marker returns the same marker.
+// [ParseLilyPondTuplet] reads the group marker "\tuplet 3/2" as the tuplet
+// 3:2; the optional span duration is not supported.
+// [ParseLilyPondMultiplier] reads the duration multiplier "*2/3" as the
+// coefficient 2/3, a fraction rather than a tuplet, because it declares no
+// group. [FormatLilyPondTuplet] and [FormatLilyPondMultiplier] write the two
+// forms back.
 //
 // An error of Parse, ParseShort, ParseName, their Must variants, or
 // UnmarshalText with a non-nil receiver quotes the rejected text: in full if

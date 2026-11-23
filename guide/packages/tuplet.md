@@ -111,7 +111,15 @@ Flattened counts are limited to the machine integer range, while the chain coeff
 
 A tuplet is written as its two counts separated by a colon, such as `3:2` or `6:4`, in plain digits without signs, spaces, leading zeros, or zero counts. The same text is used when a tuplet is stored as part of a larger structured document. The short form writes only the actual count, such as `3`, and is read back with a kind of division, which gives the default tuplet for that count — not necessarily the original pair. Names are read in lower case in English, in the alternative English forms, and in Russian.
 
-The French notation "3 pour 2", the LilyPond fraction, the abc tuplet syntax, MusicXML, and MEI are not read: exchange with these formats happens outside the library, and their numbers map directly to the pair.
+The French notation "3 pour 2", MusicXML, and MEI are not read: exchange with these formats happens outside the library, and their numbers map directly to the pair. ABC and LilyPond markers are read and written at the token level, without a score parser.
+
+## ABC and LilyPond markers
+
+An ABC marker `(p`, `(p:q`, `(p:q:r`, or `(p::r` is read in the meter context: a simple meter such as 4/4 or a compound meter such as 6/8. The short-form defaults are those of the ABC 2.1 standard: `(5` gives 5:2 in 4/4 and 5:3 in 6/8, and the event count defaults to the actual count, so `(3:2:2` keeps its two-event scope. Formatting omits the parts the reader restores in the same context.
+
+LilyPond keeps two meanings separate: the group marker `\tuplet 3/2` gives the tuplet 3:2, while the duration multiplier `*2/3` gives the coefficient 2/3 — a fraction, not a tuplet, because it declares no group. The optional span duration of `\tuplet 3/2 4` is not read; the unit of a group is chosen when the group is built in [duration](duration.md).
+
+A whole chain of tuplets can be undone at once: a sounding duration of 1/15 under an outer 5:4 and an inner 3:2 recovers the written 1/8 exactly, and an empty chain preserves the value.
 
 When a long text is rejected, the error quotes at most its first 64 bytes, without cutting a character in half, so error messages stay short however long the input is.
 
