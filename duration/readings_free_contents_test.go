@@ -390,7 +390,8 @@ func TestReadingsFreeContentsMonotone(t *testing.T) {
 
 // The work of a call with FreeContents and nesting is bounded: on a long input
 // that has readings in triplets, the call returns quickly with readings or
-// with ErrSearchLimit, never with an empty result and no error.
+// with ErrSearchLimit, never with an empty result and no error. The contract
+// does not prescribe which of the two outcomes a given long input has.
 func TestReadingsFreeContentsWorkBound(t *testing.T) {
 	t.Parallel()
 
@@ -408,14 +409,34 @@ func TestReadingsFreeContentsWorkBound(t *testing.T) {
 		return result[[]duration.Reading]{readings, err}
 	})
 
+	assertBoundedReadings(t, ds, opts, r)
+}
+
+// assertBoundedReadings checks the outcome of a Readings call on an input
+// that has readings but may exceed the search bound: either ErrSearchLimit
+// and no other sentinel (in particular not ErrTooManyParts), or a non-empty
+// list of at most MaxReadings pairwise distinct readings, each covering ds
+// exactly. An empty result without an error is wrong.
+func assertBoundedReadings(t *testing.T, ds []duration.Duration, opts duration.ReadingsOptions,
+	r result[[]duration.Reading],
+) {
+	t.Helper()
+
 	if r.err != nil {
 		assertErr(t, r.err, duration.ErrSearchLimit)
 
 		return
 	}
 
-	require.NotEmpty(t, r.v, "readings in triplets exist: an empty result without an error is wrong")
+	require.NotEmpty(t, r.v, "the input has readings: an empty result without an error is wrong")
 	assert.LessOrEqual(t, len(r.v), opts.MaxReadings)
+
+	for i := range r.v {
+		for j := i + 1; j < len(r.v); j++ {
+			assert.False(t, r.v[i].Equal(r.v[j]),
+				"readings %d and %d are equal: %s", i, j, describeContents(r.v[i].MustContents()))
+		}
+	}
 
 	for _, reading := range r.v {
 		assertExactReading(t, ds, reading)
