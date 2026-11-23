@@ -24,7 +24,8 @@
 //     division; use [FromFraction] for a value such as n/c.
 //   - [Alteration.Equal] and [Alteration.Compare] compare values by size;
 //     [Alteration.Sign], [Alteration.IsNatural], and [Alteration.IsInteger]
-//     report the direction of a value and whether it is natural or whole.
+//     report the direction of a value and whether it is natural or whole;
+//     [Alteration.Abs] returns its magnitude.
 //   - [Alteration.Fraction] returns the exact value as a fraction in lowest
 //     terms.
 //
