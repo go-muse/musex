@@ -100,15 +100,15 @@ func ChromaticBetweenNotes(from, to note.Note) (Chromatic, error) {
 	if !sys.Equal(other) {
 		return Chromatic{}, ErrDifferentSystems
 	}
-	return chromaticNotes(sys, from, to)
+	return chromaticNotes("ChromaticBetweenNotes", sys, from, to)
 }
-func chromaticNotes(sys *system.System, from, to note.Note) (Chromatic, error) {
+func chromaticNotes(op string, sys *system.System, from, to note.Note) (Chromatic, error) {
 	a, _ := from.Pitch()
 	b, _ := to.Pitch()
 	s, err := sys.Distance(a, b)
 	if err != nil {
 		if errors.Is(err, system.ErrOutOfRange) {
-			return Chromatic{}, rangeError("ChromaticBetweenNotes", err)
+			return Chromatic{}, rangeError(op, err)
 		}
 		return Chromatic{}, err
 	}
@@ -129,7 +129,7 @@ func ChromaticBetweenNotesIn(sys *system.System, from, to note.Note) (Chromatic,
 	if err := chromaticNotesCheck(from, to); err != nil {
 		return Chromatic{}, err
 	}
-	return chromaticNotes(sys, from, to)
+	return chromaticNotes("ChromaticBetweenNotesIn", sys, from, to)
 }
 
 // MustChromaticBetweenNotesIn panics with the measurement error.
