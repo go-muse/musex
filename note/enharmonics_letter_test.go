@@ -69,7 +69,15 @@ func TestEnharmonicsOnLetter(t *testing.T) {
 	t.Run("the sequence can be stopped early", func(t *testing.T) {
 		t.Parallel()
 		n := mk(t, spelling.C(), 4, ct(0), std())
-		seq, err := n.EnharmonicsOnLetter(letter.C, alteration.DoubleSharp())
+		// The traditional system admits every integer alteration, so within a
+		// limit of twelve units the letter C has three spellings at this
+		// position: C-12, C and C+12. Breaking after the first one is a real
+		// check: without the return after !yield(x) the next match would call
+		// yield again and panic.
+		limit := alteration.MustFromInt(12)
+		full := collect(n.MustEnharmonicsOnLetter(letter.C, limit))
+		require.GreaterOrEqual(t, len(full), 2, "precondition: several results on the requested letter")
+		seq, err := n.EnharmonicsOnLetter(letter.C, limit)
 		require.NoError(t, err)
 		count := 0
 		for range seq {
