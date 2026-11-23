@@ -186,3 +186,39 @@ func Example_zeroValue() {
 	// false Numbering(undefined)
 	// true false
 }
+
+// MatchBuiltins finds the built-in numberings consistent with observations
+// pairing an ASPN octave number with its displayed number.
+func ExampleMatchBuiltins() {
+	for _, n := range number.MatchBuiltins(number.Observation{ASPN: 4, Number: 3}) {
+		fmt.Println(n.Label())
+	}
+
+	fmt.Println("---")
+
+	for _, n := range number.MatchBuiltins(
+		number.Observation{ASPN: 4, Number: 3},
+		number.Observation{ASPN: 1, Number: 0},
+	) {
+		fmt.Println(n.Label())
+	}
+
+	// Output:
+	// Franco-Belgian
+	// Middle C = C3
+	// ---
+	// Middle C = C3
+}
+
+// Matches tests any numbering against the same observations; an undefined
+// numbering matches nothing.
+func ExampleNumbering_Matches() {
+	fmt.Println(number.FrancoBelgian().Matches(number.Observation{ASPN: 4, Number: 3}))
+	fmt.Println(number.MustNew(4, 3, 0).Matches(number.Observation{ASPN: 1, Number: -1}))
+	fmt.Println(number.Numbering{}.Matches())
+
+	// Output:
+	// true
+	// true
+	// false
+}

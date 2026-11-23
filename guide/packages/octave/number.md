@@ -18,6 +18,10 @@ Numberings are equal when they assign the same numbers to every octave. Mexican 
 
 Custom numberings follow the same anchor-and-skips rule. Conversion preserves octave identity and reports an error when a number is skipped or a result exceeds the range of an `int`. The zero value denotes an undefined numbering.
 
+## Matching observations
+
+An observation pairs an ASPN octave number with the displayed number seen for that octave, for example in pitch data imported from another tool. `MatchBuiltins` returns every built-in numbering consistent with all the observations, in the fixed built-in order and with labels preserved: ASPN 4 displayed as 3 matches Franco-Belgian and Middle C = C3; also observing ASPN 1 displayed as 0 leaves only Middle C = C3. ASPN 4 displayed as 5 retains both Mexican and Middle C = C5, which give the same numbers but have distinct labels. Contradictory observations give an empty result; without observations all five built-ins are returned. `Matches` applies the same check to any numbering, including a custom one; an undefined numbering matches nothing.
+
 First released in v0.4.0.
 
 [Package reference](https://pkg.go.dev/github.com/go-muse/musex/octave/number) · [Go examples](../../../octave/number/example_test.go) · [Roadmap](../../../ROADMAP.md)

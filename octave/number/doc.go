@@ -36,6 +36,9 @@
 //     number; [Numbering.ToASPN] returns the ASPN number of the octave with
 //     a given number.
 //   - [Convert] converts an octave number from one numbering to another.
+//   - [MatchBuiltins] returns the built-in numberings consistent with
+//     observations pairing an ASPN octave number with its displayed number;
+//     [Numbering.Matches] applies the same check to any numbering.
 //   - [Numbering.Equal] reports whether two numberings give the same number
 //     to every octave.
 //   - [Numbering.Label] returns the label of a built-in numbering, and
@@ -86,6 +89,18 @@
 //
 // Two numberings are equal if they give the same number to every octave,
 // however they were created and whatever their labels.
+//
+// # Matching observations
+//
+// [Observation] pairs an ASPN octave number with the displayed number
+// observed for that octave, for example in pitch data imported from another
+// tool. [MatchBuiltins] returns every built-in numbering consistent with all
+// the observations, in [Builtins] order, keeping the labels: observing ASPN
+// 4 displayed as 3 matches Franco-Belgian and Middle C = C3, and observing
+// ASPN 1 displayed as 0 as well leaves only Middle C = C3. Contradictory
+// observations give an empty result; without observations all five built-ins
+// are returned. [Numbering.Matches] applies the same check to any numbering,
+// including an own one; an undefined numbering matches nothing.
 //
 // # Errors
 //
