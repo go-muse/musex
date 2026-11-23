@@ -116,7 +116,13 @@ type Group struct {
 // contents exceeds the span. The contents are copied; later changes to them
 // do not affect the group.
 func NewGroup(t tuplet.Tuplet, unit Written, contents ...Content) (Group, error) {
-	const op = "NewGroup"
+	return newGroup("NewGroup", t, unit, contents, true)
+}
+
+// newGroup applies the checks of NewGroup for op and returns the group. With
+// copyContents false the group takes the contents slice without copying it;
+// the caller then guarantees that neither the slice nor its groups change.
+func newGroup(op string, t tuplet.Tuplet, unit Written, contents []Content, copyContents bool) (Group, error) {
 	if !t.IsSet() {
 		return Group{}, unsetTupletError(op, 0)
 	}
@@ -152,10 +158,15 @@ func NewGroup(t tuplet.Tuplet, unit Written, contents ...Content) (Group, error)
 		return Group{}, invalidError(op, "contents exceed the group span")
 	}
 
+	if copyContents {
+		contents = cloneContents(contents)
+	} else if len(contents) == 0 {
+		contents = nil
+	}
 	return Group{
 		t:        t,
 		unit:     unit,
-		contents: cloneContents(contents),
+		contents: contents,
 		span:     span,
 		sounding: sum,
 	}, nil
@@ -269,6 +280,11 @@ func (g Group) Spans() ([][2]fraction.Fraction, error) {
 	for _, c := range g.contents {
 		end, err := start.Add(c.sounding())
 		if err != nil {
+			// Defensive: every set group is built by newGroup, which adds
+			// the same contents in the same order from zero and rejects a
+			// sum outside the range, so each end here was already computed
+			// there without error. The branch keeps the error explicit
+			// should a group ever be built otherwise.
 			return nil, rangeError("Group.Spans")
 		}
 		spans = append(spans, [2]fraction.Fraction{start, end})
