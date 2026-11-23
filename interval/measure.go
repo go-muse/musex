@@ -20,8 +20,16 @@ import (
 // bound to a source; the errors of note.Note.Settings, such as
 // note.ErrUnsetSettings; ErrDifferentSystems when the systems differ;
 // note.ErrInadmissible, together with system.ErrInadmissible, when the name
-// of from, then of to, is not admissible in the system; ErrOutOfRange,
-// together with system.ErrOutOfRange, when the displacement does not fit.
+// of from, then of to, is not admissible in the system; ErrOutOfRange when
+// the written interval does not fit, as for BetweenPitches: a written octave
+// does not fit in an int (with system.ErrOutOfRange), the difference of the
+// written octaves does not fit in an int (with octave.ErrOutOfRange, as at
+// the extreme registers), the size is greater than MaxSize (without a cause
+// of a dependency), or the deviation is outside the range of package
+// alteration (with alteration.ErrOutOfRange); then ErrOutOfRange, together
+// with system.ErrOutOfRange, when the displacement does not fit. The written
+// interval is computed before the displacement, so its failure is reported
+// first.
 func MeasureNotes(from, to note.Note) (Interval, Chromatic, error) {
 	const op = "MeasureNotes"
 
@@ -68,8 +76,11 @@ func MustMeasureNotes(from, to note.Note) (Interval, Chromatic) {
 // Errors, in this order: ErrUnset when sys is nil or unset or when from or
 // to is unset; ErrNoOctave when either note has no octave;
 // system.ErrInadmissible when the name of from, then of to, is not
-// admissible in sys; ErrOutOfRange, together with system.ErrOutOfRange,
-// when the displacement does not fit.
+// admissible in sys; ErrOutOfRange when the written interval does not fit,
+// with the causes listed for MeasureNotes (system.ErrOutOfRange,
+// octave.ErrOutOfRange, no cause of a dependency for a size greater than
+// MaxSize, or alteration.ErrOutOfRange); then ErrOutOfRange, together with
+// system.ErrOutOfRange, when the displacement does not fit.
 func MeasureNotesIn(sys *system.System, from, to note.Note) (Interval, Chromatic, error) {
 	const op = "MeasureNotesIn"
 

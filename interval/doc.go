@@ -112,8 +112,8 @@
 // sources. Cents do not take part, and the generic size is the size of the
 // written interval. The error order follows BetweenNotes and
 // ChromaticBetweenNotes: unset inputs, missing octaves, missing or unset
-// settings, different systems, inadmissible names, then an out-of-range
-// displacement.
+// settings, different systems, inadmissible names, an out-of-range written
+// interval (as for BetweenPitches), then an out-of-range displacement.
 //
 // # Short notation and names
 //
