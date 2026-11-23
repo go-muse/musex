@@ -177,6 +177,76 @@ func Builtins() []Numbering {
 	return []Numbering{ASPN(), FrancoBelgian(), Mexican(), MiddleC3(), MiddleC5()}
 }
 
+// Observation pairs an ASPN octave number with the displayed number observed
+// for that octave, for example in pitch data imported from another tool.
+// ASPN is the reference number of the octave; Number is the number the
+// source displays for it.
+type Observation struct {
+	// ASPN is the ASPN number of the observed octave.
+	ASPN int
+	// Number is the displayed number observed for that octave.
+	Number int
+}
+
+// Matches reports whether n gives every observed octave its observed number:
+// for each observation, n.FromASPN(obs.ASPN) succeeds and equals obs.Number.
+// It is the per-numbering check that [MatchBuiltins] applies to the built-in
+// numberings; callers can use it to test their own numberings the same way.
+//
+// Observations may repeat: identical repeats are harmless, and two different
+// numbers for one ASPN octave can never both match, so contradictory
+// observations give false. A skipped number never matches, because FromASPN
+// never returns it. An observation whose result does not fit in an int does
+// not match either. Without observations, every defined numbering matches.
+//
+// An undefined numbering matches nothing, even without observations. Matches
+// does not change n.
+func (n Numbering) Matches(observations ...Observation) bool {
+	if !n.defined {
+		return false
+	}
+
+	for _, obs := range observations {
+		num, err := n.FromASPN(obs.ASPN)
+		if err != nil || num != obs.Number {
+			return false
+		}
+	}
+
+	return true
+}
+
+// MatchBuiltins returns every built-in numbering consistent with all the
+// observations, in [Builtins] order: the numbering gives each observed octave
+// its observed number. It answers which convention an imported source uses,
+// for example when ASPN 4 is displayed as 3.
+//
+// Without observations every built-in numbering is consistent, and all five
+// are returned. Contradictory observations, such as two different displayed
+// numbers for one ASPN octave or observations no single numbering satisfies,
+// give an empty result. Identical repeated observations are harmless.
+//
+// Equal numberings with distinct labels are both returned when both match:
+// observing ASPN 4 displayed as 5 retains [Mexican] and [MiddleC5]. The
+// elements keep their labels and are equal to the results of the built-in
+// functions.
+//
+// Each call returns a new non-nil slice that the caller owns, possibly
+// empty; modifying or retaining it does not affect later calls or other
+// callers. MatchBuiltins cannot fail, so it has no Must variant.
+func MatchBuiltins(observations ...Observation) []Numbering {
+	builtins := Builtins()
+	matches := make([]Numbering, 0, len(builtins))
+
+	for _, n := range builtins {
+		if n.Matches(observations...) {
+			matches = append(matches, n)
+		}
+	}
+
+	return matches
+}
+
 // New returns an own numbering in which the octave with ASPN number aspn has
 // number num and the numbers in skipped are skipped.
 //
