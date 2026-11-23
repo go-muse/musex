@@ -64,7 +64,8 @@ func (s *System) MustPalette(rules ...SpellingRule) []PaletteGroup {
 // PaletteWithin returns, for each class of s in class order, every admissible
 // spelling of the class with |a| ≤ limit, in the order of [System.Spellings].
 // A class without such spellings gives an empty group. With a limit of one
-// sharps and flats the class of C also offers B♯ and C♭.
+// sharps and flats the class of C offers C and B♯, and the class of B offers
+// C♭ and B.
 //
 // Errors, in this order: ErrInvalid when s is unset; ErrLimit when limit is
 // negative. The result is a new slice that the caller owns.

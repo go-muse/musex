@@ -98,16 +98,23 @@ type Group struct {
 }
 
 // NewGroup returns the group of the tuplet t in the written unit, with the
-// given contents. The span of the group is t.Normal() times the value of the
-// unit; the sounding durations of the contents must not exceed it. An empty
-// content list is allowed: the shortfall is then the whole span.
+// given contents. The contents are given under the chain of the group: the
+// chain of the unit extended by t. Every written content must carry exactly
+// that chain, and the unit of every nested group must carry it too; anything
+// else is rejected, so a group labeled 3:2 cannot hold values written outside
+// 3:2 or under a different tuplet.
+//
+// The span of the group is t.Normal() times the value of the unit; the
+// sounding durations of the contents must not exceed it. An empty content
+// list is allowed: the shortfall is then the whole span.
 //
 // In order of checking, it returns an error wrapping ErrInvalidArgument
 // together with tuplet.ErrUnset if t is unset, ErrUnset if the unit is unset,
 // ErrOutOfRange if the span or a sounding sum is outside the range of package
-// common/fraction, ErrInvalidArgument if a content is not valid, and
-// ErrInvalidArgument if the sounding sum of the contents exceeds the span.
-// The contents are copied; later changes to them do not affect the group.
+// common/fraction, ErrInvalidArgument if a content is not valid or its chain
+// does not match the group, and ErrInvalidArgument if the sounding sum of the
+// contents exceeds the span. The contents are copied; later changes to them
+// do not affect the group.
 func NewGroup(t tuplet.Tuplet, unit Written, contents ...Content) (Group, error) {
 	const op = "NewGroup"
 	if !t.IsSet() {
@@ -122,10 +129,19 @@ func NewGroup(t tuplet.Tuplet, unit Written, contents ...Content) (Group, error)
 		return Group{}, rangeError(op)
 	}
 
+	contentChain := packChain(append(unpackChain(unit.chain), t))
+
 	sum := fraction.FromInt(0)
 	for i, c := range contents {
 		if !c.IsValid() {
 			return Group{}, invalidError(op, "content "+strconv.Itoa(i))
+		}
+		if c.IsGroup() {
+			if c.group.unit.chain != contentChain {
+				return Group{}, invalidError(op, "nested group unit chain does not match content "+strconv.Itoa(i))
+			}
+		} else if c.written.chain != contentChain {
+			return Group{}, invalidError(op, "content chain does not match content "+strconv.Itoa(i))
 		}
 		sum, err = sum.Add(c.sounding())
 		if err != nil {
@@ -271,7 +287,7 @@ func (g Group) Equal(other Group) bool {
 	if !g.IsSet() || !other.IsSet() {
 		return g.IsSet() == other.IsSet()
 	}
-	if g.t != other.t || g.unit != other.unit || len(g.contents) != len(other.contents) {
+	if !g.t.Equal(other.t) || !g.unit.Equal(other.unit) || len(g.contents) != len(other.contents) {
 		return false
 	}
 	for i, a := range g.contents {
@@ -283,7 +299,7 @@ func (g Group) Equal(other Group) bool {
 			if !a.group.Equal(*b.group) {
 				return false
 			}
-		} else if a.written != b.written {
+		} else if !a.written.Equal(b.written) {
 			return false
 		}
 	}

@@ -62,13 +62,39 @@ func TestGroupEdges(t *testing.T) {
 	g := duration.MustNewGroup(triplet, eighth, duration.WrittenContent(inTriplet))
 	assert.Equal(t, fraction.MustNewReduced(1, 6), g.MustShortfall())
 
-	// Nested groups stay distinguishable and equal recursively.
-	inner := duration.MustNewGroup(triplet, eighth,
-		duration.WrittenContent(inTriplet), duration.WrittenContent(inTriplet), duration.WrittenContent(inTriplet))
+	// Nested groups stay distinguishable and equal recursively. The unit of
+	// the inner group is written under the chain of the outer group.
+	sexUnit := duration.MustNewWritten(duration.Eighth, 0, tuplet.Sextuplet())
+	sexInTriplet := duration.MustNewWritten(duration.Eighth, 0, tuplet.Sextuplet(), triplet)
+	inner := duration.MustNewGroup(triplet, sexUnit,
+		duration.WrittenContent(sexInTriplet), duration.WrittenContent(sexInTriplet), duration.WrittenContent(sexInTriplet))
 	outer := duration.MustNewGroup(tuplet.Sextuplet(), eighth, duration.GroupContent(inner), duration.GroupContent(inner))
 	outer2 := duration.MustNewGroup(tuplet.Sextuplet(), eighth, duration.GroupContent(inner), duration.GroupContent(inner))
 	assert.True(t, outer.Equal(outer2))
 	assert.False(t, outer.Equal(inner))
+
+	// Contents must carry the chain of the group: the unit chain extended by
+	// the tuplet. Plain values and values under a different tuplet are
+	// rejected even when the sounding sums fit.
+	_, err = duration.NewGroup(triplet, eighth,
+		duration.WrittenContent(eighth), duration.WrittenContent(eighth))
+	assert.ErrorIs(t, err, duration.ErrInvalidArgument)
+
+	inQuintuplet := duration.MustNewWritten(duration.Eighth, 0, tuplet.Quintuplet())
+	_, err = duration.NewGroup(triplet, eighth,
+		duration.WrittenContent(inQuintuplet), duration.WrittenContent(inQuintuplet), duration.WrittenContent(inQuintuplet))
+	assert.ErrorIs(t, err, duration.ErrInvalidArgument)
+
+	plainQuarter := duration.MustNewWritten(duration.Quarter, 0)
+	_, err = duration.NewGroup(triplet, eighth,
+		duration.WrittenContent(plainQuarter), duration.WrittenContent(eighth))
+	assert.ErrorIs(t, err, duration.ErrInvalidArgument)
+
+	// A nested group whose unit is not under the group chain is rejected.
+	_, err = duration.NewGroup(tuplet.Sextuplet(), eighth,
+		duration.GroupContent(duration.MustNewGroup(triplet, eighth,
+			duration.WrittenContent(inTriplet), duration.WrittenContent(inTriplet), duration.WrittenContent(inTriplet))))
+	assert.ErrorIs(t, err, duration.ErrInvalidArgument)
 
 	// Contents are copied.
 	contents := outer.MustContents()

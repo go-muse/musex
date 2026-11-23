@@ -65,12 +65,13 @@ func MustFormatLilyPondTuplet(t Tuplet) string {
 	return must(FormatLilyPondTuplet(t))
 }
 
-// ParseLilyPondMultiplier parses the LilyPond duration multiplier "*a/b":
-// the prefix "*" followed by two counts of ASCII decimal digits without
-// signs, leading zeros, or zero values, separated by a single slash. The
-// result is the fraction a/b with the stored pair (a, b): a duration
-// multiplied by it sounds for that part of its written value. The multiplier
-// declares no group, so the result is a coefficient, not a tuplet.
+// ParseLilyPondMultiplier parses the LilyPond duration multiplier "*a/b" or
+// its integer form "*a" (as in R1*4): the prefix "*" followed by one or two
+// counts of ASCII decimal digits without signs, leading zeros, or zero
+// values, separated by a single slash. The result is the fraction a/b (a/1
+// for the integer form) with the stored pair (a, b): a duration multiplied
+// by it sounds for that part of its written value. The multiplier declares
+// no group, so the result is a coefficient, not a tuplet.
 //
 // In order of checking, it returns an error wrapping ErrInvalidText if text
 // does not match the grammar and ErrOutOfRange if a count exceeds
@@ -84,12 +85,16 @@ func ParseLilyPondMultiplier(text string) (fraction.Fraction, error) {
 	}
 
 	before, after, found := strings.Cut(body, "/")
-	if !found || !isCount(before) || !isCount(after) {
+	if !isCount(before) || (found && !isCount(after)) {
 		return fraction.Fraction{}, parseError(ErrInvalidText, text)
 	}
 
 	num, okNum := countValue(before)
-	den, okDen := countValue(after)
+	den := 1
+	var okDen = true
+	if found {
+		den, okDen = countValue(after)
+	}
 	if !okNum || !okDen {
 		return fraction.Fraction{}, parseError(ErrOutOfRange, text)
 	}
@@ -109,7 +114,9 @@ func MustParseLilyPondMultiplier(text string) fraction.Fraction {
 
 // FormatLilyPondMultiplier returns the LilyPond duration multiplier of c:
 // "*" followed by the stored numerator and denominator separated by a slash,
-// as [ParseLilyPondMultiplier] reads them; the pair is not reduced.
+// as [ParseLilyPondMultiplier] reads them; the pair is not reduced. A
+// denominator of 1 is written in the integer form "*a", so both "*4" and
+// "*4/1" parse to the same coefficient and format as "*4".
 //
 // In order of checking, it returns an error wrapping ErrInvalidArgument if c
 // is unset, ErrInvalidCount if c is not positive, and ErrOutOfRange if a
@@ -125,6 +132,9 @@ func FormatLilyPondMultiplier(c fraction.Fraction) (string, error) {
 	num, den, ok := c.Pair()
 	if !ok {
 		return "", fmt.Errorf("%w: coefficient component exceeds int", ErrOutOfRange)
+	}
+	if den == 1 {
+		return "*" + strconv.Itoa(num), nil
 	}
 	return "*" + strconv.Itoa(num) + "/" + strconv.Itoa(den), nil
 }

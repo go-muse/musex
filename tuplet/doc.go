@@ -153,8 +153,9 @@
 // 3:2; the optional span duration is not supported.
 // [ParseLilyPondMultiplier] reads the duration multiplier "*2/3" as the
 // coefficient 2/3, a fraction rather than a tuplet, because it declares no
-// group. [FormatLilyPondTuplet] and [FormatLilyPondMultiplier] write the two
-// forms back.
+// group; the integer form "*4" (as in R1*4) is read as 4/1.
+// [FormatLilyPondTuplet] and [FormatLilyPondMultiplier] write the two forms
+// back; a multiplier with denominator 1 is written in the integer form.
 //
 // An error of Parse, ParseShort, ParseName, their Must variants, or
 // UnmarshalText with a non-nil receiver quotes the rejected text: in full if
