@@ -72,6 +72,7 @@ func TestEveryMustSuccessMatchesOrdinary(t *testing.T) {
 		"Rotate": {[]int{}}, "Reverse": {}, "Slice": {0, 1}, "Repeat": {2}, "Unique": {[]scale.Comparison{}}, "WithoutOctaves": {}, "ShiftOctaves": {1}, "Transpose": {interval.MustParse("M2")}, "TransposeIn": {system.Traditional(), interval.MustParse("M2")}, "TransposeTo": {n, interval.Up}, "TransposeToIn": {system.Traditional(), n, interval.Up},
 		"Enharmonics": {0, alteration.MustFromInt(1)}, "EnharmonicsIn": {settings.Standard(), 0, alteration.MustFromInt(1)}, "WithEnharmonic": {0, spelling.MustParse("G")}, "WithEnharmonicIn": {settings.Standard(), 0, spelling.MustParse("G")},
 		"PitchClasses": {system.Traditional()}, "KeySignature": {}, "Format": {}, "FormatIn": {settings.Standard()},
+		"Tokens": {}, "TokensIn": {settings.Standard()}, "PitchClassSequence": {system.Traditional()},
 	}
 	typ := reflect.TypeFor[*scale.Scale]()
 	errorType := reflect.TypeFor[error]()
