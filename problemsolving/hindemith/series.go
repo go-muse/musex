@@ -1,6 +1,8 @@
 package hindemith
 
 import (
+	"math"
+
 	"github.com/go-muse/musex/note"
 	"github.com/go-muse/musex/system"
 )
@@ -116,7 +118,9 @@ func checkAdmitted(op string, sys *system.System, ns []note.Note) error {
 	return nil
 }
 
-// distance returns the signed distance in steps from a to b.
+// distance returns the signed distance in steps from a to b. A distance of
+// exactly math.MinInt steps is out of range: its magnitude does not fit in
+// int, so every returned distance can be negated safely.
 func distance(op string, sys *system.System, a, b note.Note) (int, error) {
 	pa, _ := a.Pitch()
 	pb, _ := b.Pitch()
@@ -124,10 +128,14 @@ func distance(op string, sys *system.System, a, b note.Note) (int, error) {
 	if err != nil {
 		return 0, rangeError(op, err)
 	}
+	if int(s) == math.MinInt {
+		return 0, rangeError(op, system.ErrOutOfRange)
+	}
 	return int(s), nil
 }
 
-// classify builds the dyad of the pair (a, b) at the signed distance s.
+// classify builds the dyad of the pair (a, b) at the signed distance s,
+// which distance has already checked to be greater than math.MinInt.
 func classify(a, b note.Note, s int) Dyad {
 	d := s
 	if d < 0 {

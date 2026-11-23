@@ -67,10 +67,9 @@ The reduced chord is classified by its interval content:
   (diminished triad, diminished seventh) is VI without a root; otherwise
   absence of minor seconds and major sevenths gives II and their presence IV.
 - In the other groups the root is the root of the strongest interval of the
-  reduced chord; ties between equal best intervals are broken by the lower
-  pair, then the upper, so the listing order never changes the result. Each
-  tritone is one pair of pitch classes, so a doubled tritone member adds no
-  tritone.
+  reduced chord; among equal best intervals the pair with the lower bottom
+  note decides, so the listing order never changes the result. Each tritone
+  is one pair of pitch classes, so a doubled tritone member adds no tritone.
 - Subgroups 1 and 2 mean root in the bass and root above the bass. Group II
   adds `a` (one tritone, no major second, root in the bass), `b1` and `b2`
   (one tritone, root in the bass or above it), and `b3` (more than one

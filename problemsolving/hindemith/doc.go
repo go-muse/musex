@@ -66,16 +66,17 @@
 // diminished seventh and the like); otherwise absence of minor seconds and
 // major sevenths gives group II and their presence group IV. Groups V and
 // VI have no root; in the other groups the root is the root of the
-// strongest interval of the reduced chord, ties between equal best
-// intervals broken by the lower pair first and then the upper, so the
-// result does not depend on the listing order. Each tritone of the reduced
-// chord is one pair of pitch classes, so a doubled tritone member adds no
-// tritone. Subgroups 1 and 2
-// mean root equal to the bass and root above the bass; group II adds
-// subgroup a (one tritone, no major second, root in the bass) and subgroups
-// b1, b2, b3 (one tritone with root in the bass, one tritone with root
-// above the bass, more than one tritone). A group-II chord with neither a
-// major second nor a minor seventh takes b1 or b2 by root position.
+// strongest interval of the reduced chord, and among equal best intervals
+// the pair with the lower bottom note decides, so the result does not
+// depend on the listing order. Each tritone of the reduced chord is one
+// pair of pitch classes, so a doubled tritone member adds no tritone.
+//
+// Subgroups 1 and 2 mean root equal to the bass and root above the bass;
+// group II adds subgroup a (one tritone, no major second, root in the bass)
+// and subgroups b1, b2, b3 (one tritone with root in the bass, one tritone
+// with root above the bass, more than one tritone). Every group-II chord
+// contains a major second or a minor seventh; subgroup a is the chord with
+// a minor seventh and no major second.
 //
 // Harmonic fluctuation orders the classes I.1, I.2, II.a, II.b1, II.b2,
 // II.b3, III.1, III.2, IV.1, IV.2, V, VI by rising tension; a step to a

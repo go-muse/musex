@@ -28,8 +28,9 @@ var (
 	// wrapping system.ErrInadmissible.
 	ErrInadmissible = errors.New("hindemith: inadmissible note name")
 
-	// ErrOutOfRange indicates a distance that does not fit, wrapping
-	// system.ErrOutOfRange.
+	// ErrOutOfRange indicates a distance that does not fit in int, or a
+	// distance of exactly math.MinInt steps whose magnitude does not fit,
+	// wrapping system.ErrOutOfRange.
 	ErrOutOfRange = errors.New("hindemith: result out of range")
 )
 
