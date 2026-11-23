@@ -316,6 +316,16 @@ func (m Mode) MustNumbersFrom(sys *system.System, start spelling.Spelling) Posit
 	return must(m.NumbersFrom(sys, start))
 }
 
+// MustStepsBetween is like StepsBetween but panics with its error.
+func (m Mode) MustStepsBetween(sys *system.System, from, to DegreePlace) system.Step {
+	return must(m.StepsBetween(sys, from, to))
+}
+
+// MustStepsBetweenFrom is like StepsBetweenFrom but panics with its error.
+func (m Mode) MustStepsBetweenFrom(sys *system.System, start spelling.Spelling, from, to DegreePlace) system.Step {
+	return must(m.StepsBetweenFrom(sys, start, from, to))
+}
+
 // MustCycleIn is like CycleIn but panics with its error.
 func (m Mode) MustCycleIn(sys *system.System) CycleInfo {
 	return must(m.CycleIn(sys))

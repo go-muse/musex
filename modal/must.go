@@ -1,6 +1,10 @@
 package modal
 
-import "github.com/go-muse/musex/mode"
+import (
+	"iter"
+
+	"github.com/go-muse/musex/mode"
+)
 
 func must[T any](value T, err error) T {
 	if err != nil {
@@ -34,3 +38,23 @@ func MustCompareAbsolute(m mode.Mode, first, second int) int {
 
 // MustAnalyzeAbsolute calls AnalyzeAbsolute and panics with its error on failure.
 func MustAnalyzeAbsolute(m mode.Mode) AbsoluteAnalysis { return must(AnalyzeAbsolute(m)) }
+
+// MustRelationTo calls RelationTo and panics with its error on failure.
+func MustRelationTo(m mode.Mode, from, to int) Relation { return must(RelationTo(m, from, to)) }
+
+// MustRelationsFrom calls RelationsFrom and panics with its error on failure.
+func MustRelationsFrom(m mode.Mode, from int) []Relation { return must(RelationsFrom(m, from)) }
+
+// MustRelationTable calls RelationTable and panics with its error on failure.
+func MustRelationTable(m mode.Mode) iter.Seq[[]Relation] { return must(RelationTable(m)) }
+
+// MustCompareRelativePositions calls CompareRelativePositions and panics with
+// its error on failure.
+func MustCompareRelativePositions(before, after mode.Mode) RelativeComparison {
+	return must(CompareRelativePositions(before, after))
+}
+
+// MustComparePositions calls ComparePositions and panics with its error on failure.
+func MustComparePositions(before, after mode.Mode) PositionComparison {
+	return must(ComparePositions(before, after))
+}

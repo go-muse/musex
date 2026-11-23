@@ -64,8 +64,8 @@ func analyzeAbsolute(m mode.Mode, numbers ...int) (AbsoluteAnalysis, error) {
 	if err := checkDegrees(m, numbers...); err != nil {
 		return AbsoluteAnalysis{}, err
 	}
-	if !m.IsClosed() || !m.IsOctave() {
-		return AbsoluteAnalysis{}, ErrUnsupportedStructure
+	if err := checkOctaveCycle(m, "absolute analysis"); err != nil {
+		return AbsoluteAnalysis{}, err
 	}
 	// Intervals checks representability of the whole table before returning its
 	// iterator. Quality rejection must follow that check, including in address queries.

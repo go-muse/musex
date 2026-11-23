@@ -77,6 +77,66 @@ degree number returns `NeedContext` without error, retaining the requested
 places. Explicit invalid parameters return errors even if context is missing.
 All error-returning operations have corresponding Must wrappers.
 
+## Distances between degree places in a system
+
+`StepsBetween` and `StepsBetweenFrom` return by how many positions of a
+musical system the note of one `DegreePlace` is above the note of another. A
+place may be in any cycle of a closed mode, so the distance can cross cycle
+boundaries; the sign follows the positions, not the degree numbers, so it can
+be zero or negative. The octave of the first note does not matter.
+
+```go
+ionian := mode.MustFromTemplate(template.Ionian())
+traditional := system.Traditional()
+d := ionian.MustStepsBetweenFrom(traditional, spelling.MustParse("C"),
+    mode.DegreePlace{Number: 7}, mode.DegreePlace{Number: 1, Cycle: 1})
+up := ionian.MustStepsBetween(traditional, mode.DegreePlace{Number: 1}, mode.DegreePlace{Number: 3})
+// d == 1, up == 4: no name is needed in a regular system.
+```
+
+`StepsBetweenFrom` names the first degree and works in any system, including
+an irregular one, where a cycle that is not an octave can span a different
+number of positions at different places. Only that name and the names of the
+two places must be admissible. `StepsBetween` has no name and is allowed only in
+a regular system; in an irregular one it returns `interval.ErrStartRequired`.
+Only the final distance must be a whole number that fits in a `system.Step`:
+fractional or huge intermediate numbers of the individual places do not cause
+an error. For two places in cycle zero the result equals the difference of the
+corresponding numbers of `Numbers` or `NumbersFrom` whenever those succeed.
+
+Errors follow this order: `ErrUnset`; `ErrInvalidArgument` for a place number
+outside 1..`Len()` or a nonzero cycle of an open mode, from before to; then
+`interval.ErrStartRequired` or `system.ErrInadmissible`; `ErrOutOfRange` for an
+unrepresentable place name in the named form; `interval.ErrFractionalSteps`;
+and `ErrOutOfRange` for a distance outside `int`.
+
+## Walk offsets in a system
+
+The `Positions` value returned by `Numbers` and `NumbersFrom` describes where
+each degree stands, in positions from the first degree. Its offset methods read
+only `Degrees` and never fail. `DegreesAt` lists the degrees at one offset;
+several degrees can share an offset and a free offset gives an empty list.
+`OccupiedSteps` yields each occupied offset once with its degrees, and
+`StepsIn(from, to)` yields every offset of an inclusive range, free ones with
+an empty list. The `Backward` forms walk from the largest offset down; the
+bounds of `StepsInBackward` are still given as lower, upper. The cycle boundary
+is not crossed: degrees of other cycles are not searched.
+
+```go
+numbers := ionian.MustNumbers(traditional) // Degrees: 0 2 4 5 7 9 11
+fmt.Println(numbers.DegreesAt(4), numbers.DegreesAt(1)) // [3] []
+for offset, degrees := range numbers.StepsIn(0, 4) {
+    fmt.Println(offset, degrees) // 0 [1], 1 [], 2 [2], 3 [], 4 [3]
+}
+```
+
+Each iterator copies the degree numbers when the method is called, so later
+changes of the value do not affect it. Iterators can be walked again, stopped
+with `break`, and walked from several goroutines. Ranges are walked lazily,
+without overflow at `math.MinInt` and `math.MaxInt`, and the gaps between
+distant occupied offsets are not visited. Every returned list is a new slice
+owned by the caller.
+
 ## Comparison and editing
 
 Compare modes by structure, examine the intervals in which they differ, or locate an equal rotation. The package also describes diatonic properties, key signatures, and the numerical structure in a given system. A repository searches a catalog for exact, rotated, related, and numerical matches.

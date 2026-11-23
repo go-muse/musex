@@ -10,6 +10,13 @@
 // major and augmented -1, and perfect 0, regardless of integral multiplicity.
 // Equal scores form a group; ranks are dense and start at 1, brightest first.
 //
+// Relations generalize relative positions to any source degree: RelationsFrom
+// lists the full upward intervals and categories from one degree, taking lower
+// targets in the next cycle of a closed mode; RelationTo gives one relation and
+// RelationTable yields the rows from every degree. CompareRelativePositions and
+// ComparePositions match the degrees of two modes by number and flag changed
+// intervals, categories, scores, and ranks.
+//
 // Functions do not change or retain their input mode. Results are caller-owned
 // snapshots, independent between calls and groups. Slice-containing results
 // share elements on assignment, as usual in Go. Concurrent calls on an unchanged

@@ -13,10 +13,18 @@ var (
 	ErrUnset = errors.New("modal: unset mode")
 	// ErrInvalidDegree indicates a number outside the actual degrees 1..Len.
 	ErrInvalidDegree = errors.New("modal: invalid degree")
-	// ErrUnsupportedStructure indicates an absolute query without a closed P8 cycle.
-	ErrUnsupportedStructure = errors.New("modal: absolute analysis requires a closed perfect-octave cycle")
+	// ErrUnsupportedStructure indicates a mode structure outside the domain of
+	// a query. It has three sources: an absolute query on a mode without a
+	// closed perfect-octave cycle, a full comparison (ComparePositions) with
+	// such a mode, and a relation (RelationTo) of an open mode to a target
+	// below its source degree, since an open mode has no next cycle. Each
+	// source adds its own context and wraps this error once.
+	ErrUnsupportedStructure = errors.New("modal: unsupported mode structure")
 	// ErrUnsupportedQuality indicates a neutral or other fractional interval quality.
 	ErrUnsupportedQuality = errors.New("modal: unsupported interval quality")
+	// ErrIncomparable indicates compared modes with different numbers of
+	// degrees. It is distinct from mode.ErrIncomparable.
+	ErrIncomparable = errors.New("modal: incomparable modes")
 )
 
 func checkDegrees(m mode.Mode, numbers ...int) error {
@@ -42,4 +50,12 @@ func classify(q interval.Quality) (Category, error) {
 	default:
 		return CategoryUnset, fmt.Errorf("%w: %s", ErrUnsupportedQuality, q)
 	}
+}
+
+// checkOctaveCycle rejects a mode outside the domain of absolute analysis.
+func checkOctaveCycle(m mode.Mode, context string) error {
+	if !m.IsClosed() || !m.IsOctave() {
+		return fmt.Errorf("%s requires a closed perfect-octave cycle: %w", context, ErrUnsupportedStructure)
+	}
+	return nil
 }
