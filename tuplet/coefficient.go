@@ -302,6 +302,37 @@ func MustApplyChain(d fraction.Fraction, chain ...Tuplet) fraction.Fraction {
 	return must(ApplyChain(d, chain...))
 }
 
+// UnapplyChain returns d divided by ChainCoefficient(chain...), in canonical
+// reduced form: a sounding duration of 1/15 under an outer 5:4 and an inner
+// 3:2 recovers the written 1/8. An empty chain gives d in reduced form.
+// In order of checking, it returns an error wrapping ErrUnset if any element
+// is unset, ErrInvalidArgument if d is unset, the errors of ChainCoefficient,
+// and ErrOutOfRange together with fraction.ErrOutOfRange if the reduced
+// result is outside the range of package common/fraction. The chain is only
+// read.
+func UnapplyChain(d fraction.Fraction, chain ...Tuplet) (fraction.Fraction, error) {
+	if err := checkChain(chain); err != nil {
+		return fraction.Fraction{}, err
+	}
+	if !d.IsValid() {
+		return fraction.Fraction{}, fmt.Errorf("%w: unset fraction", ErrInvalidArgument)
+	}
+	c, err := chainCoefficient(chain)
+	if err != nil {
+		return fraction.Fraction{}, err
+	}
+	r, err := d.Div(c)
+	if err != nil {
+		return fraction.Fraction{}, fractionRangeError("unapply chain", err)
+	}
+	return r, nil
+}
+
+// MustUnapplyChain is like UnapplyChain but panics with the returned error.
+func MustUnapplyChain(d fraction.Fraction, chain ...Tuplet) fraction.Fraction {
+	return must(UnapplyChain(d, chain...))
+}
+
 // mulInt returns a·b and true if the product of the non-negative integers a
 // and b does not exceed math.MaxInt; otherwise it returns 0 and false.
 func mulInt(a, b int) (int, bool) {
