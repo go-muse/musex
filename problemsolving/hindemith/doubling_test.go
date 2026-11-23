@@ -2,6 +2,7 @@ package hindemith_test
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -77,10 +78,16 @@ func assertEvidence(t *testing.T, c hindemith.Chord, ns []note.Note, context str
 			assert.True(t, got[i].Equal(ns[i]), "%s: note %d is %v, want %v", context, i, got[i], ns[i])
 		}
 	}
-	assert.Len(t, c.Dyads(), len(ns)*(len(ns)-1)/2, "%s: dyads", context)
+	dyads := c.Dyads()
+	assert.Len(t, dyads, len(ns)*(len(ns)-1)/2, "%s: dyads", context)
 	if c.HasRoot() {
-		if assert.True(t, c.Best().IsValid(), "%s: best", context) {
-			assert.True(t, c.Best().Root().Equal(c.Root()), "%s: best root %v, chord root %v", context, c.Best().Root(), c.Root())
+		best := c.Best()
+		if assert.True(t, best.IsValid(), "%s: best", context) {
+			assert.True(t, best.Root().Equal(c.Root()), "%s: best root %v, chord root %v", context, best.Root(), c.Root())
+			// Best is one of the input pairs, measured in the same
+			// direction as in Dyads.
+			assert.True(t, slices.ContainsFunc(dyads, best.Equal),
+				"%s: best %v -> %v is not among the dyads", context, best.From(), best.To())
 		}
 	} else {
 		assert.False(t, c.Best().IsValid(), "%s: best without a root", context)
@@ -306,6 +313,19 @@ func TestDoubledChordClasses(t *testing.T) {
 			"octave",
 			[]note.Note{n(spelling.C(), 4), n(spelling.C(), 5)},
 			hindemith.GroupI, hindemith.Sub1, n(spelling.C(), 4), n(spelling.C(), 4), true, 1,
+		},
+		{
+			"one tone in three octaves, bass listed last",
+			[]note.Note{n(spelling.C(), 4), n(spelling.C(), 5), n(spelling.C(), 3)},
+			hindemith.GroupI, hindemith.Sub1, n(spelling.C(), 3), n(spelling.C(), 3), true, 1,
+		},
+		{
+			// The fifths C3-G5 and D4-A4 tie. The pair with the lower lower
+			// note decides (C3), not the pair with the lower upper note
+			// (A4 below G5, which would give D4).
+			"compound fifths tie by the lower lower note",
+			[]note.Note{n(spelling.C(), 3), n(spelling.G(), 5), n(spelling.D(), 4), n(spelling.A(), 4)},
+			hindemith.GroupIII, hindemith.Sub1, n(spelling.C(), 3), n(spelling.C(), 3), true, 7,
 		},
 		{
 			"major second with the bass doubled above",

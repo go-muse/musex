@@ -11,6 +11,7 @@ import (
 	"github.com/go-muse/musex/system"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestEnumStrings covers the text of every group, subgroup and direction.
@@ -113,4 +114,146 @@ func TestDistanceOverflow(t *testing.T) {
 	assert.ErrorIs(t, err, system.ErrOutOfRange)
 
 	assert.Panics(t, func() { hindemith.MustAnalyzeDyad(trad(), hi, lo) })
+}
+
+// edgeOctave is the ASPN octave of the C whose distance from G sharp 4 is
+// exactly math.MinInt steps and from G4 math.MinInt+1 steps in the
+// traditional system: 12 * (edgeOctave - 4) - 8 == math.MinInt.
+const edgeOctave = 4 - 768614336404564650
+
+// panicValue runs f and returns the value it panics with, or nil.
+func panicValue(f func()) (v any) {
+	defer func() { v = recover() }()
+	f()
+	return nil
+}
+
+// TestDistanceEdges covers the distances math.MinInt, math.MinInt+1 and
+// math.MaxInt between two notes. Exactly math.MinInt steps (and its
+// negation) is out of range: an error matching ErrOutOfRange and
+// system.ErrOutOfRange, never a runtime panic; the Must variants panic with
+// that error. The neighbouring distances fit and give the perfect fifth
+// C-G with the root on the lower C.
+func TestDistanceEdges(t *testing.T) {
+	t.Parallel()
+
+	low := note.MustFromASPN(spelling.C(), edgeOctave, cents.Zero(), nil)
+	gSharp := n(spelling.GSharp(), 4)
+	g := n(spelling.G(), 4)
+
+	outOfRange := []struct {
+		name     string
+		from, to note.Note
+	}{
+		{"distance math.MinInt", gSharp, low},
+		{"distance -math.MinInt", low, gSharp},
+	}
+	for _, tc := range outOfRange {
+		t.Run("dyad "+tc.name, func(t *testing.T) {
+			t.Parallel()
+			var err error
+			if !assert.NotPanics(t, func() { _, err = hindemith.AnalyzeDyad(trad(), tc.from, tc.to) }) {
+				return
+			}
+			assert.ErrorIs(t, err, hindemith.ErrOutOfRange)
+			assert.ErrorIs(t, err, system.ErrOutOfRange)
+			v := panicValue(func() { hindemith.MustAnalyzeDyad(trad(), tc.from, tc.to) })
+			perr, ok := v.(error)
+			if assert.True(t, ok, "MustAnalyzeDyad panics with %v, want an error", v) {
+				assert.ErrorIs(t, perr, hindemith.ErrOutOfRange)
+				assert.ErrorIs(t, perr, system.ErrOutOfRange)
+			}
+		})
+		t.Run("chord "+tc.name, func(t *testing.T) {
+			t.Parallel()
+			ns := []note.Note{tc.from, tc.to}
+			var err error
+			if !assert.NotPanics(t, func() { _, err = hindemith.AnalyzeChord(trad(), ns) }) {
+				return
+			}
+			assert.ErrorIs(t, err, hindemith.ErrOutOfRange)
+			assert.ErrorIs(t, err, system.ErrOutOfRange)
+			v := panicValue(func() { hindemith.MustAnalyzeChord(trad(), ns) })
+			perr, ok := v.(error)
+			if assert.True(t, ok, "MustAnalyzeChord panics with %v, want an error", v) {
+				assert.ErrorIs(t, perr, hindemith.ErrOutOfRange)
+				assert.ErrorIs(t, perr, system.ErrOutOfRange)
+			}
+		})
+	}
+
+	inRange := []struct {
+		name     string
+		from, to note.Note
+	}{
+		{"distance math.MinInt+1", g, low},
+		{"distance math.MaxInt", low, g},
+	}
+	for _, tc := range inRange {
+		t.Run("dyad "+tc.name, func(t *testing.T) {
+			t.Parallel()
+			var (
+				d   hindemith.Dyad
+				err error
+			)
+			if !assert.NotPanics(t, func() { d, err = hindemith.AnalyzeDyad(trad(), tc.from, tc.to) }) {
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, 3, d.Series())
+			assert.Equal(t, "perfect fifth", d.Name())
+			assert.True(t, d.Root().Equal(low), "root %v", d.Root())
+			assert.True(t, d.From().Equal(tc.from))
+			assert.True(t, d.To().Equal(tc.to))
+		})
+		t.Run("chord "+tc.name, func(t *testing.T) {
+			t.Parallel()
+			var (
+				c   hindemith.Chord
+				err error
+			)
+			if !assert.NotPanics(t, func() { c, err = hindemith.AnalyzeChord(trad(), []note.Note{tc.from, tc.to}) }) {
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, hindemith.GroupI, c.Group())
+			assert.Equal(t, hindemith.Sub1, c.Subgroup())
+			assert.True(t, c.Bass().Equal(low), "bass %v", c.Bass())
+			assert.True(t, c.Root().Equal(low), "root %v", c.Root())
+		})
+	}
+
+}
+
+// TestChordEqualByNotes covers Chord.Equal over the notes and their order:
+// equal classifications of different note lists are not equal chords.
+func TestChordEqualByNotes(t *testing.T) {
+	t.Parallel()
+
+	base := []note.Note{n(spelling.C(), 4), n(spelling.E(), 4), n(spelling.G(), 4)}
+	cases := []struct {
+		name  string
+		other []note.Note
+		want  bool
+	}{
+		{"same notes", []note.Note{n(spelling.C(), 4), n(spelling.E(), 4), n(spelling.G(), 4)}, true},
+		{"one note in another octave", []note.Note{n(spelling.C(), 4), n(spelling.E(), 4), n(spelling.G(), 5)}, false},
+		{"one note respelled at the same position", []note.Note{n(spelling.C(), 4), n(spelling.FFlat(), 4), n(spelling.G(), 4)}, false},
+		{"same notes in another order", []note.Note{n(spelling.C(), 4), n(spelling.G(), 4), n(spelling.E(), 4)}, false},
+		{"an added doubling", []note.Note{n(spelling.C(), 4), n(spelling.E(), 4), n(spelling.G(), 4), n(spelling.C(), 5)}, false},
+		{"another class", []note.Note{n(spelling.E(), 4), n(spelling.G(), 4), n(spelling.C(), 5)}, false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			a := hindemith.MustAnalyzeChord(trad(), base)
+			b := hindemith.MustAnalyzeChord(trad(), tc.other)
+			assert.Equal(t, tc.want, a.Equal(b))
+			assert.Equal(t, tc.want, b.Equal(a), "symmetry")
+			assert.True(t, a.Equal(a), "reflexivity")
+			assert.False(t, a.Equal(hindemith.Chord{}), "set and unset")
+			assert.False(t, hindemith.Chord{}.Equal(a), "unset and set")
+		})
+	}
 }

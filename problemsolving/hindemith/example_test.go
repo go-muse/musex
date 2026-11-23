@@ -26,6 +26,32 @@ func ExampleAnalyzeChord() {
 	// I 2 C5
 }
 
+// Two voicings of the C major triad: in root position the root C is the bass
+// (subgroup 1), in the first inversion C lies above the bass E (subgroup 2).
+func ExampleAnalyzeChord_voicings() {
+	sys := system.Traditional()
+	std := settings.Standard()
+	voicings := [][]note.Note{
+		{
+			note.MustFromASPN(spelling.C(), 4, cents.Zero(), nil),
+			note.MustFromASPN(spelling.E(), 4, cents.Zero(), nil),
+			note.MustFromASPN(spelling.G(), 4, cents.Zero(), nil),
+		},
+		{
+			note.MustFromASPN(spelling.E(), 4, cents.Zero(), nil),
+			note.MustFromASPN(spelling.G(), 4, cents.Zero(), nil),
+			note.MustFromASPN(spelling.C(), 5, cents.Zero(), nil),
+		},
+	}
+	for _, ns := range voicings {
+		c := hindemith.MustAnalyzeChord(sys, ns)
+		fmt.Println(c.Group(), c.Subgroup(), c.Value(), c.Root().Spelling(), c.Bass().MustFormatIn(std))
+	}
+	// Output:
+	// I 1 1 C C4
+	// I 2 2 C E4
+}
+
 // The tritone has no root of its own.
 func ExampleAnalyzeDyad() {
 	sys := system.Traditional()
