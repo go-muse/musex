@@ -41,22 +41,36 @@
 // perfect fourth, major third, minor sixth, minor third, major sixth, major
 // second, minor seventh, minor second, major seventh, tritone.
 //
-// A chord is classified by its intra-chord interval content, counted over
-// pairs of different pitch classes so that doublings add nothing: without
-// a tritone, three different tones a major third apart (the augmented
-// triad) or a perfect fourth apart (the perfect quartal triad), in any
-// voicing and with doublings, are group V; otherwise absence of seconds
-// and sevenths gives group I and their presence group III. A chord of one
-// doubled note is group I with that note as its root. With a tritone,
-// content of only tritones, minor thirds and major sixths is group VI
-// (diminished triad, diminished seventh and the like); otherwise absence
-// of minor seconds and major sevenths gives group II and their presence
-// group IV. Groups V and VI have no root; in the other groups the root is
-// the root of the strongest interval between different tones, unison and
-// octave pairs ignored, ties between equal best intervals broken by the
-// lower pair first and then the upper, so the result does not depend on
-// the listing order. Tritones are counted as different pairs of pitch
-// classes, so a doubled tritone member is one tritone. Subgroups 1 and 2
+// Doublings never change the classification. A chord is first reduced to
+// the lowest note of every pitch class. The pitch class is the position in
+// the system modulo 12, not the spelling, so enharmonic doublings such as
+// G♭4 and F♯5, or C4 and B♯4, are one class. Of two notes of one class at
+// the same position (a unison, also in different spellings such as C♯4
+// and D♭4) the first in input order stays, as for the bass. The group,
+// subgroup, tritone count, best interval, root, the comparison of root and
+// bass, and the fluctuation value are computed on the reduced chord only;
+// higher repetitions of a tone add no interval. A doubling below the
+// lowest occurrence of a tone replaces it in the reduced chord and so may
+// move the bass and the root: the result is that of the reduced chord. The
+// evidence still shows the whole input: Chord.Notes returns every input
+// note and Chord.Dyads every input pair.
+//
+// The reduced chord is classified by its interval content: without a
+// tritone, three different tones a major third apart (the augmented triad)
+// or a perfect fourth apart (the perfect quartal triad), in any voicing,
+// are group V; otherwise absence of seconds and sevenths gives group I and
+// their presence group III. A chord of one doubled tone (unisons and
+// octaves only) is group I, subgroup 1, with its lowest note, the first of
+// equal positions, as bass and root. With a tritone, content of only
+// tritones, minor thirds and major sixths is group VI (diminished triad,
+// diminished seventh and the like); otherwise absence of minor seconds and
+// major sevenths gives group II and their presence group IV. Groups V and
+// VI have no root; in the other groups the root is the root of the
+// strongest interval of the reduced chord, ties between equal best
+// intervals broken by the lower pair first and then the upper, so the
+// result does not depend on the listing order. Each tritone of the reduced
+// chord is one pair of pitch classes, so a doubled tritone member adds no
+// tritone. Subgroups 1 and 2
 // mean root equal to the bass and root above the bass; group II adds
 // subgroup a (one tritone, no major second, root in the bass) and subgroups
 // b1, b2, b3 (one tritone with root in the bass, one tritone with root
