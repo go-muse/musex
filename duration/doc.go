@@ -10,7 +10,7 @@
 // units of notation formats; those belong to the packages that use it. Rests
 // have the same durations as notes, so the package does not distinguish them.
 //
-// # Five types
+// # Types
 //
 //   - [Duration] is an exact length without notation.
 //   - [Base] is a note value without dots: one of 14 values from maxima to
@@ -19,6 +19,8 @@
 //     of tuplets.
 //   - [Tied] is a tied duration: two or more written durations under a tie.
 //   - [Position] is an exact offset of at least zero.
+//   - [Group] is a written tuplet group with contents ([Content]); [Reading]
+//     is one exact rhythmic reading of a sequence of durations.
 //
 // A written or tied duration has a duration, returned by Written.Duration and
 // Tied.Duration. Adding durations gives a duration, not a notation: notation
@@ -122,6 +124,30 @@
 // a quarter gives 2 eighths and a dotted half 3 quarters. Two or more dots
 // have no rule ([ErrNoSubdivision]), and parts shorter than the 1024th are
 // outside the series ([ErrOutsideSeries]).
+//
+// [Written.SubdivideTuplet] divides a written duration into the actual count
+// of a tuplet, preserving the enclosing chain: a quarter in 3:2 gives three
+// eighths sounding 1/12 each, and a dotted quarter in 2:3 gives two eighths
+// sounding 3/16 each. The part may carry dots; when the equal part is not one
+// written sign, the error is [ErrNotNotatable].
+//
+// # Groups and readings
+//
+// [Group] is a written tuplet group: a tuplet, a written unit, and contents
+// ([Content], a written duration or a nested group) whose sounding durations
+// fill at most the group span. [NewGroup] builds one; Span, Shortfall, and
+// Spans expose the total span, the unfilled part, and the half-open sounding
+// spans of the contents. Adjacent and nested groups stay distinguishable:
+// one 6:4 group is not two 3:2 groups over the same notes. The contents are
+// written durations; whether a value is a note or a rest belongs to package
+// event.
+//
+// [Readings] finds the exact rhythmic readings of an ordered sequence of
+// sounding durations: each duration gets one written value, in order, inside
+// its chain of groups; groups are filled exactly and use the allowed ratios;
+// durations that need no tuplet stay outside groups. [ReadingsOptions] bounds
+// the ratios, the notation, the nesting depth (no nesting by default), and
+// the number of results. No reading is an empty result, not an error.
 //
 // # Positions
 //

@@ -640,3 +640,74 @@ func (w Written) Subdivide() (count int, part Written, err error) {
 func (w Written) MustSubdivide() (count int, part Written) {
 	return must2(w.Subdivide())
 }
+
+// SubdivideTuplet divides w into the actual count of the tuplet t: count is
+// t.Actual(), and part is the single written sign, possibly dotted, whose
+// value is w.Value()/t.Normal(), under the chain of w extended by t as the
+// innermost tuplet. The enclosing chain is preserved, and count parts of the
+// sounding duration of part equal the sounding duration of w. A quarter in
+// 3:2 gives three eighths sounding 1/12 each; a dotted quarter in 2:3 gives
+// two eighths sounding 3/16 each; a dotted quarter in 3:2 gives three dotted
+// eighths.
+//
+// In order of checking, it returns an error wrapping ErrUnset if w is unset,
+// ErrInvalidArgument together with tuplet.ErrUnset if t is unset,
+// ErrOutOfRange if the value of the part or its duration is outside the range
+// of package common/fraction, ErrNotNotatable if the equal part is not one
+// written sign, and ErrOutsideSeries if the base of the part would be outside
+// the series.
+func (w Written) SubdivideTuplet(t tuplet.Tuplet) (count int, part Written, err error) {
+	const op = "Written.SubdivideTuplet"
+	if !w.IsSet() {
+		return 0, Written{}, w.unset(op)
+	}
+	if !t.IsSet() {
+		return 0, Written{}, unsetTupletError(op, 0)
+	}
+
+	actual, normal := t.MustPair()
+	chain := unpackChain(w.chain)
+	coef, err := checkedCoefficient(op, chain)
+	if err != nil {
+		return 0, Written{}, err
+	}
+	// The written value of w is its duration divided by the chain coefficient;
+	// the part's written value is that divided by the normal count.
+	v := ratOf(w.value)
+	v.Quo(v, coef)
+	v.Quo(v, new(big.Rat).SetInt64(int64(normal)))
+	partValue, ok := fromRat(v)
+	if !ok {
+		return 0, Written{}, rangeError(op)
+	}
+
+	v = ratOf(partValue)
+	if !isPow2(v.Denom()) {
+		return 0, Written{}, simpleError(ErrNotNotatable, op)
+	}
+	// v = a·2^j with odd a; one sign with k dots requires a = 2^(k+1) − 1.
+	shift := v.Num().TrailingZeroBits()
+	a := new(big.Int).Rsh(v.Num(), shift)
+	a.Add(a, big.NewInt(1))
+	if !isPow2(a) {
+		return 0, Written{}, simpleError(ErrNotNotatable, op)
+	}
+	k := a.BitLen() - 2
+	j := int(shift) - (v.Denom().BitLen() - 1)
+	b, okBase := baseOfExp(j + k)
+	if !okBase {
+		return 0, Written{}, simpleError(ErrOutsideSeries, op)
+	}
+
+	part, err = makeWritten(op, b, k, append(chain, t))
+	if err != nil {
+		return 0, Written{}, err
+	}
+	return actual, part, nil
+}
+
+// MustSubdivideTuplet is like SubdivideTuplet but panics with the returned
+// error.
+func (w Written) MustSubdivideTuplet(t tuplet.Tuplet) (count int, part Written) {
+	return must2(w.SubdivideTuplet(t))
+}
