@@ -169,6 +169,13 @@
 // recovered; the package checks that the returned name is set, admissible and
 // of the requested class.
 //
+// [System.Palette] groups the spellings the rules produce by class, in class
+// order and rule order, without repeats: Palette(Flats(), Sharps()) on the
+// traditional system gives 12 groups and 17 spellings, the class of C♯/D♭
+// offering D♭ before C♯. [System.PaletteWithin] gives every admissible
+// spelling of each class within an alteration limit, in the order of
+// [System.Spellings].
+//
 // # Technical limits
 //
 // N <= [MaxClasses] (2^16), c <= [MaxChromatic] (2^16), a progression step is
