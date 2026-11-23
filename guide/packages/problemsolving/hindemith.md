@@ -105,8 +105,13 @@ Errors are sentinels matched with `errors.Is`: `ErrUnset`, `ErrNoOctave`,
 `system.ErrInadmissible`), and `ErrOutOfRange` (wrapping
 `system.ErrOutOfRange`), in the documented order per operation. Every checked
 operation has a `Must` variant that panics with the same error. `Dyad.Equal`
-and `Chord.Equal` compare the analyzed values; two unset values are not
-equal, as for `note.Note.Equal`.
+and `Chord.Equal` compare the analyzed values. Two set dyads are equal when
+the ordered pair of notes, the Series II position, and the root, if there is
+one, are equal. Two set chords are equal when the notes in the same order,
+the group and subgroup, the bass, and the root, if there is one, are equal.
+Values without a root (a tritone dyad, a chord of group V or VI) are equal
+when everything else is equal. An unset value equals no value, not even
+another unset value, as for `note.Note.Equal`.
 
 Sources: Hindemith, *The Craft of Musical Composition*, Book I, pp. 68-106;
 the chord-group table reproduction at the UNT digital library; the group

@@ -52,12 +52,20 @@ func (d Dyad) From() note.Note { return d.from }
 // note only when the interval ascends.
 func (d Dyad) To() note.Note { return d.to }
 
-// Equal reports whether d and other measure the same ordered pair of notes
-// to the same Series II interval with the same root. Two unset dyads are
-// not equal, as for note.Note.Equal.
+// Equal reports whether d and other are set and measure the same ordered
+// pair of notes (compared with note.Note.Equal) to the same Series II
+// position with the same root. The root is compared only when the interval
+// has one: two tritone dyads, which have no root, are equal when their
+// ordered notes are equal. An unset dyad equals no dyad, not even another
+// unset dyad, as for note.Note.Equal.
 func (d Dyad) Equal(other Dyad) bool {
+	if !d.IsValid() || !other.IsValid() {
+		return false
+	}
+
 	return d.from.Equal(other.from) && d.to.Equal(other.to) &&
-		d.entry.series == other.entry.series && d.root.Equal(other.root)
+		d.entry.series == other.entry.series &&
+		(!d.entry.hasRoot || d.root.Equal(other.root))
 }
 
 // IsValid reports whether the dyad was analyzed.

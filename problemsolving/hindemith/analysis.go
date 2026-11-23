@@ -187,12 +187,19 @@ func (c Chord) HasRoot() bool { return c.hasRoot }
 // the unset note when there is none.
 func (c Chord) Root() note.Note { return c.root }
 
-// Equal reports whether c and other classify the same notes in the same
-// order to the same group, subgroup, bass and root. Two unset chords are
-// not equal, as for note.Note.Equal.
+// Equal reports whether c and other are set and classify the same notes in
+// the same order (compared with note.Note.Equal) to the same group,
+// subgroup, bass and root. The root is compared only when the chord has
+// one: two chords of group V or VI, which have no root, are equal when
+// their notes, group, subgroup and bass are equal. An unset chord equals no
+// chord, not even another unset chord, as for note.Note.Equal.
 func (c Chord) Equal(other Chord) bool {
+	if !c.IsValid() || !other.IsValid() {
+		return false
+	}
 	if len(c.notes) != len(other.notes) || c.group != other.group || c.sub != other.sub ||
-		c.hasRoot != other.hasRoot || !c.bass.Equal(other.bass) || !c.root.Equal(other.root) {
+		c.hasRoot != other.hasRoot || !c.bass.Equal(other.bass) ||
+		(c.hasRoot && !c.root.Equal(other.root)) {
 		return false
 	}
 	for i := range c.notes {
