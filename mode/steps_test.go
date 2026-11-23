@@ -319,6 +319,44 @@ func stepsFixtures() []stepsFixture {
 	}
 }
 
+// TestStepsBetweenFromChecksOnlyTheRequestedNames checks P-33 and R-18: the
+// named form checks the start and the names of the two places only. In each
+// case another name of the mode (a degree that is not requested, or the
+// first degree of the next cycle) is not admissible, so NumbersFrom, which
+// checks every name, fails while the distance succeeds.
+func TestStepsBetweenFromChecksOnlyTheRequestedNames(t *testing.T) {
+	t.Parallel()
+	traditional := system.Traditional()
+	// C and D are the only admissible names around C: no accidentals at all.
+	naturalOnly := system.MustNewRegular(2, 1, letter.C, system.MustIntegerRange(0, 0), "Naturals only")
+	neutralOpen := mode.MustOpenFromDegreeIntervals(intervals("P1 n3 n7"))
+	neutralClosed := mode.MustClosedFromDegreeIntervals(intervals("P1 n3 P5"), interval.PerfectOctave())
+	// From C the degrees are C and D; the next cycle starts on E flat.
+	closesAtFlat := mode.MustParse("M2 m2")
+	for _, tt := range []struct {
+		name  string
+		m     mode.Mode
+		sys   *system.System
+		start string
+		from  mode.DegreePlace
+		to    mode.DegreePlace
+		want  system.Step
+	}{
+		{"open mode: degrees 2 and 3 are E-1/2 and B-1/2", neutralOpen, traditional, "C", place(1, 0), place(1, 0), 0},
+		{"closed mode: degree 2 is E-1/2, C to G", neutralClosed, traditional, "C", place(1, 0), place(3, 0), 7},
+		{"closed mode: degree 2 is E-1/2, G to the next C", neutralClosed, traditional, "C", place(3, 0), place(1, 1), 5},
+		{"the next cycle starts on an inadmissible E flat", closesAtFlat, naturalOnly, "C", place(1, 0), place(2, 0), 2},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			start := spelling.MustParse(tt.start)
+			_, err := tt.m.NumbersFrom(tt.sys, start)
+			require.ErrorIs(t, err, system.ErrInadmissible, "precondition: another name of the mode is not admissible")
+			checkStepsSuccess(t, namedFrom(tt.m, tt.sys, tt.start, tt.from, tt.to), tt.want)
+		})
+	}
+}
+
 func TestStepsBetweenMatchesNumbersInCycleZero(t *testing.T) {
 	t.Parallel()
 	for _, f := range stepsFixtures() {
