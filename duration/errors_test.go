@@ -9,11 +9,12 @@ import (
 )
 
 // TestSentinels covers business-spec 2.6, T-10, and architecture 4.1: 11
-// sentinels, pairwise distinct; none wraps another or a dependency sentinel.
+// sentinels plus ErrSearchLimit of Readings, pairwise distinct; none wraps
+// another or a dependency sentinel.
 func TestSentinels(t *testing.T) {
 	t.Parallel()
 
-	require.Len(t, durationSentinels, 11)
+	require.Len(t, durationSentinels, 12)
 
 	for _, a := range durationSentinels {
 		require.Error(t, a.err, a.name)

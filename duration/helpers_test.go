@@ -23,7 +23,8 @@ type namedError struct {
 	err  error
 }
 
-// durationSentinels are the 11 sentinels of architecture 4.2 (E-1 to E-11).
+// durationSentinels are the 11 sentinels of architecture 4.2 (E-1 to E-11)
+// and ErrSearchLimit, the search bound of Readings.
 var durationSentinels = []namedError{
 	{"duration.ErrUnset", duration.ErrUnset},
 	{"duration.ErrInvalidArgument", duration.ErrInvalidArgument},
@@ -36,6 +37,7 @@ var durationSentinels = []namedError{
 	{"duration.ErrTooManyParts", duration.ErrTooManyParts},
 	{"duration.ErrInvalidText", duration.ErrInvalidText},
 	{"duration.ErrOutOfRange", duration.ErrOutOfRange},
+	{"duration.ErrSearchLimit", duration.ErrSearchLimit},
 }
 
 // dependencySentinels are all sentinels of common/fraction, tuplet, and

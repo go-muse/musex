@@ -228,6 +228,50 @@ func TestReadingsFreeContentsCovers(t *testing.T) {
 				eighthIn(triplet), eighthIn(triplet),
 				wcon(duration.Sixteenth, 0, triplet), wcon(duration.Sixteenth, 0, triplet))}},
 		},
+		{
+			name: "one quarter as a dotted quarter in a 3:2 group",
+			ds:   []duration.Duration{dur(1, 4)},
+			opts: duration.ReadingsOptions{Allowed: []tuplet.Tuplet{triplet}, MaxDots: 1},
+			want: [][]duration.Content{{gcon(triplet, eighth, wcon(duration.Quarter, 1, triplet))}},
+		},
+		{
+			name: "three quarters in a 3:2 group in dotted quarters",
+			ds:   repeatDur(3, 1, 4),
+			opts: duration.ReadingsOptions{Allowed: []tuplet.Tuplet{triplet}, MaxDots: 1, Longest: duration.Quarter},
+			want: [][]duration.Content{{gcon(triplet, wr(duration.Quarter, 1),
+				wcon(duration.Quarter, 1, triplet), wcon(duration.Quarter, 1, triplet), wcon(duration.Quarter, 1, triplet))}},
+		},
+		{
+			name: "three 4/3 in a 3:2 group in breves",
+			ds:   repeatDur(3, 4, 3),
+			opts: duration.ReadingsOptions{Allowed: []tuplet.Tuplet{triplet}},
+			want: [][]duration.Content{{gcon(triplet, wr(duration.Breve, 0),
+				wcon(duration.Breve, 0, triplet), wcon(duration.Breve, 0, triplet), wcon(duration.Breve, 0, triplet))}},
+		},
+		{
+			name: "a 3:2 group nested alone in a 2:3 group",
+			ds:   repeatDur(3, 3, 8),
+			opts: duration.ReadingsOptions{
+				Allowed: []tuplet.Tuplet{tp(2, 3), triplet},
+				MaxDots: 1, Longest: duration.Quarter, MaxDepth: 1,
+			},
+			want: [][]duration.Content{{gcon(tp(2, 3), wr(duration.Quarter, 1),
+				gcon(triplet, wr(duration.Quarter, 1, tp(2, 3)),
+					wcon(duration.Quarter, 1, tp(2, 3), triplet),
+					wcon(duration.Quarter, 1, tp(2, 3), triplet),
+					wcon(duration.Quarter, 1, tp(2, 3), triplet)))}},
+		},
+		{
+			name: "a free 3:2 group nested in a 5:4 group",
+			ds:   []duration.Duration{dur(1, 10), dur(1, 10), dur(1, 15), dur(1, 30), dur(1, 10), dur(1, 10)},
+			opts: duration.ReadingsOptions{Allowed: []tuplet.Tuplet{tuplet.Quintuplet(), triplet}, MaxDepth: 1},
+			want: [][]duration.Content{{gcon(tuplet.Quintuplet(), eighth,
+				eighthIn(tuplet.Quintuplet()), eighthIn(tuplet.Quintuplet()),
+				gcon(triplet, wr(duration.Sixteenth, 0, tuplet.Quintuplet()),
+					wcon(duration.Eighth, 0, tuplet.Quintuplet(), triplet),
+					wcon(duration.Sixteenth, 0, tuplet.Quintuplet(), triplet)),
+				eighthIn(tuplet.Quintuplet()), eighthIn(tuplet.Quintuplet()))}},
+		},
 	}
 
 	for _, tt := range tests {
@@ -236,6 +280,7 @@ func TestReadingsFreeContentsCovers(t *testing.T) {
 
 			opts := tt.opts
 			opts.FreeContents = true
+			opts.MaxReadings = manyReadings
 			readings, err := duration.Readings(tt.ds, opts)
 			require.NoError(t, err)
 
@@ -345,7 +390,7 @@ func TestReadingsFreeContentsMonotone(t *testing.T) {
 
 // The work of a call with FreeContents and nesting is bounded: on a long input
 // that has readings in triplets, the call returns quickly with readings or
-// with ErrTooManyParts, never with an empty result and no error.
+// with ErrSearchLimit, never with an empty result and no error.
 func TestReadingsFreeContentsWorkBound(t *testing.T) {
 	t.Parallel()
 
@@ -364,7 +409,7 @@ func TestReadingsFreeContentsWorkBound(t *testing.T) {
 	})
 
 	if r.err != nil {
-		assertErr(t, r.err, duration.ErrTooManyParts)
+		assertErr(t, r.err, duration.ErrSearchLimit)
 
 		return
 	}
