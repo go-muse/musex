@@ -17,4 +17,12 @@
 // source guarantees. Mutating the same Scale requires caller synchronization.
 // Independent copies can be edited concurrently. Must operations call their
 // error-returning counterparts and panic with the original error on failure.
+//
+// FromSpellings builds a scale of name-only notes; FromTokens reads tokens in
+// the notation of a source, identifying a failing token by index with a
+// TokenError. Tokens and TokensIn write one token per note; Spellings returns
+// the ordered spellings. ChromaticRun builds a playable chromatic run between
+// two pitches, spelled by an explicit system.SpellingRule and bound to a
+// source. PitchClassSequence projects the notes to an ordered pcseq.Sequence,
+// one position per note, preserving repetitions and enharmonic equivalents.
 package scale

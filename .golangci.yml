@@ -353,6 +353,7 @@ linters:
             - github.com/go-muse/musex/interval$
             - github.com/go-muse/musex/letter$
             - github.com/go-muse/musex/note$
+            - github.com/go-muse/musex/pcseq$
             - github.com/go-muse/musex/pcset$
             - github.com/go-muse/musex/pitch$
             - github.com/go-muse/musex/settings$

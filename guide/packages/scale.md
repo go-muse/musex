@@ -7,6 +7,12 @@ octave, cents correction, and settings source. It also keeps the order and any r
 built, the scale holds only the notes, so it can be edited independently of
 the mode.
 
+## Build from spellings and tokens
+
+`FromSpellings` builds a scale of name-only notes — no octaves, zero cents, and a chosen source — preserving order and repetitions. `FromTokens` reads text tokens in the notation of a source, accepting both names and written pitches; a failing token is identified by its index. `Tokens` and `TokensIn` write one token per note, and `Spellings` returns the ordered spellings.
+
+`ChromaticRun` builds a playable chromatic exercise between two pitches, endpoints included: C4 through C5 gives 13 notes, each with its written octave and source, spelled by an explicit rule — the directional chromatic-scale rule for a key (C major ascending gives B♭ at the tenth semitone) or a sharp/flat policy. `PitchClassSequence` projects the notes to an ordered pitch-class sequence, one position per note, keeping repetitions and enharmonic equivalents: C4, D♭4, C♯5, D4 give [0, 1, 1, 2].
+
 ## Build notes from a mode
 
 `Mode.FromTonic` gives one note per degree, in mode order. For a seven-degree
