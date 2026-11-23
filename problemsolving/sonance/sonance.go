@@ -133,10 +133,9 @@ func (p Profile) Weight(ic int) (float64, error) {
 // MustWeight is like Weight but panics with its error.
 func (p Profile) MustWeight(ic int) float64 { return must(p.Weight(ic)) }
 
-// Equal reports whether p and other carry the same seven weights. Two set
-// profiles are equal when their weights are equal. Two unset profiles are
-// equal; an unset profile equals no set profile, not even one of seven zero
-// weights.
+// Equal reports whether p and other are both unset, or both set with equal
+// seven weights. An unset profile has no weights and equals no set profile,
+// not even one of seven zero weights.
 func (p Profile) Equal(other Profile) bool { return p.set == other.set && p.weights == other.weights }
 
 // PairProfile is an immutable set of twelve consonance weights, one per
@@ -216,10 +215,9 @@ func (p PairProfile) Weight(semis int) (float64, error) {
 // MustWeight is like Weight but panics with its error.
 func (p PairProfile) MustWeight(semis int) float64 { return must(p.Weight(semis)) }
 
-// Equal reports whether p and other carry the same twelve weights. Two set
-// profiles are equal when their weights are equal. Two unset profiles are
-// equal; an unset profile equals no set profile, not even one of twelve zero
-// weights.
+// Equal reports whether p and other are both unset, or both set with equal
+// twelve weights. An unset profile has no weights and equals no set profile,
+// not even one of twelve zero weights.
 func (p PairProfile) Equal(other PairProfile) bool {
 	return p.set == other.set && p.weights == other.weights
 }
