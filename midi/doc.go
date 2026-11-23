@@ -3,10 +3,14 @@
 // A Number is an integer position from 0 through 127 in the ordinary MIDI map:
 // C in positional octave -1 is 0, C4 is 60, A4 is 69, and G9 is 127. The zero
 // Number is invalid, not MIDI 0. Min, Max, Count, and All expose the complete
-// range; Shift, ShiftOctaves, their neighboring forms, and Sub never wrap,
-// clamp, or saturate. Parts returns an ASPN positional octave, a class modulo
-// 12, and the numeric C-layout position P = m-12. FromParts performs the
-// inverse numeric assembly without consulting a musical system.
+// range; NumbersInOctave enumerates the numbers of one positional octave in
+// ascending order, including the partial top octave 120 through 127. A valid
+// octave outside the MIDI range gives an empty sequence; the invalid octave
+// is an error, not an empty result. Shift, ShiftOctaves, their neighboring
+// forms, and Sub never wrap, clamp, or saturate. Parts returns an ASPN
+// positional octave, a class modulo 12, and the numeric C-layout position
+// P = m-12. FromParts performs the inverse numeric assembly without
+// consulting a musical system.
 //
 // Conversion from a written pitch requires an explicit system with the
 // traditional C layout: twelve classes, offsets C0 D2 E4 F5 G7 A9 B11,

@@ -7,6 +7,7 @@ import (
 	"github.com/go-muse/musex/cents"
 	"github.com/go-muse/musex/midi"
 	"github.com/go-muse/musex/note"
+	"github.com/go-muse/musex/octave"
 	"github.com/go-muse/musex/pitch"
 	"github.com/go-muse/musex/settings"
 	"github.com/go-muse/musex/spelling"
@@ -119,4 +120,22 @@ func ExampleNumber_Pitch_positionOctave() {
 	// B♯3: 4 60
 	// C♭4: 3 59
 	// true
+}
+
+// NumbersInOctave enumerates the MIDI numbers of a positional octave; the
+// top octave is partial, and an octave outside the range gives no numbers.
+func ExampleNumbersInOctave() {
+	for _, aspn := range []int{4, 9, 10} {
+		numbers := make([]int, 0)
+		for number := range midi.MustNumbersInOctave(octave.FromASPN(aspn)) {
+			numbers = append(numbers, number.MustInt())
+		}
+
+		fmt.Println(aspn, numbers)
+	}
+
+	// Output:
+	// 4 [60 61 62 63 64 65 66 67 68 69 70 71]
+	// 9 [120 121 122 123 124 125 126 127]
+	// 10 []
 }
