@@ -52,3 +52,29 @@ func ExampleReadings() {
 	// 2
 	// 6:4
 }
+
+// With FreeContents a group may hold any number of values that fill it
+// exactly: a quarter and an eighth sounding 1/6 and 1/12 have no reading with
+// fixed contents, and one 3:2 group in eighths with free contents.
+func ExampleReadings_freeContents() {
+	ds := []duration.Duration{duration.MustNew(1, 6), duration.MustNew(1, 12)}
+	allowed := []tuplet.Tuplet{tuplet.Triplet()}
+
+	fixed := duration.MustReadings(ds, duration.ReadingsOptions{Allowed: allowed})
+	fmt.Println(len(fixed))
+
+	free := duration.MustReadings(ds, duration.ReadingsOptions{Allowed: allowed, FreeContents: true})
+	fmt.Println(len(free))
+
+	g := free[0].MustContents()[0].MustGroup()
+	fmt.Println(g.MustTuplet(), g.MustUnit())
+	for _, c := range g.MustContents() {
+		fmt.Println(c.MustWritten())
+	}
+	// Output:
+	// 0
+	// 1
+	// 3:2 8
+	// 4[3:2]
+	// 8[3:2]
+}
