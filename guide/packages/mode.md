@@ -102,7 +102,8 @@ a regular system; in an irregular one it returns `interval.ErrStartRequired`.
 Only the final distance must be a whole number that fits in a `system.Step`:
 fractional or huge intermediate numbers of the individual places do not cause
 an error. For two places in cycle zero the result equals the difference of the
-corresponding numbers of `Numbers` or `NumbersFrom` whenever those succeed.
+corresponding numbers of `Numbers` or `NumbersFrom` whenever those succeed
+and the difference fits in an `int`; otherwise the distance is `ErrOutOfRange`.
 
 Errors follow this order: `ErrUnset`; `ErrInvalidArgument` for a place number
 outside 1..`Len()` or a nonzero cycle of an open mode, from before to; then
