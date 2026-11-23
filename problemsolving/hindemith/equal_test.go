@@ -3,9 +3,11 @@ package hindemith_test
 import (
 	"testing"
 
+	"github.com/go-muse/musex/letter"
 	"github.com/go-muse/musex/note"
 	"github.com/go-muse/musex/problemsolving/hindemith"
 	"github.com/go-muse/musex/spelling"
+	"github.com/go-muse/musex/system"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -235,12 +237,14 @@ func TestChordEqualWithoutRoot(t *testing.T) {
 		{"diminished triad and diminished seventh", chordOf(diminished...),
 			chordOf(n(spelling.B(), 3), n(spelling.D(), 4), n(spelling.F(), 4), n(spelling.AFlat(), 4)), rootless, rootless, false},
 
-		// Values without a root that differ in the group or the bass.
-		{"group V and group VI", chordOf(augmented...),
+		// Values without a root whose notes differ, and with them the group
+		// or the bass. Differences in the classification alone, for the same
+		// notes, are covered by TestEqualComparesTheClassification.
+		{"other notes of group V and of group VI", chordOf(augmented...),
 			chordOf(n(spelling.C(), 4), n(spelling.EFlat(), 4), n(spelling.GFlat(), 4)), rootless, rootless, false},
-		{"augmented triad with another bass", chordOf(augmented...),
+		{"augmented triad inverted to other notes and another bass", chordOf(augmented...),
 			chordOf(n(spelling.E(), 4), n(spelling.GSharp(), 4), n(spelling.C(), 5)), rootless, rootless, false},
-		{"diminished triad with another bass", chordOf(diminished...),
+		{"diminished triad inverted to other notes and another bass", chordOf(diminished...),
 			chordOf(n(spelling.D(), 4), n(spelling.F(), 4), n(spelling.B(), 4)), rootless, rootless, false},
 
 		// A value without a root against a value with a root.
@@ -328,5 +332,212 @@ func TestEqualIsEquivalenceOnSetValues(t *testing.T) {
 		var c hindemith.Chord
 		assert.False(t, d.Equal(d), "an unset dyad does not equal itself")
 		assert.False(t, c.Equal(c), "an unset chord does not equal itself")
+	})
+}
+
+// twelveTone returns a system of twelve classes with the boundary letter C,
+// chromatic unit 1 and the integer alteration values, with the offsets of
+// the letters C D E F G A B. Every such system is admitted by the package
+// (ХН-П1), so the same notes may be classified differently in two of them.
+func twelveTone(name string, offsets [letter.Count]int) *system.System {
+	return system.MustNew(system.Definition{
+		Name:        name,
+		Classes:     12,
+		Boundary:    letter.C,
+		Offsets:     offsets,
+		Chromatic:   1,
+		Alterations: system.Integers(),
+	})
+}
+
+// Twelve-tone systems that differ from the traditional one (C 0 D 2 E 4 F 5
+// G 7 A 9 B 11) in the offsets of one or more letters.
+var (
+	sysD1    = twelveTone("d1", [letter.Count]int{0, 1, 4, 5, 7, 9, 11})
+	sysB9    = twelveTone("b9", [letter.Count]int{0, 2, 4, 5, 7, 8, 9})
+	sysE5    = twelveTone("e5", [letter.Count]int{0, 2, 5, 5, 7, 9, 11})
+	sysG6    = twelveTone("g6", [letter.Count]int{0, 2, 4, 5, 6, 9, 11})
+	sysMinor = twelveTone("minor", [letter.Count]int{0, 2, 3, 5, 7, 8, 10})
+)
+
+// sameNotes reports whether a and b are the same notes in the same order.
+func sameNotes(a, b []note.Note) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if !a[i].Equal(b[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+// sameRoot reports whether two optional roots agree: both absent, or both
+// present and equal notes.
+func sameRoot(hasA bool, a note.Note, hasB bool, b note.Note) bool {
+	if hasA != hasB {
+		return false
+	}
+	return !hasA || a.Equal(b)
+}
+
+// dyadDiff lists the criteria of Dyad.Equal in which the set dyads a and b
+// differ: "notes" (the ordered pair), "series" and "root".
+func dyadDiff(a, b hindemith.Dyad) []string {
+	var diff []string
+	if !a.From().Equal(b.From()) || !a.To().Equal(b.To()) {
+		diff = append(diff, "notes")
+	}
+	if a.Series() != b.Series() {
+		diff = append(diff, "series")
+	}
+	if !sameRoot(a.HasRoot(), a.Root(), b.HasRoot(), b.Root()) {
+		diff = append(diff, "root")
+	}
+	return diff
+}
+
+// chordDiff lists the criteria of Chord.Equal in which the set chords a and
+// b differ: "notes" (in order), "group", "subgroup", "bass" and "root".
+func chordDiff(a, b hindemith.Chord) []string {
+	var diff []string
+	if !sameNotes(a.Notes(), b.Notes()) {
+		diff = append(diff, "notes")
+	}
+	if a.Group() != b.Group() {
+		diff = append(diff, "group")
+	}
+	if a.Subgroup() != b.Subgroup() {
+		diff = append(diff, "subgroup")
+	}
+	if !a.Bass().Equal(b.Bass()) {
+		diff = append(diff, "bass")
+	}
+	if !sameRoot(a.HasRoot(), a.Root(), b.HasRoot(), b.Root()) {
+		diff = append(diff, "root")
+	}
+	return diff
+}
+
+// TestEqualComparesTheClassification covers the criteria of Dyad.Equal and
+// Chord.Equal (ХН-П13) other than the notes. The same notes are analyzed in
+// two admitted twelve-tone systems in which exactly one criterion differs:
+// for a dyad the Series II position or the root, for a chord the group, the
+// subgroup, the bass (with and without a root) or the root. Each case first
+// requires that exactly the named criterion differs and every other one
+// agrees, then expects inequality in both directions. The positive controls
+// classify the same notes identically in two systems and are equal.
+//
+// The expected classifications follow from the class (p(l) + a) mod 12 of
+// each name and the position Octave·12 + class (package system), Series II
+// and the interval roots, and the group table (package documentation).
+func TestEqualComparesTheClassification(t *testing.T) {
+	t.Parallel()
+
+	t.Run("dyads", func(t *testing.T) {
+		t.Parallel()
+
+		cases := []struct {
+			name     string
+			from, to note.Note
+			sa, sb   *system.System
+			series   int // the Series II position of a
+			differs  []string
+			want     bool
+		}{
+			// C4 0, D4 2: major second (9), root D4; in d1 D4 is 1: minor
+			// second (11), root D4.
+			{"only the Series II position", n(spelling.C(), 4), n(spelling.D(), 4), trad(), sysD1, 9, []string{"series"}, false},
+			// Traditional: C𝄫3 46, B3 47, an ascending minor second with
+			// the root on the upper B3. b9: C𝄫3 46, B3 45, a descending
+			// minor second with the root on the upper C𝄫3.
+			{"only the root", n(spelling.CDoubleFlat(), 3), n(spelling.B(), 3), trad(), sysB9, 11, []string{"root"}, false},
+			// D sits at 2 in both: the same major second with the root D4.
+			{"same classification of a second", n(spelling.C(), 4), n(spelling.D(), 4), trad(), sysB9, 9, nil, true},
+			// F♯ sits at 6 in both: the same tritone without a root.
+			{"same classification of a tritone", n(spelling.C(), 4), n(spelling.FSharp(), 4), trad(), sysB9, 13, nil, true},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+				a, err := hindemith.AnalyzeDyad(tc.sa, tc.from, tc.to)
+				require.NoError(t, err)
+				b, err := hindemith.AnalyzeDyad(tc.sb, tc.from, tc.to)
+				require.NoError(t, err)
+				require.Equal(t, tc.series, a.Series(), "Series II position of a")
+				require.Equal(t, tc.differs, dyadDiff(a, b),
+					"differing criteria: a is %s %d root %v, b is %s %d root %v",
+					a.Name(), a.Series(), a.Root(), b.Name(), b.Series(), b.Root())
+
+				assert.Equal(t, tc.want, a.Equal(b), "a.Equal(b)")
+				assert.Equal(t, tc.want, b.Equal(a), "b.Equal(a): symmetry")
+			})
+		}
+	})
+
+	t.Run("chords", func(t *testing.T) {
+		t.Parallel()
+
+		cases := []struct {
+			name    string
+			notes   []note.Note
+			sa, sb  *system.System
+			group   hindemith.Group // the group of a
+			differs []string
+			want    bool
+		}{
+			// Traditional: C3 36, D3 38, A3 45; the best interval is the
+			// fifth D3-A3, root D3 above the bass: III.2. d1: D3 37; the
+			// best interval is the minor sixth D3-A3, root A3: III.2.
+			{"only the root", []note.Note{n(spelling.C(), 3), n(spelling.D(), 3), n(spelling.A(), 3)},
+				trad(), sysD1, hindemith.GroupIII, []string{"root"}, false},
+			// e5: E3 and F3 share position 41, the first input note F3 is
+			// the bass; F3-G3 is a major second, root G3: III.2. g6: E3 40,
+			// F3 41, G3 42; the best interval is the major second E3-G3,
+			// root G3 above the bass E3: III.2.
+			{"only the bass", []note.Note{n(spelling.F(), 3), n(spelling.E(), 3), n(spelling.G(), 3)},
+				sysE5, sysG6, hindemith.GroupIII, []string{"bass"}, false},
+			// d1: D𝄫3 47, E♯3 41; e5: D𝄫3 36, E♯3 42. Both a lone
+			// tritone, group VI without a root, with the bass on the other
+			// note.
+			{"only the bass, without a root", []note.Note{n(spelling.DDoubleFlat(), 3), n(spelling.ESharp(), 3)},
+				sysD1, sysE5, hindemith.GroupVI, []string{"bass"}, false},
+			// b9: D3 38, B3 45, a fifth with the root D3: I.1. d1: D3 37,
+			// B3 47, a minor seventh with the root D3: III.1.
+			{"only the group", []note.Note{n(spelling.D(), 3), n(spelling.B(), 3)},
+				sysB9, sysD1, hindemith.GroupI, []string{"group"}, false},
+			// Traditional: E𝄫4 50, A♭3 44, B♯4 48; one tritone A♭3-E𝄫4,
+			// a major second B♯4-E𝄫4, the best interval the major third
+			// A♭3-B♯4 with the root A♭3 in the bass: II.b1. minor: E𝄫4 49,
+			// A♭3 43, B♯4 59; one tritone, a minor seventh E𝄫4-B♯4 and no
+			// major second, the root A♭3 in the bass: II.a.
+			{"only the subgroup", []note.Note{n(spelling.EDoubleFlat(), 4), n(spelling.AFlat(), 3), n(spelling.BSharp(), 4)},
+				trad(), sysMinor, hindemith.GroupII, []string{"subgroup"}, false},
+			// C, E and G sit at 0, 4 and 7 in both: I.1 with the root C4.
+			{"same classification of a major triad", []note.Note{n(spelling.C(), 4), n(spelling.E(), 4), n(spelling.G(), 4)},
+				trad(), sysB9, hindemith.GroupI, nil, true},
+			// F♯ sits at 6 in both: group VI with the bass C4.
+			{"same classification of a lone tritone", []note.Note{n(spelling.C(), 4), n(spelling.FSharp(), 4)},
+				trad(), sysB9, hindemith.GroupVI, nil, true},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+				a, err := hindemith.AnalyzeChord(tc.sa, tc.notes)
+				require.NoError(t, err)
+				b, err := hindemith.AnalyzeChord(tc.sb, tc.notes)
+				require.NoError(t, err)
+				require.Equal(t, tc.group, a.Group(), "group of a")
+				require.Equal(t, tc.differs, chordDiff(a, b),
+					"differing criteria: a is %v.%v bass %v root %v, b is %v.%v bass %v root %v",
+					a.Group(), a.Subgroup(), a.Bass(), a.Root(), b.Group(), b.Subgroup(), b.Bass(), b.Root())
+
+				assert.Equal(t, tc.want, a.Equal(b), "a.Equal(b)")
+				assert.Equal(t, tc.want, b.Equal(a), "b.Equal(a): symmetry")
+			})
+		}
 	})
 }
