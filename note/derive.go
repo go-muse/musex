@@ -4,6 +4,7 @@ import (
 	"iter"
 
 	"github.com/go-muse/musex/alteration"
+	"github.com/go-muse/musex/letter"
 	"github.com/go-muse/musex/octave"
 	"github.com/go-muse/musex/pitch"
 	"github.com/go-muse/musex/settings"
@@ -125,6 +126,49 @@ func (n Note) EnharmonicsIn(src settings.Source, limit alteration.Alteration) (i
 // MustEnharmonicsIn is like EnharmonicsIn but panics with its error.
 func (n Note) MustEnharmonicsIn(src settings.Source, limit alteration.Alteration) iter.Seq[Note] {
 	return must(n.EnharmonicsIn(src, limit))
+}
+
+// EnharmonicsOnLetter returns the notes of Enharmonics(limit) whose written
+// letter is l, in the same order. The position, the correction, the presence
+// of an octave and the source of n are preserved; no match gives an empty
+// sequence. For example, C♯4 on D with a limit of one chromatic unit gives
+// D♭4 in the traditional system.
+//
+// Errors, in this order: ErrUnset for the note or an unset letter; then the
+// errors of Enharmonics.
+func (n Note) EnharmonicsOnLetter(l letter.Letter, limit alteration.Alteration) (iter.Seq[Note], error) {
+	const op = "EnharmonicsOnLetter"
+
+	if err := checkNote(op, n); err != nil {
+		return nil, err
+	}
+
+	if !l.IsValid() {
+		return nil, unsetError(op, "letter")
+	}
+
+	seq, err := n.enharmonics(op, ownContext(), limit)
+	if err != nil {
+		return nil, err
+	}
+
+	return func(yield func(Note) bool) {
+		for x := range seq {
+			if !x.name.Letter().Equal(l) {
+				continue
+			}
+
+			if !yield(x) {
+				return
+			}
+		}
+	}, nil
+}
+
+// MustEnharmonicsOnLetter is like EnharmonicsOnLetter but panics with its
+// error.
+func (n Note) MustEnharmonicsOnLetter(l letter.Letter, limit alteration.Alteration) iter.Seq[Note] {
+	return must(n.EnharmonicsOnLetter(l, limit))
 }
 
 // Range returns the notes with the name, the correction and the source of n

@@ -1,6 +1,8 @@
 package note
 
 import (
+	"fmt"
+
 	"github.com/go-muse/musex/cents"
 	"github.com/go-muse/musex/common/rounding"
 	"github.com/go-muse/musex/octave"
@@ -52,6 +54,60 @@ func FromSpelling(name spelling.Spelling, c cents.Cents, src settings.Source) (N
 // FromSpelling.
 func MustFromSpelling(name spelling.Spelling, c cents.Cents, src settings.Source) Note {
 	return must(FromSpelling(name, c, src))
+}
+
+// FromSpellings returns the notes without octaves with the names names, a
+// correction of 0 cents and the source src, in input order, preserving
+// repetitions. Each note is bound as by FromSpelling: a nil src gives unbound
+// notes; with a source every name must be admissible in the system of its
+// settings, which is read once. An empty or nil names gives a non-nil empty
+// list without reading the source.
+//
+// Errors, in this order: ErrUnset for the first unset name; ErrUnsetSettings;
+// ErrInadmissible for the first inadmissible name.
+func FromSpellings(names []spelling.Spelling, src settings.Source) (Notes, error) {
+	const op = "FromSpellings"
+
+	for i, name := range names {
+		if !name.IsValid() {
+			return nil, unsetError(op, fmt.Sprintf("name %d", i+1))
+		}
+	}
+
+	out := make(Notes, 0, len(names))
+
+	if len(names) == 0 {
+		return out, nil
+	}
+
+	var sys *system.System
+
+	if src != nil {
+		f, err := sourceFrame(newReader(op), src)
+		if err != nil {
+			return nil, err
+		}
+
+		sys = f.sys
+	}
+
+	for _, name := range names {
+		if sys != nil {
+			if err := admit(op, sys, name); err != nil {
+				return nil, err
+			}
+		}
+
+		out = append(out, Note{name: name, src: src})
+	}
+
+	return out, nil
+}
+
+// MustFromSpellings is like FromSpellings but panics with the error of
+// FromSpellings.
+func MustFromSpellings(names []spelling.Spelling, src settings.Source) Notes {
+	return must(FromSpellings(names, src))
 }
 
 // FromPitch returns the note with the written pitch p, correction c and

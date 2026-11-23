@@ -128,10 +128,14 @@
 // # Lists of notes
 //
 // Notes is an ordered, mutable slice of notes, with repetitions allowed. It
-// adds Clone and methods for the same stable position and sound sorts as the
-// package functions. The existing functions and the APIs of other packages
-// continue to use []Note; a Notes value can be passed to them directly, or as
-// ns... to a variadic operation.
+// adds Clone, the stable position and sound sorts of the package functions in
+// both directions, and collection operations: UniqueBySpelling keeps the
+// first note of each written name, Spellings projects the names in order,
+// FormatIn and FormatNamesIn render every note in the notation of one
+// explicit source. FromSpellings builds a list of notes without octaves from
+// names. The existing functions and the APIs of other packages continue to
+// use []Note; a Notes value can be passed to them directly, or as ns... to a
+// variadic operation.
 //
 // Assignment and conversion share the array; Clone copies the elements:
 //
@@ -145,6 +149,18 @@
 // unset notes without reading sources. A successful sort returns a non-nil
 // empty list for either empty form, and validates notes by the sort's usual
 // contract. On error a sort returns nil; its Must form panics with that error.
+//
+// The descending sorts have the comparison, validation and source snapshot
+// rules of the ascending ones and keep the input order of equal keys.
+// UniqueBySpelling keys notes by name only: the octave, the correction and
+// the source of the first note of a spelling are kept and do not take part
+// in the key, so C5 and C4 collapse while C♯4 and D♭4 stay distinct.
+// UniqueBySpelling and Spellings need no settings and read no source.
+// FormatIn and FormatNamesIn read the explicit source once, never the own
+// sources of the notes, and propagate the formatting errors of FormatIn.
+// FromSpellings binds every note as FromSpelling does and reads the source
+// once. Each of these operations reports ErrUnset for the first unset note
+// or name; an empty input gives a non-nil empty result.
 //
 // # Errors
 //

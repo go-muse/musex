@@ -14,8 +14,12 @@ import (
 // order. An empty or nil slice gives an empty, non-nil slice without an error
 // and without reading any source; the In and InTuning forms then check only
 // that the explicit context is set.
+//
+// sign is +1 for an ascending order and -1 for a descending one; it reverses
+// the comparison, not the result, so equal keys keep their input order in
+// both directions.
 
-func sortedByPosition(op string, c opContext, notes Notes) (Notes, error) {
+func sortedByPosition(op string, c opContext, notes Notes, sign int) (Notes, error) {
 	if len(notes) == 0 {
 		if err := c.check(op); err != nil {
 			return nil, err
@@ -33,7 +37,7 @@ func sortedByPosition(op string, c opContext, notes Notes) (Notes, error) {
 	slices.SortStableFunc(out, func(x, y Note) int {
 		r, _ := sys.Compare(x.pitch(), y.pitch()) // the notes are checked: no error
 
-		return r
+		return sign * r
 	})
 
 	return out, nil
@@ -77,6 +81,23 @@ func MustSortedByPositionInTuning(t *tuning.Tuning, notes []Note) []Note {
 	return Notes(notes).MustSortedByPositionInTuning(t)
 }
 
+// SortedByPositionDescending returns a new slice of notes sorted by position
+// from the highest (system.System.Compare); the correction does not take
+// part. It has the comparison, validation and source snapshot rules of
+// SortedByPosition; notes of equal position keep their input order.
+//
+// Errors, in this order: ErrUnset for a note; ErrNoOctave; ErrNoSource;
+// ErrUnsetSettings; ErrInadmissible; ErrDifferentSystems.
+func SortedByPositionDescending(notes []Note) ([]Note, error) {
+	return Notes(notes).SortedByPositionDescending()
+}
+
+// MustSortedByPositionDescending is like SortedByPositionDescending but
+// panics with its error.
+func MustSortedByPositionDescending(notes []Note) []Note {
+	return Notes(notes).MustSortedByPositionDescending()
+}
+
 // soundKey is the key of a note in a sort by sound: the exact height or the
 // frequency.
 type soundKey struct {
@@ -85,7 +106,7 @@ type soundKey struct {
 	freq   float64
 }
 
-func sortedBySound(op string, c opContext, notes Notes) (Notes, error) {
+func sortedBySound(op string, c opContext, notes Notes, sign int) (Notes, error) {
 	if len(notes) == 0 {
 		if err := c.check(op); err != nil {
 			return nil, err
@@ -132,10 +153,10 @@ func sortedBySound(op string, c opContext, notes Notes) (Notes, error) {
 
 	slices.SortStableFunc(keys, func(a, b soundKey) int {
 		if exact {
-			return a.height.Compare(b.height)
+			return sign * a.height.Compare(b.height)
 		}
 
-		return cmp.Compare(a.freq, b.freq)
+		return sign * cmp.Compare(a.freq, b.freq)
 	})
 
 	out := make(Notes, len(keys))
@@ -184,4 +205,22 @@ func SortedBySoundInTuning(t *tuning.Tuning, notes []Note) ([]Note, error) {
 // error.
 func MustSortedBySoundInTuning(t *tuning.Tuning, notes []Note) []Note {
 	return Notes(notes).MustSortedBySoundInTuning(t)
+}
+
+// SortedBySoundDescending returns a new slice of notes sorted by sound from
+// the highest, strictly. It has the comparison, validation and source
+// snapshot rules of SortedBySound; notes that sound the same keep their input
+// order.
+//
+// Errors, in this order: ErrUnset for a note; ErrNoOctave; ErrNoSource;
+// ErrUnsetSettings; ErrInadmissible; ErrOutOfRange for a key that does not fit
+// (also the error of tuning or cents).
+func SortedBySoundDescending(notes []Note) ([]Note, error) {
+	return Notes(notes).SortedBySoundDescending()
+}
+
+// MustSortedBySoundDescending is like SortedBySoundDescending but panics with
+// its error.
+func MustSortedBySoundDescending(notes []Note) []Note {
+	return Notes(notes).MustSortedBySoundDescending()
 }

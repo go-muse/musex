@@ -345,6 +345,20 @@ func (a Alteration) Sign() int {
 	return cmp.Compare(a.num, 0)
 }
 
+// Abs returns the magnitude of a: |a|, as an [Alteration]. The natural is
+// its own magnitude; a negative value gives the positive value of the same
+// size, for example -2 gives +2 and -1/2 gives +1/2.
+//
+// The guaranteed range is symmetric, so the magnitude of every value is in
+// range: Abs is exact, never fails and has no Must variant. a is not changed.
+func (a Alteration) Abs() Alteration {
+	if a.num < 0 {
+		a.num = -a.num
+	}
+
+	return a
+}
+
 // IsNatural reports whether a is the natural, the value 0. It equals
 // a.Equal(Natural()) and a.Sign() == 0.
 func (a Alteration) IsNatural() bool {
