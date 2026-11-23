@@ -25,10 +25,18 @@ var ErrUnknownName = errors.New("naming: unknown octave name")
 // ErrDuplicateName reports that the same non-empty name is given to two
 // different octaves while creating a catalog.
 //
-// [New] returns errors that match ErrDuplicateName, and [MustNew] panics
-// with such an error. Check for it with [errors.Is]; the text of the error
-// is not part of the API.
+// [New] and [Catalog.WithAliases] return errors that match ErrDuplicateName,
+// and [MustNew] and [Catalog.MustWithAliases] panic with such an error. Check
+// for it with [errors.Is]; the text of the error is not part of the API.
 var ErrDuplicateName = errors.New("naming: duplicate octave name")
+
+// ErrUnnamedOctave reports that an alias is given for an octave that has no
+// name in the catalog.
+//
+// [Catalog.WithAliases] returns errors that match ErrUnnamedOctave, and
+// [Catalog.MustWithAliases] panics with such an error. Check for it with
+// [errors.Is]; the text of the error is not part of the API.
+var ErrUnnamedOctave = errors.New("naming: alias for an unnamed octave")
 
 // Catalog is a catalog of octave names: an immutable set of pairs of an ASPN
 // octave number and a non-empty name. Each octave has at most one name, and
@@ -39,11 +47,18 @@ var ErrDuplicateName = errors.New("naming: duplicate octave name")
 // [Russian], [English] or [German]. No function or method changes a catalog
 // after it is created.
 //
+// A catalog may also accept additional input names, aliases, for its named
+// octaves; add them with [Catalog.WithAliases]. Aliases extend the lookup by
+// name only: [Catalog.Name] and [Catalog.All] keep returning the canonical
+// names, and [Catalog.Aliases] lists the aliases of an octave. The built-in
+// catalogs have no aliases.
+//
 // The zero value, such as var c Catalog or &Catalog{}, and the nil pointer
 // are valid catalogs without names. They behave like MustNew(nil): [Catalog.Name]
 // returns "" for every number, [Catalog.ASPN] reports [ErrUnknownName] for
 // every name, and [Catalog.Equal] reports them equal to any catalog without
-// names. No method panics on them, except [Catalog.MustASPN] as documented.
+// names or aliases. No method panics on them, except [Catalog.MustASPN] and
+// [Catalog.MustWithAliases] as documented.
 //
 // Catalog values are not comparable: == on two Catalog values does not
 // compile. For *Catalog pointers, == reports whether they point to the same
@@ -56,7 +71,8 @@ var ErrDuplicateName = errors.New("naming: duplicate octave name")
 // affected.
 //
 // The package does not provide serialization for catalogs. To store a custom
-// catalog, keep the map of pairs it was created from.
+// catalog, keep the map of pairs it was created from and the aliases added
+// with [Catalog.WithAliases].
 type Catalog struct {
 	// names maps an ASPN octave number to its non-empty name.
 	names map[int]string
@@ -66,6 +82,10 @@ type Catalog struct {
 	// is built once by New and only read afterward, so a sequence returned by
 	// All may keep it without copying.
 	ordered []namedOctave
+	// aliases maps each additional input name to its ASPN octave number.
+	// Canonical names are not stored here. It is built once by WithAliases
+	// and only read afterward; copies of a catalog may share it.
+	aliases map[string]int
 }
 
 // namedOctave is a pair of an ASPN octave number and its non-empty name.
@@ -215,7 +235,7 @@ func (c *Catalog) Name(aspn int) string {
 }
 
 // ASPN returns the ASPN number of the octave that has the given name in the
-// catalog.
+// catalog, either as its canonical name or as one of its aliases.
 //
 // Names are compared exactly, byte for byte, without trimming,
 // normalization or case folding. If the catalog has no octave with this
@@ -224,10 +244,15 @@ func (c *Catalog) Name(aspn int) string {
 // ASPN number, so check the error to tell whether the name was found.
 //
 // For every named octave k of a catalog c, c.ASPN(c.Name(k)) returns k and a
-// nil error.
+// nil error. For every alias a of a named octave k, c.ASPN(a) returns k and
+// c.Name(k) returns the canonical name of that octave.
 func (c *Catalog) ASPN(name string) (int, error) {
 	if c != nil {
 		if number, ok := c.numbers[name]; ok {
+			return number, nil
+		}
+
+		if number, ok := c.aliases[name]; ok {
 			return number, nil
 		}
 	}
@@ -246,16 +271,204 @@ func (c *Catalog) MustASPN(name string) int {
 	return number
 }
 
+// WithAliases returns a new catalog that also accepts the given additional
+// input names, aliases, for its named octaves. The receiver is not modified:
+// its names, aliases and lookup results stay as they were. Aliases already
+// in the receiver are kept, so successive calls accumulate.
+//
+// aliases maps an ASPN octave number to the additional names of that octave.
+// An alias is stored and compared exactly as given, byte for byte, like a
+// canonical name. [Catalog.ASPN] and [Catalog.MustASPN] accept aliases as
+// well as canonical names; [Catalog.Name] and [Catalog.All] keep returning
+// the canonical names only. For an alias a of a named octave k,
+// c.Name(c.MustASPN(a)) returns the canonical name of k. The built-in
+// catalogs have no aliases.
+//
+// An alias must resolve to exactly one octave. WithAliases returns nil and
+// an error that matches [ErrDuplicateName] when a non-empty alias would
+// resolve to two different octaves: it equals another octave's canonical
+// name or another octave's alias, including an alias the receiver already
+// has. An alias that already resolves to the same octave is not ambiguous:
+// it is accepted as a no-op and not stored twice, whether it repeats in the
+// list, is already an alias of that octave in the receiver, or equals that
+// octave's own canonical name. WithAliases is therefore idempotent, and
+// alias lists from several sources can be merged.
+//
+// Empty alias strings are ignored, as in [New]: the empty string is not a
+// name. A non-empty alias for an octave without a canonical name gives an
+// error that matches [ErrUnnamedOctave]. The conditions are checked in this
+// order:
+//
+//  1. an alias of an unnamed octave: the error matches [ErrUnnamedOctave];
+//  2. an alias resolving to two different octaves: the error matches
+//     [ErrDuplicateName].
+//
+// On error no catalog is created and the receiver is unchanged. The error
+// message quotes a bounded excerpt of one offending alias and names the
+// octaves involved; it does not depend on map iteration order.
+//
+// WithAliases does not modify or retain aliases: the new catalog keeps its
+// own copy, and later changes to the map or its slices do not affect it. On
+// success the result is a new non-nil *Catalog that the caller owns. A nil
+// or zero receiver has no named octaves: an empty alias map gives a new
+// catalog without names, and any non-empty alias gives [ErrUnnamedOctave].
+// The caller must not modify aliases concurrently with the call.
+func (c *Catalog) WithAliases(aliases map[int][]string) (*Catalog, error) {
+	var names map[int]string
+	var numbers, existing map[string]int
+
+	if c != nil {
+		names = c.names
+		numbers = c.numbers
+		existing = c.aliases
+	}
+
+	// Process the input in a fixed order, ascending octave number and then
+	// alias, so the chosen error does not depend on map iteration order.
+	octaves := make([]int, 0, len(aliases))
+	for number := range aliases {
+		octaves = append(octaves, number)
+	}
+
+	slices.Sort(octaves)
+
+	merged := maps.Clone(existing)
+
+	var unnamedNumbers []int
+	var unnamedAliases []string
+
+	type collision struct {
+		alias   string
+		numbers []int
+	}
+
+	var collisions []collision
+
+	for _, number := range octaves {
+		list := slices.Clone(aliases[number])
+		slices.Sort(list)
+
+		for _, alias := range list {
+			if alias == "" {
+				continue
+			}
+
+			if names[number] == "" {
+				unnamedNumbers = append(unnamedNumbers, number)
+				unnamedAliases = append(unnamedAliases, alias)
+
+				continue
+			}
+
+			target, found := numbers[alias]
+			if !found {
+				target, found = merged[alias]
+			}
+
+			switch {
+			case found && target == number:
+				// Already resolves to this octave; do not store it twice.
+			case found:
+				collisions = append(collisions, collision{alias: alias, numbers: []int{target, number}})
+			default:
+				if merged == nil {
+					merged = make(map[string]int)
+				}
+
+				merged[alias] = number
+			}
+		}
+	}
+
+	if len(unnamedNumbers) > 0 {
+		// The input was processed in ascending order, so the first pair is
+		// the smallest octave number with its smallest alias.
+		return nil, fmt.Errorf("%w: %s for octave %d", ErrUnnamedOctave, excerpt(unnamedAliases[0]), unnamedNumbers[0])
+	}
+
+	if len(collisions) > 0 {
+		chosen := collisions[0]
+		for _, col := range collisions[1:] {
+			if col.alias < chosen.alias {
+				chosen = col
+			}
+		}
+
+		var nums []int
+		for _, col := range collisions {
+			if col.alias == chosen.alias {
+				nums = append(nums, col.numbers...)
+			}
+		}
+
+		slices.Sort(nums)
+		nums = slices.Compact(nums)
+
+		return nil, fmt.Errorf("%w: %s for octaves %d and %d", ErrDuplicateName, excerpt(chosen.alias), nums[0], nums[1])
+	}
+
+	result := &Catalog{aliases: merged}
+	if c != nil {
+		result.names = names
+		result.numbers = numbers
+		result.ordered = c.ordered
+	}
+
+	return result, nil
+}
+
+// MustWithAliases is like [Catalog.WithAliases] but panics if WithAliases
+// returns an error. The panic value is that error, which matches
+// [ErrUnnamedOctave] or [ErrDuplicateName].
+//
+// MustWithAliases is intended for literals and other data known to be
+// correct.
+func (c *Catalog) MustWithAliases(aliases map[int][]string) *Catalog {
+	result, err := c.WithAliases(aliases)
+	if err != nil {
+		panic(err)
+	}
+
+	return result
+}
+
+// Aliases returns the additional input names of the octave with ASPN number
+// aspn, in ascending byte order. The canonical name of the octave is not
+// included. The result is a new non-nil slice that the caller owns; it is
+// empty when the octave has no aliases, including for an unnamed octave and
+// on a nil or zero catalog. Aliases never fails or panics.
+func (c *Catalog) Aliases(aspn int) []string {
+	aliases := make([]string, 0)
+
+	if c != nil {
+		for alias, number := range c.aliases {
+			if number == aspn {
+				aliases = append(aliases, alias)
+			}
+		}
+	}
+
+	slices.Sort(aliases)
+
+	return aliases
+}
+
 // Equal reports whether c and other are the same catalog: they name the same
-// octaves, and each octave has the same name in both, compared exactly.
+// octaves, each octave has the same name in both, compared exactly, and both
+// accept the same aliases for the same octaves. The order of aliases does
+// not matter.
+//
+// Equal catalogs are interchangeable: Name, ASPN and All agree on them.
+// Catalogs without aliases behave as before: they are equal exactly when
+// they name the same octaves with the same names.
 //
 // How the catalogs were created and whether the pointers are identical do
 // not matter: Russian().Equal(Russian()) is true although the pointers
 // differ. Pairs with an empty name are not part of a catalog, so the nil
-// pointer, the zero value and every catalog without names are equal to one
-// another. Equal does not modify either catalog.
+// pointer, the zero value and every catalog without names or aliases are
+// equal to one another. Equal does not modify either catalog.
 func (c *Catalog) Equal(other *Catalog) bool {
-	return maps.Equal(c.pairs(), other.pairs())
+	return maps.Equal(c.pairs(), other.pairs()) && maps.Equal(c.aliasMap(), other.aliasMap())
 }
 
 // All returns the named octaves of the catalog as a sequence of pairs of an
@@ -299,4 +512,14 @@ func (c *Catalog) pairs() map[int]string {
 	}
 
 	return c.names
+}
+
+// aliasMap returns the read-only map of aliases of c; it is nil for a nil or
+// zero catalog and for a catalog without aliases.
+func (c *Catalog) aliasMap() map[string]int {
+	if c == nil {
+		return nil
+	}
+
+	return c.aliases
 }

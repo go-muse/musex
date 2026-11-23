@@ -214,3 +214,35 @@ func ExampleCatalog_MustASPN() {
 	// 4
 	// 3
 }
+
+// WithAliases adds exact input names for a named octave; the canonical name
+// is unchanged, and an alias of another octave is an error.
+func ExampleCatalog_WithAliases() {
+	ru := naming.Russian().MustWithAliases(map[int][]string{
+		4: {"первая октава", "FirstOctave"},
+	})
+
+	fmt.Println(ru.MustASPN("первая"), ru.MustASPN("первая октава"), ru.MustASPN("FirstOctave"))
+	fmt.Println(ru.Name(4))
+
+	_, err := naming.Russian().WithAliases(map[int][]string{4: {"малая"}})
+	fmt.Println(errors.Is(err, naming.ErrDuplicateName))
+
+	// Output:
+	// 4 4 4
+	// первая
+	// true
+}
+
+// Aliases lists the additional input names of an octave in byte order; the
+// canonical name is not included.
+func ExampleCatalog_Aliases() {
+	ru := naming.Russian().MustWithAliases(map[int][]string{4: {"первая октава", "FirstOctave"}})
+
+	fmt.Println(ru.Aliases(4))
+	fmt.Println(ru.Aliases(3))
+
+	// Output:
+	// [FirstOctave первая октава]
+	// []
+}
