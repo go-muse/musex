@@ -148,13 +148,17 @@
 // sounding durations: each duration gets one written value, in order, inside
 // its chain of groups; groups are filled exactly and use the allowed ratios;
 // durations that need no tuplet stay outside groups. By default a group holds
-// exactly the actual count of values; FreeContents lets it hold any number
-// whose written sum is the actual count times the unit. The unit of a nested
-// group is written under the chain of the enclosing group.
-// [ReadingsOptions] bounds the ratios, the notation, the nesting depth (no
-// nesting by default), and the number of results; the work of a call is
-// bounded independently of the result count. No reading is an empty result,
-// not an error.
+// exactly the actual count of values; FreeContents lets it hold any number of
+// consecutive values whose written sum is the actual count times the unit,
+// and such a group may end anywhere in the sequence, the rest being read by
+// plain values and further groups. The unit of a nested group is written
+// under the chain of the enclosing group. The search finds every exact
+// reading within [ReadingsOptions], without repeats; the options bound the
+// ratios, the notation, the nesting depth (no nesting by default), and the
+// number of results, and the work of a call is bounded independently of the
+// result count, failing with [ErrTooManyParts] beyond it. A long sequence is
+// better read part by part, for example by measures. No reading is an empty
+// result, not an error.
 //
 // # Positions
 //
