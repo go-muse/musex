@@ -7,9 +7,11 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/go-muse/musex/cents"
 	"github.com/go-muse/musex/interval"
 	"github.com/go-muse/musex/note"
 	"github.com/go-muse/musex/pitch"
+	"github.com/go-muse/musex/settings"
 	"github.com/go-muse/musex/spelling"
 	"github.com/go-muse/musex/system"
 
@@ -29,6 +31,34 @@ func ExampleChromatic() {
 	// Output:
 	// +3 3
 	// F
+}
+
+// Three pairs of notes in the traditional system: the written interval and
+// the chromatic displacement are measured together. The augmented second and
+// the minor third span the same three steps; D sharp 4 to E flat 4 is an
+// ascending diminished second of zero steps.
+func ExampleMeasureNotes() {
+	std := settings.Standard()
+	at := func(name spelling.Spelling) note.Note {
+		return note.MustFromASPN(name, 4, cents.Zero(), std)
+	}
+	pairs := [][2]note.Note{
+		{at(spelling.C()), at(spelling.DSharp())},
+		{at(spelling.C()), at(spelling.EFlat())},
+		{at(spelling.DSharp()), at(spelling.EFlat())},
+	}
+	for _, p := range pairs {
+		iv, shift, err := interval.MeasureNotes(p[0], p[1])
+		if err != nil {
+			fmt.Println("error")
+			continue
+		}
+		fmt.Println(iv, shift)
+	}
+	// Output:
+	// A2 +3
+	// m3 +3
+	// d2 0
 }
 
 func ExampleGeneric_Resolve() {

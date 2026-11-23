@@ -63,3 +63,22 @@ func ExampleNewPairProfile() {
 	// Output:
 	// 1.000 2.000
 }
+
+// Two voicings of the C major triad, C4 E4 G4 and E4 G4 C5, contain the same
+// pair classes once each, so they score alike under Huron's pair profile.
+func ExampleScoreNotes_voicings() {
+	sys := system.Traditional()
+	rootPosition := sonance.MustScoreNotes(sys, []note.Note{
+		note.MustFromASPN(spelling.C(), 4, cents.Zero(), nil),
+		note.MustFromASPN(spelling.E(), 4, cents.Zero(), nil),
+		note.MustFromASPN(spelling.G(), 4, cents.Zero(), nil),
+	}, sonance.HuronPairProfile())
+	firstInversion := sonance.MustScoreNotes(sys, []note.Note{
+		note.MustFromASPN(spelling.E(), 4, cents.Zero(), nil),
+		note.MustFromASPN(spelling.G(), 4, cents.Zero(), nil),
+		note.MustFromASPN(spelling.C(), 5, cents.Zero(), nil),
+	}, sonance.HuronPairProfile())
+	fmt.Printf("%.3f %.3f\n", rootPosition.Value(), firstInversion.Value())
+	// Output:
+	// 2.220 2.220
+}
