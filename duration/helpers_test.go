@@ -130,11 +130,18 @@ func panicError(t *testing.T, f func()) error {
 // proportional to the size of the value (E-9, E-11 for dots, large maxDots).
 const fastLimit = 5 * time.Second
 
-// fast runs f in a goroutine and returns its result. If f does not return
-// within fastLimit, the test fails at once without waiting for the goroutine;
+// fast is within with the limit fastLimit.
+func fast[T any](t *testing.T, f func() T) T {
+	t.Helper()
+
+	return within(t, fastLimit, f)
+}
+
+// within runs f in a goroutine and returns its result. If f does not return
+// within limit, the test fails at once without waiting for the goroutine;
 // the overall bound of a run is the -timeout of go test. A panic of f is
 // recovered in the goroutine and fails the test instead of the test binary.
-func fast[T any](t *testing.T, f func() T) T {
+func within[T any](t *testing.T, limit time.Duration, f func() T) T {
 	t.Helper()
 
 	type outcome struct {
@@ -159,8 +166,8 @@ func fast[T any](t *testing.T, f func() T) T {
 		}
 
 		return o.v
-	case <-time.After(fastLimit):
-		t.Fatalf("the call did not return within %s", fastLimit)
+	case <-time.After(limit):
+		t.Fatalf("the call did not return within %s", limit)
 
 		var zero T
 
