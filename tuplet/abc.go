@@ -38,16 +38,19 @@ func abcDefaultNormal(actual int, division Division) (int, bool) {
 }
 
 // ParseABCMarker parses an ABC tuplet marker in the meter context given by
-// division: "(p", "(p:q", "(p:q:r", or "(p::r", where p, q, and r are counts
-// of ASCII decimal digits without signs, leading zeros, or zero values.
+// division: "(p", "(p::", "(p:q", "(p:q:r", or "(p::r", where p, q, and r are
+// counts of ASCII decimal digits without signs, leading zeros, or zero values.
 // Binary is the context of a simple meter such as 4/4, Ternary of a compound
 // meter such as 6/8.
 //
 // The normal count q defaults by the ABC 2.1 standard, not by [Default]:
 // 3, 2, 3, 2, 3 for p = 2, 3, 4, 6, 8, and 3 in Ternary or 2 in Binary for
 // p = 5, 7, 9; so "(5" gives 5:2 in Binary and 5:3 in Ternary. The event
-// count r defaults to p. Actual counts other than 2 through 9 have no ABC
-// default and require an explicit q.
+// count r defaults to p. "(p::" omits both q and r and reads exactly as "(p"
+// in the same division, as section 4.13 of the standard states for "(3::".
+// Actual counts other than 2 through 9 have no ABC default and require an
+// explicit q. The forms "(p:" and "(p:q:", with an empty last part, are
+// rejected.
 //
 // In order of checking, it returns an error wrapping ErrInvalidText if text
 // does not match the grammar, ErrOutOfRange if a count exceeds math.MaxInt,
@@ -64,7 +67,9 @@ func ParseABCMarker(text string, division Division) (ABCMarker, error) {
 
 	if i := strings.Index(body, "::"); i >= 0 {
 		pStr, rStr = body[:i], body[i+2:]
-		hasR = true
+		// "(p::" omits both q and r and reads as "(p" (abc 2.1, section 4.13);
+		// any other text after "::" must be the event count.
+		hasR = rStr != ""
 	} else {
 		parts := strings.Split(body, ":")
 		switch len(parts) {
@@ -122,8 +127,9 @@ func MustParseABCMarker(text string, division Division) ABCMarker {
 // FormatABCMarker returns the ABC marker text of m in the meter context given
 // by division. The formatter omits the parts that [ParseABCMarker] restores
 // in the same division: "(p" when q is the ABC default for p and r equals p;
-// "(p:q" when r equals p; "(p:q:r" otherwise. The "(p::r" form is never
-// produced. Parsing the result in the same division returns an equal marker.
+// "(p:q" when r equals p; "(p:q:r" otherwise. The "(p::" and "(p::r" forms
+// are never produced. Parsing the result in the same division returns an
+// equal marker.
 //
 // In order of checking, it returns an error wrapping ErrUnset if the tuplet
 // of m is unset, ErrInvalidCount if Events is less than 1, and ErrNoDefault

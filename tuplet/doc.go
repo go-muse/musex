@@ -142,13 +142,14 @@
 // the pair maps directly to their numbers.
 //
 // ABC and LilyPond markers are parsed at the token level, without a score
-// parser. [ParseABCMarker] reads "(p", "(p:q", "(p:q:r", and "(p::r" in the
-// meter context of a [Division] (Binary for a simple meter such as 4/4,
-// Ternary for a compound meter such as 6/8) and returns an [ABCMarker] with
-// the tuplet and the event count. The short-form defaults are those of the
-// ABC 2.1 standard, not [Default]: "(5" gives 5:2 in Binary and 5:3 in
-// Ternary. [FormatABCMarker] omits the parts the parser restores in the same
-// context, so parsing a formatted marker returns the same marker.
+// parser. [ParseABCMarker] reads "(p", "(p::", "(p:q", "(p:q:r", and "(p::r"
+// in the meter context of a [Division] (Binary for a simple meter such as
+// 4/4, Ternary for a compound meter such as 6/8) and returns an [ABCMarker]
+// with the tuplet and the event count. The short-form defaults are those of
+// the ABC 2.1 standard, not [Default]: "(5" gives 5:2 in Binary and 5:3 in
+// Ternary, and "(p::" reads exactly as "(p". [FormatABCMarker] omits the
+// parts the parser restores in the same context, so parsing a formatted
+// marker returns the same marker.
 // [ParseLilyPondTuplet] reads the group marker "\tuplet 3/2" as the tuplet
 // 3:2; the optional span duration is not supported.
 // [ParseLilyPondMultiplier] reads the duration multiplier "*2/3" as the
