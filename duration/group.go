@@ -109,12 +109,16 @@ type Group struct {
 // list is allowed: the shortfall is then the whole span.
 //
 // In order of checking, it returns an error wrapping ErrInvalidArgument
-// together with tuplet.ErrUnset if t is unset, ErrUnset if the unit is unset,
-// ErrOutOfRange if the span or a sounding sum is outside the range of package
-// common/fraction, ErrInvalidArgument if a content is not valid or its chain
-// does not match the group, and ErrInvalidArgument if the sounding sum of the
-// contents exceeds the span. The contents are copied; later changes to them
-// do not affect the group.
+// together with tuplet.ErrUnset if t is unset; ErrUnset if the unit is unset;
+// ErrOutOfRange together with fraction.ErrOutOfRange if the span is outside
+// the range of package common/fraction; then, for each content in order,
+// ErrInvalidArgument if it is not valid or its chain does not match the
+// group, and ErrOutOfRange together with fraction.ErrOutOfRange if the
+// sounding sum of the contents up to it is outside that range, so a failure
+// of an earlier content is reported before any failure of a later one; and
+// last ErrInvalidArgument if the sounding sum of the contents exceeds the
+// span. The contents are copied; later changes to them do not affect the
+// group.
 func NewGroup(t tuplet.Tuplet, unit Written, contents ...Content) (Group, error) {
 	return newGroup("NewGroup", t, unit, contents, true)
 }
@@ -253,13 +257,20 @@ func (g Group) MustSpan() fraction.Fraction { return must(g.Span()) }
 
 // Shortfall returns the part of the span of g that its contents do not fill:
 // Span minus the sum of the sounding durations of the contents. It is zero
-// for an exactly filled group. It returns an error wrapping ErrUnset if g is
-// unset.
+// for an exactly filled group. In order of checking, it returns an error
+// wrapping ErrUnset if g is unset and ErrOutOfRange together with
+// fraction.ErrOutOfRange if the difference is outside the range of package
+// common/fraction.
 func (g Group) Shortfall() (fraction.Fraction, error) {
+	const op = "Group.Shortfall"
 	if !g.IsSet() {
-		return fraction.Fraction{}, g.unset("Group.Shortfall")
+		return fraction.Fraction{}, g.unset(op)
 	}
-	return g.span.Sub(g.sounding)
+	d, err := g.span.Sub(g.sounding)
+	if err != nil {
+		return fraction.Fraction{}, rangeError(op)
+	}
+	return d, nil
 }
 
 // MustShortfall is like Shortfall but panics with the returned error.

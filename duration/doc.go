@@ -160,7 +160,12 @@
 // longer than MaxParts has none. Every step of the search, including branches
 // that find nothing, counts toward a fixed work bound; exceeding it fails with
 // [ErrSearchLimit]. A long sequence is better read part by part, for example
-// by measures. No reading is an empty result, not an error.
+// by measures. No reading is an empty result, not an error. The readings are
+// ordered by the number of groups, nested ones included, fewest first, and
+// then item by item: a written value precedes a group, written values compare
+// by Written.Compare, and groups compare by ratio (the actual count first,
+// then the normal count, so 2:2 precedes 3:2 and 3:2 precedes 6:4), then by
+// unit, then by contents.
 //
 // # Positions
 //

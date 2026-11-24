@@ -155,7 +155,10 @@
 // coefficient 2/3, a fraction rather than a tuplet, because it declares no
 // group; the integer form "*4" (as in R1*4) is read as 4/1.
 // [FormatLilyPondTuplet] and [FormatLilyPondMultiplier] write the two forms
-// back; a multiplier with denominator 1 is written in the integer form.
+// back; a multiplier with denominator 1 is written in the integer form, and a
+// positive coefficient stored with two negative components, such as -2/-3,
+// is written without signs ("*2/3"), so the text parses to an equal
+// coefficient.
 //
 // An error of Parse, ParseShort, ParseName, their Must variants, or
 // UnmarshalText with a non-nil receiver quotes the rejected text: in full if
