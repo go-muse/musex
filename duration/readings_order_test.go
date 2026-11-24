@@ -49,9 +49,11 @@ func assertReadingsInOrder(t *testing.T, want [][]duration.Content, readings []d
 }
 
 // The readings are ordered by the number of groups, nested groups included,
-// then lexicographically by item kind (written values before groups), ratio
-// (tuplet.Tuplet.Compare: 3:2 before 6:4 before 2:2), unit, and contents;
-// MaxReadings keeps the first ones in that order.
+// then lexicographically by item kind (written values before groups), ratio,
+// unit, and contents; MaxReadings keeps the first ones in that order. Ratios
+// compare by the actual count, then by the normal count: 2:2 before 3:2 before
+// 6:4. This is not the order of tuplet.Tuplet.Compare, which puts 3:2 and 6:4
+// (coefficient 2/3) before 2:2 (coefficient 1).
 func TestReadingsExactOrder(t *testing.T) {
 	t.Parallel()
 
@@ -74,6 +76,40 @@ func TestReadingsExactOrder(t *testing.T) {
 	tripletOfEighths := gcon(triplet, eighth, eighths(3, triplet)...)
 	sextupletOfEighths := gcon(sextuplet, eighth, eighths(6, sextuplet)...)
 	plainQuarter := duration.WrittenContent(quarter)
+
+	// A sounding quarter alone in a group: in 2:2 a quarter over an eighth
+	// unit (written 1/4 sounds 1/4), in 3:2 a dotted quarter over an eighth
+	// unit (written 3/8 sounds 3/8 times 2/3 = 1/4). Both groups need FreeContents,
+	// since they hold one item instead of the actual count.
+	neutralQuarter := gcon(neutral, eighth, wcon(duration.Quarter, 0, neutral))
+	tripletQuarter := gcon(triplet, eighth, wcon(duration.Quarter, 1, triplet))
+
+	// Readings of two sounding quarters under 2:2 and 3:2 with free contents
+	// and one dot, in the order of Readings. Without groups: two quarters.
+	// With one group, the written value first comes first, then the group
+	// by ratio, then by unit (eighth before quarter): a group over both
+	// quarters has a quarter unit, in 2:2 with two quarters and in 3:2 with two
+	// dotted quarters. With two groups, one per quarter, by the ratio of the
+	// first group, then of the second.
+	twoQuartersFree := [][]duration.Content{
+		{plainQuarter, plainQuarter},
+		{plainQuarter, neutralQuarter},
+		{plainQuarter, tripletQuarter},
+		{neutralQuarter, plainQuarter},
+		{gcon(neutral, quarter, wcon(duration.Quarter, 0, neutral), wcon(duration.Quarter, 0, neutral))},
+		{tripletQuarter, plainQuarter},
+		{gcon(triplet, quarter, wcon(duration.Quarter, 1, triplet), wcon(duration.Quarter, 1, triplet))},
+		{neutralQuarter, neutralQuarter},
+		{neutralQuarter, tripletQuarter},
+		{tripletQuarter, neutralQuarter},
+		{tripletQuarter, tripletQuarter},
+	}
+
+	// The cases with 2:2 and 3:2 pin the ratio order only if tuplet.Tuplet.Compare
+	// orders this pair the other way: 3:2 (coefficient 2/3) before 2:2
+	// (coefficient 1), while Readings puts 2:2 (actual 2) before 3:2 (actual 3).
+	require.Negative(t, triplet.Compare(neutral), "Tuplet.Compare puts 3:2 before 2:2")
+	require.Positive(t, neutral.Compare(triplet), "Tuplet.Compare puts 2:2 after 3:2")
 
 	tests := []struct {
 		name string
@@ -145,6 +181,40 @@ func TestReadingsExactOrder(t *testing.T) {
 					{sextupletHalf, sextupletHalf},
 				}
 			}(),
+		},
+		{
+			// Equal group counts whose first differing items are groups of
+			// 2:2 and 3:2: the readings with 2:2 come first, at the second
+			// item (one group), at the first item over both quarters (one
+			// group, quarter units), and at either item (two groups). Allowed
+			// lists 3:2 first; that does not change the order.
+			name: "two quarters under 3:2 and 2:2 with free contents, all readings",
+			ds:   repeatDur(2, 1, 4),
+			opts: duration.ReadingsOptions{
+				Allowed: []tuplet.Tuplet{triplet, neutral}, MaxDots: 1, FreeContents: true,
+				MaxReadings: manyReadings,
+			},
+			want: twoQuartersFree,
+		},
+		{
+			// MaxReadings keeps the reading with the 2:2 group and drops the
+			// one with the 3:2 group, which follows it.
+			name: "two quarters under 3:2 and 2:2 with free contents truncated to two",
+			ds:   repeatDur(2, 1, 4),
+			opts: duration.ReadingsOptions{
+				Allowed: []tuplet.Tuplet{triplet, neutral}, MaxDots: 1, FreeContents: true, MaxReadings: 2,
+			},
+			want: twoQuartersFree[:2],
+		},
+		{
+			// MaxReadings keeps the one-group reading over both quarters in
+			// 2:2 and drops the one in 3:2, both in quarter units.
+			name: "two quarters under 3:2 and 2:2 with free contents truncated to five",
+			ds:   repeatDur(2, 1, 4),
+			opts: duration.ReadingsOptions{
+				Allowed: []tuplet.Tuplet{triplet, neutral}, MaxDots: 1, FreeContents: true, MaxReadings: 5,
+			},
+			want: twoQuartersFree[:5],
 		},
 	}
 
