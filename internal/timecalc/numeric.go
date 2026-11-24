@@ -82,11 +82,24 @@ func intervalScale(a interval, factor *big.Rat, precision uint) interval {
 	return intervalMul(a, intervalFromRat(factor, precision), precision)
 }
 
-func intervalWiden(a interval, errorBound *big.Rat, precision uint) interval {
-	bound := intervalFromRat(errorBound, precision)
+// intervalWidenFrac widens a on both sides by the error bound num/den, which
+// is rounded up to precision first. den must be nonzero; as with big.Rat, a
+// zero den panics with "division by zero".
+//
+// The fraction is deliberately not reduced. The series remainders passed here
+// have operands of hundreds of thousands of bits, and reducing them with
+// big.Rat costs a quadratic GCD while the rounded bound does not change:
+// big.Float.Quo rounds the exact quotient correctly, so its result depends
+// only on the value of num/den, exactly as big.Float.SetRat of the reduced
+// fraction does.
+func intervalWidenFrac(a interval, num, den *big.Int, precision uint) interval {
+	if den.Sign() == 0 {
+		panic("division by zero")
+	}
+	bound := directedFloat(precision, big.ToPositiveInf).Quo(new(big.Float).SetInt(num), new(big.Float).SetInt(den))
 	return interval{
-		lo: directedFloat(precision, big.ToNegativeInf).Sub(a.lo, bound.hi),
-		hi: directedFloat(precision, big.ToPositiveInf).Add(a.hi, bound.hi),
+		lo: directedFloat(precision, big.ToNegativeInf).Sub(a.lo, bound),
+		hi: directedFloat(precision, big.ToPositiveInf).Add(a.hi, bound),
 	}
 }
 
@@ -139,12 +152,6 @@ func decomposeLogBase(base *big.Rat) (int, *big.Rat) {
 	return k, u
 }
 
-func integerPowerRat(base *big.Rat, exponent int) *big.Rat {
-	n := new(big.Int).Exp(base.Num(), big.NewInt(int64(exponent)), nil)
-	d := new(big.Int).Exp(base.Denom(), big.NewInt(int64(exponent)), nil)
-	return new(big.Rat).SetFrac(n, d)
-}
-
 func intervalAtanhLog(base *big.Rat, precision uint) interval {
 	z := new(big.Rat).Sub(base, big.NewRat(1, 1))
 	z.Quo(z, new(big.Rat).Add(base, big.NewRat(1, 1)))
@@ -158,13 +165,19 @@ func intervalAtanhLog(base *big.Rat, precision uint) interval {
 		term := intervalQuo(power, intervalFromRat(big.NewRat(int64(2*n+1), 1), precision), precision)
 		sum = intervalAdd(sum, term, precision)
 	}
-	zAbs := new(big.Rat).Abs(z)
-	remainderPower := integerPowerRat(zAbs, 2*terms+1)
-	denominator := new(big.Rat).Mul(big.NewRat(int64(2*terms+1), 1), new(big.Rat).Sub(big.NewRat(1, 1), new(big.Rat).Mul(z, z)))
-	remainder := new(big.Rat).Quo(remainderPower, denominator)
-	remainder.Mul(remainder, big.NewRat(2, 1))
+	// The remainder of the doubled series is bounded by
+	// 2|z|^(2T+1) / ((2T+1)(1-z^2)) for T terms. With z = p/q, multiplying
+	// the numerator and the denominator by q^(2T+1) keeps everything in
+	// integers: 2|p|^(2T+1) / ((2T+1) q^(2T-1) (q^2-p^2)).
+	p, q := z.Num(), z.Denom()
+	exponent := big.NewInt(int64(2*terms + 1))
+	remainderNum := new(big.Int).Exp(new(big.Int).Abs(p), exponent, nil)
+	remainderNum.Lsh(remainderNum, 1)
+	remainderDen := new(big.Int).Exp(q, big.NewInt(int64(2*terms-1)), nil)
+	remainderDen.Mul(remainderDen, new(big.Int).Sub(new(big.Int).Mul(q, q), new(big.Int).Mul(p, p)))
+	remainderDen.Mul(remainderDen, exponent)
 	sum = intervalScale(sum, big.NewRat(2, 1), precision)
-	return intervalWiden(sum, remainder, precision)
+	return intervalWidenFrac(sum, remainderNum, remainderDen, precision)
 }
 
 func intervalLogRat(base *big.Rat, precision uint) interval {
@@ -197,9 +210,14 @@ func intervalExp(value interval, precision uint) interval {
 		term = intervalQuo(term, intervalFromRat(new(big.Rat).SetInt64(int64(n)), precision), precision)
 		sum = intervalAdd(sum, term, precision)
 	}
-	factorial := new(big.Int).MulRange(1, int64(terms+1))
-	remainder := new(big.Rat).SetFrac(new(big.Int).Mul(big.NewInt(2), integerPowerRat(yAbs, terms+1).Num()), new(big.Int).Mul(factorial, integerPowerRat(yAbs, terms+1).Denom()))
-	result := intervalWiden(sum, remainder, precision)
+	// The remainder after T terms is bounded by 2|y|^(T+1)/(T+1)!; with
+	// |y| = n/d this is 2n^(T+1) / ((T+1)! d^(T+1)).
+	exponent := big.NewInt(int64(terms + 1))
+	remainderNum := new(big.Int).Exp(yAbs.Num(), exponent, nil)
+	remainderNum.Lsh(remainderNum, 1)
+	remainderDen := new(big.Int).Exp(yAbs.Denom(), exponent, nil)
+	remainderDen.Mul(remainderDen, new(big.Int).MulRange(1, int64(terms+1)))
+	result := intervalWidenFrac(sum, remainderNum, remainderDen, precision)
 	for range j {
 		result = intervalMul(result, result, precision)
 	}

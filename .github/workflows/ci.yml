@@ -21,7 +21,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        check: [lint, tests, vulnerabilities]
+        # The tests run twice, in parallel: 'tests-race' with the race
+        # detector in short mode, 'tests-coverage' without it to measure
+        # coverage. Both together in one run cost about twice as much.
+        check: [lint, tests-race, tests-coverage, vulnerabilities]
     env:
       GOTOOLCHAIN: local
     defaults:
@@ -76,14 +79,19 @@ jobs:
         if: ${{ !cancelled() && matrix.check == 'lint' }}
         run: go mod tidy -diff
 
-      # Keep in sync with the Makefile target 'test'.
-      - name: Test with race detection and coverage
-        if: matrix.check == 'tests' && steps.packages.outputs.present == 'true'
-        run: go test -race -count=1 -covermode=atomic -coverprofile=coverage.out ./...
+      # Keep in sync with the Makefile target 'test-race'.
+      - name: Test with race detection
+        if: matrix.check == 'tests-race' && steps.packages.outputs.present == 'true'
+        run: go test -race -short -count=1 ./...
+
+      # Keep in sync with the Makefile target 'test-cover'.
+      - name: Test with coverage
+        if: matrix.check == 'tests-coverage' && steps.packages.outputs.present == 'true'
+        run: go test -count=1 -covermode=set -coverprofile=coverage.out ./...
 
       # Keep in sync with the Makefile target 'cover'.
       - name: Generate coverage badge and reports
-        if: ${{ !cancelled() && matrix.check == 'tests' && (success() || hashFiles('coverage.out') != '') }}
+        if: ${{ !cancelled() && matrix.check == 'tests-coverage' && (success() || hashFiles('coverage.out') != '') }}
         env:
           HAS_PACKAGES: ${{ steps.packages.outputs.present }}
         run: |
@@ -102,10 +110,10 @@ jobs:
       # Keep in sync with the Makefile target 'roadmap-badge' (part of 'cover'
       # and 'check'). Validates the checkboxes in ROADMAP.md and writes
       # coverage/roadmap.svg, which is published with the coverage site. Runs
-      # on pull requests too, so a malformed ROADMAP.md fails the tests check
-      # before it reaches main.
+      # on pull requests too, so a malformed ROADMAP.md fails the
+      # tests-coverage check before it reaches main.
       - name: Generate roadmap badge
-        if: ${{ !cancelled() && matrix.check == 'tests' }}
+        if: ${{ !cancelled() && matrix.check == 'tests-coverage' }}
         run: |
           progress="$(python3 scripts/roadmap.py)"
           echo "$progress"
@@ -115,7 +123,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload coverage reports
-        if: ${{ !cancelled() && matrix.check == 'tests' && hashFiles('coverage/coverage.svg') != '' }}
+        if: ${{ !cancelled() && matrix.check == 'tests-coverage' && hashFiles('coverage/coverage.svg') != '' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage
@@ -126,7 +134,7 @@ jobs:
       # The site holds the coverage report and both badges (coverage.svg and
       # roadmap.svg). Skipped if any earlier step of this job failed.
       - name: Upload coverage site
-        if: matrix.check == 'tests' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        if: matrix.check == 'tests-coverage' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
         with:
           path: coverage/

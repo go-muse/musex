@@ -25,7 +25,8 @@ Format the code and run the checks from the repository root:
 golangci-lint fmt ./...
 golangci-lint run ./...
 go mod tidy -diff
-go test -race -count=1 -covermode=atomic -coverprofile=coverage.out ./...
+go test -race -short -count=1 ./...
+go test -count=1 -covermode=set -coverprofile=coverage.out ./...
 go tool cover -func=coverage.out
 govulncheck ./...
 ```
@@ -36,26 +37,31 @@ within each group. Both formatting and linting use `.golangci.yml`.
 The depguard rule of each package in `.golangci.yml` sets which musex packages
 it may import; when the package plan changes, update the rule in the same change.
 
-GitHub Actions runs lint, tests, and vulnerability checks independently on pull
-requests and pushes to `main`. The lint check also verifies that `go.mod` and
-`go.sum` are tidy with `go mod tidy -diff`. Coverage is shown in the workflow
-summary and saved as an artifact containing text, HTML, the raw profile, and
-an SVG badge.
-The tests check also counts how many package checkboxes in `ROADMAP.md` are
+The tests run twice: once with the race detector in short mode, where
+`testing.Short()` lets heavy single-threaded tests skip themselves, and once
+without it to measure coverage. Running the race detector and coverage
+instrumentation together costs about twice as much as running them apart.
+
+GitHub Actions runs lint, `tests-race`, `tests-coverage`, and vulnerability
+checks independently on pull requests and pushes to `main`. The lint check also
+verifies that `go.mod` and `go.sum` are tidy with `go mod tidy -diff`. The
+`tests-coverage` check shows coverage in the workflow summary and saves it as an
+artifact containing text, HTML, the raw profile, and an SVG badge.
+The `tests-coverage` check also counts how many package checkboxes in `ROADMAP.md` are
 checked, shows the result in the workflow summary, and adds a roadmap progress
 badge, `roadmap.svg` (for example `1/30 packages`), to the same artifact.
 Checkboxes in bullet and numbered lists are counted; those in fenced code blocks
 and HTML comments are ignored. If there are no checkboxes, a checkbox is
 malformed or inside a block quote, or a code block or comment is not closed, the
-tests check fails instead of publishing a misleading badge.
+`tests-coverage` check fails instead of publishing a misleading badge.
 After all checks pass on `main`, both badges and the HTML report are published to
 [GitHub Pages](https://go-muse.github.io/musex/). Pull requests generate artifacts
 but never deploy. There is no minimum coverage threshold or external coverage
 service. The coverage badge uses a neutral chart icon and shows `n/a` when there
 are no executable statements; otherwise it shows Go's total statement coverage.
 
-To generate the same report and badges locally after running the tests above
-(`make cover` runs the tests and both commands):
+To generate the same report and badges locally after running the coverage tests
+above (`make cover` runs the coverage tests and both commands):
 
 ```sh
 python3 scripts/coverage.py --profile coverage.out
@@ -84,11 +90,13 @@ but not Windows. Run it from the repository root:
 | `make tools` | Installs golangci-lint and govulncheck of the required versions into `.cache/bin/`. |
 | `make fmt` | Fixes formatting and import order in place: `golangci-lint fmt ./...`. |
 | `make lint` | Runs `golangci-lint config verify`, then `golangci-lint run ./...`. Unformatted code fails. |
-| `make test` | Runs `go test -race -count=1 -covermode=atomic -coverprofile=coverage.out ./...`. |
-| `make cover` | Runs the tests and `python3 scripts/roadmap.py`, then `python3 scripts/coverage.py --profile coverage.out`. |
+| `make test` | Runs `make test-race`, then `make test-cover`. |
+| `make test-race` | Runs `go test -race -short -count=1 ./...`. |
+| `make test-cover` | Runs `go test -count=1 -covermode=set -coverprofile=coverage.out ./...`. |
+| `make cover` | Runs `make test-cover` and `python3 scripts/roadmap.py`, then `python3 scripts/coverage.py --profile coverage.out`. |
 | `make vuln` | Runs `govulncheck ./...`. |
 | `make tidy` | Runs `go mod tidy`, which updates `go.mod` and `go.sum`. |
-| `make check` | Runs `lint`, the module tidiness check (`go mod tidy -diff`), `test`, the roadmap badge (`python3 scripts/roadmap.py`), and `vuln`. Changes no source files. |
+| `make check` | Runs `lint`, the module tidiness check (`go mod tidy -diff`), `test` (both modes), the roadmap badge (`python3 scripts/roadmap.py`), and `vuln`. Changes no source files. |
 | `make clean` | Removes `coverage.out` and `coverage/`. |
 
 - `make` without a target runs `make check`, which stops at the first failure.
