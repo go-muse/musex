@@ -45,7 +45,9 @@ race detector and coverage instrumentation together costs about twice as much
 as running them apart.
 
 GitHub Actions runs lint, `tests-race`, `tests-coverage`, and vulnerability
-checks independently on pull requests and pushes to `main`. The lint check also
+checks independently on pull requests and pushes to `main`. A final `tests`
+check, which branch protection requires, passes only when all of these checks
+pass. The lint check also
 verifies that `go.mod` and `go.sum` are tidy with `go mod tidy -diff`. The
 `tests-coverage` check shows coverage in the workflow summary and saves it as an
 artifact containing text, HTML, the raw profile, and an SVG badge.
