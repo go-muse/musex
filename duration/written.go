@@ -643,7 +643,8 @@ func (w Written) MustSubdivide() (count int, part Written) {
 
 // SubdivideTuplet divides w into the actual count of the tuplet t: count is
 // t.Actual(), and part is the single written sign, possibly dotted, whose
-// value is w.Value()/t.Normal(), under the chain of w extended by t as the
+// written value is the written value of w (its base and dots, without the
+// chain) divided by t.Normal(), under the chain of w extended by t as the
 // innermost tuplet. The enclosing chain is preserved, and count parts of the
 // sounding duration of part equal the sounding duration of w. A quarter in
 // 3:2 gives three eighths sounding 1/12 each; a dotted quarter in 2:3 gives
@@ -653,8 +654,8 @@ func (w Written) MustSubdivide() (count int, part Written) {
 // In order of checking, it returns an error wrapping ErrUnset if w is unset;
 // ErrInvalidArgument together with tuplet.ErrUnset if t is unset;
 // ErrOutOfRange together with fraction.ErrOutOfRange if the written value of
-// the part, w.Value()/t.Normal(), is outside the range of package
-// common/fraction; ErrNotNotatable if the equal part is not one written sign;
+// the part, the written value of w divided by t.Normal(), is outside the
+// range of package common/fraction; ErrNotNotatable if the equal part is not one written sign;
 // ErrOutsideSeries if the base of the part would be outside the series; and,
 // only after those, ErrOutOfRange if the coefficient of the chain extended by
 // t (together with tuplet.ErrOutOfRange and fraction.ErrOutOfRange) or the
