@@ -181,6 +181,9 @@ func TestQuantizeOnGrid(t *testing.T) {
 // pairs: TowardZero = Down, AwayFromZero = Up, HalfTowardZero = HalfDown,
 // HalfAwayFromZero = HalfUp.
 func TestQuantizeModePairs(t *testing.T) {
+	if testing.Short() {
+		t.Skip("quantize mode pairs sweep: heavy single-threaded check; runs in the coverage job without -short")
+	}
 	t.Parallel()
 
 	pairs := [][2]rounding.Mode{

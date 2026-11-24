@@ -80,14 +80,18 @@ func TestConcurrentReadOnlyOperations(t *testing.T) {
 		MustWithExtension(tempomap.MustNewExtension(at(1, 2), sec(1, 4)))
 	canonical := m.String()
 
-	const workers = 24
-	const iterations = 40
+	// Several workers released together are enough for the race detector to
+	// see overlapping access to the shared map; each iteration is costly.
+	const workers = 8
+	const iterations = 10
 	var wg sync.WaitGroup
 	errorsCh := make(chan error, workers)
+	start := make(chan struct{})
 	for range workers {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			<-start
 			for range iterations {
 				if got := m.String(); got != canonical {
 					errorsCh <- fmt.Errorf("String changed: %q", got)
@@ -120,6 +124,7 @@ func TestConcurrentReadOnlyOperations(t *testing.T) {
 			}
 		}()
 	}
+	close(start)
 	wg.Wait()
 	close(errorsCh)
 	for err := range errorsCh {

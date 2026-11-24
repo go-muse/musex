@@ -221,6 +221,9 @@ func checkErrorText(t *testing.T, err error, x, label string) {
 // input, a bounded text with the excerpt, the same text for both sizes, and
 // a Must variant panics with the text of its base path.
 func TestParseErrorExcerpt(t *testing.T) {
+	if testing.Short() {
+		t.Skip("error excerpts of 1 MiB inputs: heavy single-threaded check; runs in the coverage job without -short")
+	}
 	t.Parallel()
 
 	for _, in := range excerptInputs {

@@ -417,6 +417,9 @@ func majorSecondPlaces(count int) []interval.Interval {
 func TestMaxPlaces(t *testing.T) {
 	t.Parallel()
 	assert.Equal(t, 65536, template.MaxPlaces)
+	if testing.Short() {
+		t.Skip("templates of MaxPlaces places: heavy single-threaded check; runs in the coverage job without -short")
+	}
 	cases := []struct {
 		name   string
 		count  int

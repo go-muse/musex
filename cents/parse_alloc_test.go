@@ -63,6 +63,10 @@ func assertLinearMemory(t *testing.T, long, ref uint64, longLen, refLen int) boo
 // paused. The file is sorted after concurrency_test.go, so the first use of
 // the package stays in TestConcurrentUse.
 func TestParseManyFactorsMemory(t *testing.T) {
+	if testing.Short() {
+		t.Skip("memory of 1,000,000-factor inputs: heavy single-threaded check; runs in the coverage job without -short")
+	}
+
 	const many = 1_000_000
 
 	for _, f := range []string{"2", "2^3", "3^(1/2)"} {

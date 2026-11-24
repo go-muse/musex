@@ -12,6 +12,9 @@ import (
 )
 
 func TestExhaustiveTemplateProperties(t *testing.T) {
+	if testing.Short() {
+		t.Skip("exhaustive template properties: heavy single-threaded check; runs in the coverage job without -short")
+	}
 	t.Parallel()
 	cases := controlTemplates()
 	for _, record := range loadBuiltinRecords(t) {
@@ -84,6 +87,11 @@ func checkAllRotationsAndPlaces(t *testing.T, original template.Template) {
 			}
 		}
 
+		// Every pair (i, j) is compared exactly with the oracle P(j)-P(i),
+		// where P is the place coordinate. The oracle is additive, so the
+		// additivity BetweenPlaces(i, j)+BetweenPlaces(j, m) ==
+		// BetweenPlaces(i, m) follows from these pairwise checks and needs
+		// no separate triple loop.
 		for i := 1; i <= limit; i++ {
 			for j := 1; j <= limit; j++ {
 				got, err := rotated.BetweenPlaces(i, j)
@@ -94,14 +102,6 @@ func checkAllRotationsAndPlaces(t *testing.T, original template.Template) {
 				)
 				requireCoordinate(t, want, got)
 				assert.Equal(t, i == j, got.Equal(interval.PerfectUnison()))
-				for m := 1; m <= limit; m++ {
-					second, err := rotated.BetweenPlaces(j, m)
-					require.NoError(t, err)
-					total, err := rotated.BetweenPlaces(i, m)
-					require.NoError(t, err)
-					combined := addCoordinates(coordinateOf(got), coordinateOf(second))
-					requireCoordinate(t, combined, total)
-				}
 			}
 		}
 
