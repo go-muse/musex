@@ -416,7 +416,8 @@ func TestReadingsFreeContentsWorkBound(t *testing.T) {
 // that has readings but may exceed the search bound: either ErrSearchLimit
 // and no other sentinel (in particular not ErrTooManyParts), or a non-empty
 // list of at most MaxReadings pairwise distinct readings, each covering ds
-// exactly. An empty result without an error is wrong.
+// exactly (MaxReadings 0 means 256). An empty result without an error is
+// wrong.
 func assertBoundedReadings(t *testing.T, ds []duration.Duration, opts duration.ReadingsOptions,
 	r result[[]duration.Reading],
 ) {
@@ -429,7 +430,13 @@ func assertBoundedReadings(t *testing.T, ds []duration.Duration, opts duration.R
 	}
 
 	require.NotEmpty(t, r.v, "the input has readings: an empty result without an error is wrong")
-	assert.LessOrEqual(t, len(r.v), opts.MaxReadings)
+
+	maxReadings := opts.MaxReadings
+	if maxReadings == 0 {
+		maxReadings = 256
+	}
+
+	assert.LessOrEqual(t, len(r.v), maxReadings)
 
 	for i := range r.v {
 		for j := i + 1; j < len(r.v); j++ {
