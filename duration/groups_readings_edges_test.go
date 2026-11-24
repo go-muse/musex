@@ -114,8 +114,17 @@ func TestReadingsEdges(t *testing.T) {
 	_, err := duration.Readings(nil, duration.ReadingsOptions{})
 	assert.ErrorIs(t, err, duration.ErrInvalidArgument)
 
+	// An unset duration in the list is reported with ErrUnset alone, not with
+	// ErrInvalidArgument, wherever it stands in the list; it is checked before
+	// the options, so an invalid option does not change the class.
 	_, err = duration.Readings([]duration.Duration{{}}, duration.ReadingsOptions{})
-	assert.ErrorIs(t, err, duration.ErrUnset)
+	assertErr(t, err, duration.ErrUnset)
+
+	_, err = duration.Readings([]duration.Duration{duration.MustNew(1, 4), {}}, duration.ReadingsOptions{})
+	assertErr(t, err, duration.ErrUnset)
+
+	_, err = duration.Readings([]duration.Duration{{}}, duration.ReadingsOptions{MaxDots: -1})
+	assertErr(t, err, duration.ErrUnset)
 
 	_, err = duration.Readings([]duration.Duration{duration.MustNew(1, 4)}, duration.ReadingsOptions{MaxDots: -1})
 	assert.ErrorIs(t, err, duration.ErrInvalidArgument)
