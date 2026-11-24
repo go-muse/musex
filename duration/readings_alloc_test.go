@@ -14,25 +14,24 @@ import (
 // readingsAllocLimit bounds the bytes a single Readings call may allocate in
 // TestReadingsAllocationBound, unless a case sets a tighter bound.
 //
-// Measured allocations of a search whose every step is bounded: about 22 MB
-// on the dense 1/64 input, about 1 MB on the quarters-and-a-fifth input at
-// depth 7, and up to about 107 MB on it at depth 20. Measured allocations of
-// a step whose cost grows with the nesting depth: about 340 MB on one quarter
-// under 1:1 at depth 300 and about 1.5 GB at depth 1000. 256 MB is 2.4 times
-// the largest bounded case and a sixth of the defective one; 512 MB would
-// leave too little room for the tighter case below.
+// The bound separates a search whose every step is bounded, which stays
+// several times below it on every case, from the defects it guards against.
+// A step whose cost grows with the nesting depth allocated about 1.5 GB on
+// one quarter under 1:1 at depth 1000. A missing step bound allocated
+// gigabytes on the dense 1/64 input and on the quarters-and-a-fifth input.
+// 256 MB is a sixth of the smallest of these; 512 MB would leave too little
+// room for the tighter case below.
 const readingsAllocLimit = 256 << 20
 
 // readingsTruncateAllocLimit bounds the call that truncates many readings to
 // MaxReadings. Collecting and sorting every reading before truncating
-// allocates about 66 MB plus 3.3 MB per quarter on 66·1/12 followed by
-// quarters (28 657 readings): about 200 MB with 40 quarters. The race
+// allocated about 66 MB plus 3.3 MB per quarter on 66·1/12 followed by
+// quarters (28 657 readings): about 190 MB with 40 quarters. The race
 // detector multiplies the resident memory of that defect about fourfold
 // (272 MB allocated with 60 quarters reached 1 GB resident), so a larger
-// input is not safe to run before the fix. A search that stops after the
-// first readings needs a few megabytes on an input of this size: the bounded
-// search allocates about 22 MB on the 1000 values of the dense 1/64 input.
-// 96 MB is four times that and half the defective allocation.
+// input is not safe to run against it. 96 MB is half the defective
+// allocation; a search that stops after the first readings stays several
+// times below it.
 const readingsTruncateAllocLimit = 96 << 20
 
 // readingsAllocTimeLimit bounds the time of each call of the test.
