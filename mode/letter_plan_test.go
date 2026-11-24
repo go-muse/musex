@@ -421,10 +421,12 @@ func (r *classRecorder) rule(names map[int]string, fallback system.SpellingRule)
 
 // sequence returns the recorded classes with consecutive repetitions
 // collapsed: the number of calls per class is not part of the contract.
+// The result is never nil, so "no call at all" compares equal to []int{}
+// whether or not the recorder was ever written to.
 func (r *classRecorder) sequence() []int {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	return slices.Compact(slices.Clone(r.classes))
+	return slices.Compact(append([]int{}, r.classes...))
 }
 
 func TestCustomRuleReceivesOnlyDegreeClassesInOrder(t *testing.T) {
