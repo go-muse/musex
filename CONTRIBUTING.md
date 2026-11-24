@@ -37,10 +37,12 @@ within each group. Both formatting and linting use `.golangci.yml`.
 The depguard rule of each package in `.golangci.yml` sets which musex packages
 it may import; when the package plan changes, update the rule in the same change.
 
-The tests run twice: once with the race detector in short mode, where
-`testing.Short()` lets heavy single-threaded tests skip themselves, and once
-without it to measure coverage. Running the race detector and coverage
-instrumentation together costs about twice as much as running them apart.
+The tests run twice: once with the race detector in short mode, and once
+without it to measure coverage. In short mode, `testing.Short()` lets heavy
+checks skip themselves when they add no concurrency coverage beyond the
+dedicated concurrent tests; they run in full in the coverage run. Running the
+race detector and coverage instrumentation together costs about twice as much
+as running them apart.
 
 GitHub Actions runs lint, `tests-race`, `tests-coverage`, and vulnerability
 checks independently on pull requests and pushes to `main`. The lint check also
