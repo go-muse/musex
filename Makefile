@@ -79,7 +79,7 @@ require_version = if [ "$$found" = missing ]; then \
 
 .NOTPARALLEL:
 
-.PHONY: check help fmt lint test cover vuln tidy tools clean \
+.PHONY: check help fmt lint test test-race test-cover cover vuln tidy tools clean \
 	require-golangci-lint require-govulncheck mod-check roadmap-badge
 
 # The first rule is the default goal: 'make' runs 'make check'. Both tools
@@ -90,7 +90,7 @@ check: require-golangci-lint require-govulncheck lint mod-check test roadmap-bad
 
 help: ## List the targets
 	@printf '%s\n\n' 'Usage: make [target] ...'
-	@awk -F':.*## ' '/^[a-z][a-z-]*:.*## / {printf "  %-8s %s\n", $$1, $$2}' "$(firstword $(MAKEFILE_LIST))"
+	@awk -F':.*## ' '/^[a-z][a-z-]*:.*## / {printf "  %-10s %s\n", $$1, $$2}' "$(firstword $(MAKEFILE_LIST))"
 
 fmt: require-golangci-lint ## Fix formatting and import order in place (golangci-lint fmt)
 	"$(GOLANGCI_LINT)" fmt ./...
@@ -101,12 +101,20 @@ lint: require-golangci-lint ## Verify the linter config, then lint; unformatted 
 	"$(GOLANGCI_LINT)" config verify
 	"$(GOLANGCI_LINT)" run ./...
 
-# Keep in sync with CI: tests / 'Test with race detection and coverage'.
-test: ## Run the tests with the race detector; writes coverage.out
-	go test -race -count=1 -covermode=atomic -coverprofile=coverage.out ./...
+# The tests run in two separate modes, as in CI: the race detector and
+# coverage instrumentation together cost about twice as much as both apart.
+test: test-race test-cover ## Run the tests in both modes, test-race and test-cover; writes coverage.out
 
-# Keep in sync with CI: tests / 'Generate coverage badge and reports'.
-cover: test roadmap-badge ## Run the tests, then build the coverage report and roadmap badge in coverage/
+# Keep in sync with CI: tests-race / 'Test with race detection'.
+test-race: ## Run the tests with the race detector in short mode
+	go test -race -short -count=1 ./...
+
+# Keep in sync with CI: tests-coverage / 'Test with coverage'.
+test-cover: ## Run the tests with coverage, without the race detector; writes coverage.out
+	go test -count=1 -covermode=set -coverprofile=coverage.out ./...
+
+# Keep in sync with CI: tests-coverage / 'Generate coverage badge and reports'.
+cover: test-cover roadmap-badge ## Run the coverage tests, then build the coverage report and roadmap badge in coverage/
 	python3 scripts/coverage.py --profile coverage.out
 
 # Keep in sync with CI: vulnerabilities / 'Check known vulnerabilities'.
@@ -168,7 +176,7 @@ require-govulncheck:
 
 # Roadmap badge, part of 'cover' and 'check': counts the checkboxes in
 # ROADMAP.md and writes coverage/roadmap.svg; fails on an unexpected layout.
-# Keep in sync with CI: tests / 'Generate roadmap badge'.
+# Keep in sync with CI: tests-coverage / 'Generate roadmap badge'.
 roadmap-badge:
 	python3 scripts/roadmap.py
 
