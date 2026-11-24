@@ -149,6 +149,29 @@ jobs:
         if: matrix.check == 'vulnerabilities' && steps.packages.outputs.present == 'true'
         run: govulncheck ./...
 
+  # Branch protection requires a status check named exactly 'tests'. The tests
+  # themselves run in the 'tests-race' and 'tests-coverage' entries of the
+  # 'checks' matrix, so this job reports their outcome under that name. It
+  # depends on the whole matrix, so a failed lint or vulnerability check also
+  # fails it; those checks are reported separately as well.
+  tests:
+    name: tests
+    needs: checks
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require all checks to pass
+        env:
+          CHECKS_RESULT: ${{ needs.checks.result }}
+        run: |
+          if [[ "$CHECKS_RESULT" != 'success' ]]; then
+            echo "::error::Checks finished with result '$CHECKS_RESULT'; see the tests-race and tests-coverage checks."
+            exit 1
+          fi
+          echo 'tests-race and tests-coverage passed.'
+        shell: bash
+
   publish-coverage:
     name: Publish coverage
     needs: checks
