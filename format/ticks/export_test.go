@@ -755,7 +755,7 @@ func TestMIDITempoMapStretchAcrossBaseSteps(t *testing.T) {
 // ErrOutOfRange from a finite interval fallback is not an allowed result.
 func TestMIDITempoMapStretchRationalFragmentWithWeightedLogTime(t *testing.T) {
 	if testing.Short() {
-		t.Skip("stretched rational fragment with weighted log time: heavy single-threaded check; runs in the coverage job without -short")
+		t.Skip("stretched rational fragment with weighted log time: heavy export check; runs in the coverage job without -short; concurrent reads of a shared map are covered by TestConcurrentUse")
 	}
 	t.Parallel()
 	m := ritardandoMap().MustWithExtension(tempomap.MustNewExtension(at(5, 4), sec(1, 1)))
@@ -786,7 +786,7 @@ func TestMIDITempoMapStretchRationalFragmentWithWeightedLogTime(t *testing.T) {
 // select M+1 (E-5); every other mode selects M, without an E-8 fallback.
 func TestMIDITempoMapStretchWeightedLogTimeAtFormatLimit(t *testing.T) {
 	if testing.Short() {
-		t.Skip("stretched weighted log time at the format limit: heavy single-threaded check; runs in the coverage job without -short")
+		t.Skip("stretched weighted log time at the format limit: heavy export check; runs in the coverage job without -short; concurrent reads of a shared map are covered by TestConcurrentUse")
 	}
 	t.Parallel()
 	m := tempomap.MustNew(quarterTempo(120, 1)).
