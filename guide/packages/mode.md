@@ -138,9 +138,95 @@ without overflow at `math.MinInt` and `math.MaxInt`, and the gaps between
 distant occupied offsets are not visited. Every returned list is a new slice
 owned by the caller.
 
+## Build modes from steps
+
+A mode can be described by the numbers of its adjacent intervals in a system:
+how many positions each step spans. The numbers alone do not say which letter
+each degree uses; a *letter plan* does. `LetterPlan.Degrees` holds the size of
+the interval of every degree from the first one (1 for the first degree, equal
+sizes for two degrees written with one letter), and `LetterPlan.Cycle` holds
+the size of the cycle.
+
+`SuggestLetterPlan` asks a spelling rule of package `system` (`Sharps`,
+`Flats`, `ChromaticScale`, or `CustomSpelling`) for the plan of a one-octave
+mode with a named first degree. The numbers include the closing one and must
+add up to the positions of the system octave. The first degree keeps its name;
+every other degree gets the name the rule chooses for its class, and its size
+is the size of the written interval at its real place, so F♯ followed by F
+eleven positions higher has size 8. `FromNumbersFromWithRule` builds that mode
+directly. The plan is only a suggestion: edit it and pass it to
+`FromNumbersFromWithPlan` to write the degrees differently.
+
+```go
+traditional := system.Traditional()
+c := spelling.MustParse("C")
+steps := []system.Step{3, 2, 2, 3, 2}
+
+plan := mode.MustSuggestLetterPlan(traditional, steps, c, system.Flats())
+// plan.Degrees == [1 3 4 5 7], plan.Cycle == 8: C E♭ F G B♭
+flats := mode.MustFromNumbersFromWithRule(traditional, steps, c, system.Flats())
+// flats equals mode.MustFromNumbersFromWithPlan(traditional, steps, c, plan)
+
+plan.Degrees[1] = 2 // write the second degree as D♯ instead
+edited := mode.MustFromNumbersFromWithPlan(traditional, steps, c, plan)
+```
+
+When the names of a rule are written out of order (a degree below the first
+or the previous one, or above the first degree of the next cycle),
+`SuggestLetterPlan` and `FromNumbersFromWithRule` return `ErrInvalidStructure`
+instead of an incorrect plan; pass an explicit plan in that case. The checks
+come in this order: `ErrUnset` (system, first name, rule), `ErrEmptyInput`,
+`ErrInvalidArgument` (more than `MaxDegrees` numbers), `ErrInvalidStructure`
+(a number below 1), `ErrSystemOctaveRequired` (the exact sum), then the
+`system` errors for the first name and for the rule at degrees 2..k, and
+finally `ErrInvalidStructure` for a plan out of order. With a single number the
+plan is `[1]; 8` and the rule is not applied. `FromNumbers` and
+`FromNumbersFrom` without a plan are unchanged: they still accept exactly seven
+numbers and give each degree the next letter.
+
+`OpenFromNumbers` and `OpenFromNumbersFrom` build an open mode from k−1 numbers
+and the k sizes of its degrees; there is no cycle size. Sizes start at 1, do
+not decrease, and may exceed 8. The form without a name works only in a
+regular system; the named form checks the names of all degrees.
+
+```go
+open := mode.MustOpenFromNumbersFrom(traditional, []system.Step{2, 1}, c, []int{1, 2, 3})
+// the open mode M2 m2: C D E♭
+```
+
+`Mode.LetterPlan` reads the plan of any mode without errors. A closed mode
+reports its cycle size and `true`; an open mode reports `Cycle == 0` and
+`false`; the unset mode gives an empty plan. Together with the numbers of the
+mode the plan rebuilds it, as long as every number is at least 1:
+
+```go
+pentatonic := mode.MustFromCode("pentatonic-major")
+read, closed := pentatonic.LetterPlan() // [1 2 3 5 6], 8, true
+numbers := pentatonic.MustNumbers(traditional).Adjacent // 2 2 3 2 3
+again := mode.MustFromNumbersWithPlan(traditional, numbers, read)
+// again.Equal(pentatonic)
+```
+
+Every plan the package returns is a new slice owned by the caller; editing it
+changes neither the mode nor later plans. Passed numbers, sizes, and rules are
+neither changed nor retained.
+
+To find catalog entries by numbers without building a mode, use
+`Repository.IdentifyNumbers` or, with a name for the first degree,
+`Repository.IdentifyNumbersFrom`. The kind is explicit (`mode.Closed` or
+`mode.Open`), matches are exact from the first degree without rotations, and
+the entries come in catalog order. A query without matches returns an empty
+slice, not an error.
+
+```go
+entries := mode.BuiltInRepository().MustIdentifyNumbers(mode.Closed, traditional,
+    []system.Step{3, 2, 1, 1, 3, 2})
+// blues, blues-b5: different templates with the same numbers
+```
+
 ## Comparison and editing
 
-Compare modes by structure, examine the intervals in which they differ, or locate an equal rotation. The package also describes diatonic properties, key signatures, and the numerical structure in a given system. A repository searches a catalog for exact, rotated, related, and numerical matches.
+Compare modes by structure, examine the intervals in which they differ, or locate an equal rotation. The package also describes diatonic properties, key signatures, and the numerical structure in a given system. A repository searches a catalog for exact, rotated, related, and numerical matches, either by a mode or directly by the numbers of adjacent intervals (`IdentifyNumbers`, `IdentifyNumbersFrom`).
 
 Edits include replacing, inserting, and removing degrees, rotating a closed mode, mirroring, and repeating its structure. Each edit validates its result before replacing the mode. Copies made by assignment can be edited independently, and iterators retain the structure they started from.
 

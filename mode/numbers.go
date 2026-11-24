@@ -13,6 +13,21 @@ import (
 )
 
 // LetterPlan supplies the interval sizes of the degrees and the cycle.
+//
+// Degrees[i] is the size of the interval of degree i+1 from degree 1: the
+// number of letters it spans, counting both ends. Equal neighboring sizes
+// write two degrees with one letter; a skipped size skips a letter. Cycle is
+// the size of the cycle. A plan is correct when Degrees[0] is 1, the sizes do
+// not decrease, and Cycle is not less than the last size; the function that
+// accepts a plan checks it. A plan without a cycle, as returned for an open
+// mode by Mode.LetterPlan, has Cycle 0; the second result of Mode.LetterPlan
+// tells whether there is a cycle.
+//
+// FromNumbersWithPlan and FromNumbersFromWithPlan build a closed mode from a
+// plan; SuggestLetterPlan suggests a plan from a spelling rule, and
+// Mode.LetterPlan reads the plan of a mode. A plan is ordinary data without
+// an unset state: a plan returned by this package is owned by the caller and
+// shares no data with any mode.
 type LetterPlan struct {
 	Degrees []int
 	Cycle   int
@@ -55,11 +70,23 @@ type Symmetry struct {
 
 // FromNumbers creates a seven-degree mode spanning one octave of a regular
 // system, using the default letter plan.
+//
+// The default plan gives every degree the next letter, so FromNumbers accepts
+// exactly seven numbers whose sum is the number of positions of the system;
+// other counts give ErrWrongDegreeCount. For any number of degrees, use
+// FromNumbersFromWithRule to let a spelling rule choose the letters,
+// FromNumbersWithPlan to pass an explicit letter plan, or OpenFromNumbers for
+// an open mode.
 func FromNumbers(sys *system.System, adjacent []system.Step) (Mode, error) {
 	return fromNumbers(sys, adjacent, spelling.Spelling{}, nil, false)
 }
 
 // FromNumbersFrom creates a seven-degree, one-octave mode from start.
+//
+// Like FromNumbers, it uses the default letter plan and accepts exactly seven
+// numbers. For any number of degrees, use FromNumbersFromWithRule (the letters
+// chosen by a spelling rule), FromNumbersFromWithPlan (an explicit letter
+// plan), or OpenFromNumbersFrom (an open mode).
 func FromNumbersFrom(sys *system.System, adjacent []system.Step, start spelling.Spelling) (Mode, error) {
 	return fromNumbers(sys, adjacent, start, nil, true)
 }
