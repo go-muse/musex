@@ -13,13 +13,14 @@ import (
 // Allowed lists the tuplet ratios a reading may use; an empty list means no
 // tuplets. It is a set by [tuplet.Tuplet.Equal]: a repeated ratio gives the
 // same readings as one occurrence, and the order of the list does not change
-// the result, which follows the order of [Readings]. Longest is the longest allowed base; the zero value means Breve.
-// MaxDots is the largest number of dots of a written sign, at least 0.
-// MaxParts is the largest number of written values in one reading; 0 means
-// [MaxParts]. A reading has one written value per input duration, so an input
-// longer than MaxParts has no reading. MaxDepth is the largest nesting depth of groups; 0 (the default)
-// means no nesting. MaxReadings is the largest number of readings returned;
-// 0 means 256.
+// the result, which follows the order of [Readings]. Longest is the longest
+// allowed base; the zero value means Breve. MaxDots is the largest number of
+// dots of a written sign, at least 0. MaxParts is the largest number of
+// written values in one reading; 0 means [MaxParts]. A reading has one written
+// value per input duration, so an input longer than MaxParts has no reading.
+// MaxDepth is the largest nesting depth of groups; 0 (the default) means no
+// nesting. MaxReadings is the largest number of readings returned; 0 means
+// 256.
 //
 // FreeContents lets a group hold any number, at least one, of consecutive
 // items whose written sum under the chain of the group is the actual count
@@ -95,9 +96,20 @@ func (r Reading) Equal(other Reading) bool {
 // maxSearchSteps bounds the work of one Readings call. Every step of the
 // search counts toward it: a computed cover entry, a ratio tried, a span
 // examined, a group considered, a content cover turned into a group (one step
-// per input it covers), and a produced cover. The cost of a step is bounded, so a call
-// ends within bounded time and memory.
-const maxSearchSteps = 100000
+// per input it covers), a produced cover, a chain of ratios or a written sign
+// built, and each item visited while choosing the first readings in order.
+// Work that grows with the depth of a chain of ratios is charged by
+// [chainSteps], so the cost of a step is bounded independently of the input
+// and the options, and a call ends within bounded time and memory.
+const maxSearchSteps = 200000
+
+// chainTupletsPerStep is the number of tuplets of a chain that the search
+// may process for one step: packing a chain, comparing it with the chain of
+// a group, or building a sign under it.
+const chainTupletsPerStep = 16
+
+// chainSteps returns the steps charged for work over a chain of depth d.
+func chainSteps(d int) int { return 1 + d/chainTupletsPerStep }
 
 // defaultMaxReadings is the result bound when MaxReadings is 0.
 const defaultMaxReadings = 256
@@ -136,9 +148,12 @@ const defaultMaxReadings = 256
 // The work of a call is bounded independently of the input and the result
 // count: every step of the search counts toward a fixed bound, including the
 // branches that produce no cover, such as spans that no unit fills, groups
-// over durations that no sign writes, and nested ratios at every depth.
-// Exceeding the bound fails with ErrSearchLimit rather than exhausting time
-// or memory; within it, a call returns its readings or an empty result. The
+// over durations that no sign writes, and nested ratios at every depth, with
+// work over long chains of ratios charged in proportion to their depth. The
+// first MaxReadings readings are chosen by comparing the found covers, which
+// also counts toward the bound, and only those are built. Exceeding the bound
+// fails with ErrSearchLimit rather than exhausting time or memory; within it,
+// a call returns its readings or an empty result. The
 // number of readings grows quickly with the length of the input, the number
 // of ratios, and the nesting depth, especially with FreeContents, so a long
 // input is better split into parts, for example by measures, and read part by
@@ -204,15 +219,63 @@ func Readings(ds []Duration, opts ReadingsOptions) ([]Reading, error) {
 		return nil, simpleError(ErrSearchLimit, op)
 	}
 
-	readings := make([]Reading, 0, len(covers))
-	for _, c := range covers {
-		readings = append(readings, Reading{contents: c.items.slice()})
+	first := s.first(covers, maxReadings)
+	if s.exceeded {
+		return nil, simpleError(ErrSearchLimit, op)
 	}
-	slices.SortFunc(readings, compareReadings)
-	if len(readings) > maxReadings {
-		readings = readings[:maxReadings]
+	readings := make([]Reading, len(first))
+	for k, c := range first {
+		readings[k] = Reading{contents: c.items.slice()}
 	}
 	return readings, nil
+}
+
+// first returns the first n of the covers in the order of Readings.
+// It keeps at most n candidates and compares covers as item lists, so only
+// the returned covers are built into readings; every item visited by a
+// comparison counts toward the work bound.
+func (s *readingSearch) first(covers []coverResult, n int) []coverResult {
+	best := make([]coverResult, 0, min(n, len(covers)))
+	for _, c := range covers {
+		if len(best) == n {
+			if s.compareCovers(c, best[n-1]) >= 0 {
+				continue
+			}
+			best = best[:n-1]
+		}
+		k, _ := slices.BinarySearchFunc(best, c, s.compareCovers)
+		best = slices.Insert(best, k, c)
+		if s.exceeded {
+			return nil
+		}
+	}
+	return best
+}
+
+// compareCovers orders covers in the order of Readings: fewer groups first,
+// nested ones included, then lexicographically by items. Covers that share a
+// tail of items stop comparing at the shared node.
+func (s *readingSearch) compareCovers(a, b coverResult) int {
+	if !s.step(1) {
+		return 0
+	}
+	if c := cmpInt(a.groups, b.groups); c != 0 {
+		return c
+	}
+	la, lb := a.items, b.items
+	for la != lb {
+		if la == nil {
+			return -1
+		}
+		if lb == nil {
+			return 1
+		}
+		if c := s.compareContent(la.head, lb.head); c != 0 {
+			return c
+		}
+		la, lb = la.tail, lb.tail
+	}
+	return 0
 }
 
 // MustReadings is like Readings but panics with the returned error.
@@ -249,13 +312,15 @@ type readingSearch struct {
 	spans        map[groupKey][]groupSpan
 }
 
-// chainInfo is a chain of tuplets met by the search, built once: its tuplets,
-// the products of their actual and normal counts, its coefficient, its depth,
-// the written signs under it, and the chains extended by each allowed ratio. A nil coef means that a product is
-// outside the range of package common/fraction, as for checkedCoefficient,
-// so nothing can be written under the chain or under its extensions.
+// chainInfo is a chain of tuplets met by the search, built once: its packed
+// form, the products of the actual and normal counts, its coefficient, its
+// depth, the written signs under it, and the chains extended by each allowed
+// ratio. A nil coef means that a product is outside the range of package
+// common/fraction, as for checkedCoefficient, so nothing can be written under
+// the chain or under its extensions. Every written value under the chain
+// shares its packed form.
 type chainInfo struct {
-	tuplets  []tuplet.Tuplet
+	packed   string
 	actual   *big.Int
 	normal   *big.Int
 	coef     *big.Rat
@@ -267,14 +332,15 @@ type chainInfo struct {
 // root returns the empty chain of the search.
 func (s *readingSearch) root() *chainInfo {
 	if s.chain == nil {
-		s.chain = &chainInfo{actual: big.NewInt(1), normal: big.NewInt(1), coef: big.NewRat(1, 1)}
+		s.chain = &chainInfo{packed: packChain(nil), actual: big.NewInt(1), normal: big.NewInt(1), coef: big.NewRat(1, 1)}
 	}
 	return s.chain
 }
 
-// child returns the chain c extended by the allowed ratio at index k. Its
-// products and coefficient follow from those of c, so extending a chain
-// costs a few multiplications.
+// child returns the chain c extended by the allowed ratio at index k, or nil
+// if the work bound is exceeded. Its products and coefficient follow from
+// those of c; packing it costs work proportional to its depth, which is
+// charged by chainSteps.
 func (s *readingSearch) child(c *chainInfo, k int) *chainInfo {
 	if c.children == nil {
 		c.children = make([]*chainInfo, len(s.allowed))
@@ -282,9 +348,12 @@ func (s *readingSearch) child(c *chainInfo, k int) *chainInfo {
 	if c.children[k] != nil {
 		return c.children[k]
 	}
+	if !s.step(chainSteps(c.depth + 1)) {
+		return nil
+	}
 	t := s.allowed[k]
 	actual, normal := t.MustPair()
-	ch := &chainInfo{tuplets: append(slices.Clone(c.tuplets), t), depth: c.depth + 1}
+	ch := &chainInfo{packed: c.packed + packChain([]tuplet.Tuplet{t}), depth: c.depth + 1}
 	if c.coef != nil {
 		limit := fraction.MaxComponentBig()
 		ch.actual = new(big.Int).Mul(c.actual, big.NewInt(int64(actual)))
@@ -323,12 +392,14 @@ func (s *readingSearch) step(n int) bool {
 	return true
 }
 
-// coverResult is one cover found by the search: its items and the inputs it
-// consumes. Every input has exactly one written value, so the number of
-// written values of a cover is the number of inputs it consumes.
+// coverResult is one cover found by the search: its items, the inputs it
+// consumes, and the number of its groups, nested ones included. Every input
+// has exactly one written value, so the number of written values of a cover is
+// the number of inputs it consumes.
 type coverResult struct {
-	items *itemList
-	used  int
+	items  *itemList
+	used   int
+	groups int
 }
 
 // itemList is an immutable list of the items of a cover. Covers that end alike
@@ -404,7 +475,7 @@ func (s *readingSearch) cover(i, end, n int, chain *chainInfo) []coverResult {
 			if !s.step(1) {
 				return nil
 			}
-			out = append(out, coverResult{items: rest.items.prepend(item), used: 1 + rest.used})
+			out = append(out, coverResult{items: rest.items.prepend(item), used: 1 + rest.used, groups: rest.groups})
 		}
 	}
 
@@ -425,7 +496,11 @@ func (s *readingSearch) cover(i, end, n int, chain *chainInfo) []coverResult {
 					if !s.step(1) {
 						return nil
 					}
-					out = append(out, coverResult{items: rest.items.prepend(g.item), used: g.used + rest.used})
+					out = append(out, coverResult{
+						items:  rest.items.prepend(g.item),
+						used:   g.used + rest.used,
+						groups: g.groups + rest.groups,
+					})
 				}
 			}
 		}
@@ -436,11 +511,13 @@ func (s *readingSearch) cover(i, end, n int, chain *chainInfo) []coverResult {
 }
 
 // groupCover is one exactly filled group starting at a position: the group
-// as an item and the inputs it consumes. The item is shared by every cover
+// as an item, the inputs it consumes, and the number of groups it holds,
+// itself included. The item is shared by every cover
 // that holds the group; covers are only read.
 type groupCover struct {
-	item Content
-	used int
+	item   Content
+	used   int
+	groups int
 }
 
 // groupKey identifies cached groups or spans: the start, the end (the bound
@@ -472,6 +549,9 @@ type groupSpan struct {
 // t.Actual() units: the group is filled exactly.
 func (s *readingSearch) groupsAt(k, i, end int, chain *chainInfo) []groupCover {
 	inner := s.child(chain, k)
+	if inner == nil {
+		return nil
+	}
 	if !s.freeContents {
 		return s.fixedGroups(k, i, end, chain, inner)
 	}
@@ -507,7 +587,7 @@ func (s *readingSearch) fixedGroups(k, i, end int, chain, inner *chainInfo) []gr
 		return out
 	}
 	for _, c := range s.cover(i, end, actual, inner) {
-		if !s.step(1 + c.used) {
+		if !s.step((1 + c.used) * chainSteps(inner.depth)) {
 			return nil
 		}
 		sum := new(big.Rat).Sub(s.prefix[i+c.used], s.prefix[i])
@@ -570,7 +650,7 @@ func (s *readingSearch) freeGroups(k int, sp groupSpan, i int, inner *chainInfo)
 	}
 	var out []groupCover
 	for _, c := range s.cover(i, sp.end, -1, inner) {
-		if !s.step(1 + c.used) {
+		if !s.step((1 + c.used) * chainSteps(inner.depth)) {
 			return nil
 		}
 		if g, ok := groupOf(s.allowed[k], sp.unit, c); ok {
@@ -590,7 +670,7 @@ func groupOf(t tuplet.Tuplet, unit Written, c coverResult) (groupCover, bool) {
 	if err != nil {
 		return groupCover{}, false
 	}
-	return groupCover{item: Content{group: &g}, used: c.used}, true
+	return groupCover{item: Content{group: &g}, used: c.used, groups: 1 + c.groups}, true
 }
 
 // signFor returns the single written sign of ds[i] under chain, within the
@@ -629,35 +709,20 @@ func (s *readingSearch) signRat(v *big.Rat, chain *chainInfo) (Written, bool) {
 	if w, ok := chain.signs[key]; ok {
 		return w, w.IsSet()
 	}
-	w, err := makeWritten("Readings", b, k, chain.tuplets)
-	if err != nil {
-		w = Written{}
+	if !s.step(chainSteps(chain.depth)) {
+		return Written{}, false
+	}
+	// As makeWritten, with the coefficient and the packed form of the chain
+	// already at hand.
+	var w Written
+	if value, err := writtenValue("Readings", b, k, chain.coef); err == nil {
+		w = Written{base: b, dots: k, chain: chain.packed, value: value}
 	}
 	if chain.signs == nil {
 		chain.signs = make(map[[2]int]Written)
 	}
 	chain.signs[key] = w
 	return w, w.IsSet()
-}
-
-// groupCount counts the groups of a cover, recursively.
-func groupCount(items []Content) int {
-	n := 0
-	for _, c := range items {
-		if c.IsGroup() {
-			n += 1 + groupCount(c.group.contents)
-		}
-	}
-	return n
-}
-
-// compareReadings orders readings: fewer groups first, then lexicographically
-// by item kind, ratio, unit, and contents.
-func compareReadings(a, b Reading) int {
-	if c := cmpInt(groupCount(a.contents), groupCount(b.contents)); c != 0 {
-		return c
-	}
-	return compareContents(a.contents, b.contents)
 }
 
 func cmpInt(a, b int) int {
@@ -671,16 +736,25 @@ func cmpInt(a, b int) int {
 	}
 }
 
-func compareContents(a, b []Content) int {
+// compareContents compares item slices lexicographically by compareContent;
+// a shorter slice that is a prefix of the other comes first.
+func (s *readingSearch) compareContents(a, b []Content) int {
 	for i := 0; i < len(a) && i < len(b); i++ {
-		if c := compareContent(a[i], b[i]); c != 0 {
+		if c := s.compareContent(a[i], b[i]); c != 0 {
 			return c
 		}
 	}
 	return cmpInt(len(a), len(b))
 }
 
-func compareContent(a, b Content) int {
+// compareContent orders items: written values before groups, written values
+// by Written.Compare, and groups by actual count, normal count, unit, and
+// contents. Each item visited counts one step toward the work bound; a group
+// shared by both items compares equal at once.
+func (s *readingSearch) compareContent(a, b Content) int {
+	if !s.step(1) {
+		return 0
+	}
 	if a.IsGroup() != b.IsGroup() {
 		if a.IsGroup() {
 			return 1
@@ -691,6 +765,9 @@ func compareContent(a, b Content) int {
 		return a.written.Compare(b.written)
 	}
 	ga, gb := a.group, b.group
+	if ga == gb {
+		return 0
+	}
 	if c := cmpInt(ga.t.MustActual(), gb.t.MustActual()); c != 0 {
 		return c
 	}
@@ -700,5 +777,5 @@ func compareContent(a, b Content) int {
 	if c := ga.unit.Compare(gb.unit); c != 0 {
 		return c
 	}
-	return compareContents(ga.contents, gb.contents)
+	return s.compareContents(ga.contents, gb.contents)
 }
