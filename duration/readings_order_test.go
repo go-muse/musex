@@ -111,6 +111,66 @@ func TestReadingsExactOrder(t *testing.T) {
 	require.Negative(t, triplet.Compare(neutral), "Tuplet.Compare puts 3:2 before 2:2")
 	require.Positive(t, neutral.Compare(triplet), "Tuplet.Compare puts 2:2 after 3:2")
 
+	// The actual count is the first key: 2:3 (actual 2) precedes 4:2
+	// (actual 4), although the normal count alone, 3 against 2, orders the
+	// pair the other way.
+	twoThree := tp(2, 3)
+	fourTwo := tp(4, 2)
+
+	require.Less(t, noErr(twoThree.Actual()), noErr(fourTwo.Actual()), "2:3 has the smaller actual count")
+	require.Greater(t, noErr(twoThree.Normal()), noErr(fourTwo.Normal()), "2:3 has the larger normal count")
+
+	// A sounding 3/16 alone in a group: in 2:3 an eighth over a sixteenth
+	// unit (written 1/8 sounds 1/8 times 3/2 = 3/16), in 4:2 a dotted quarter
+	// over a dotted sixteenth unit (written 3/8 sounds 3/8 times 1/2 = 3/16).
+	// Both need FreeContents, since they hold one item instead of the actual
+	// count. Outside groups 3/16 is a dotted eighth.
+	dottedEighth := wcon(duration.Eighth, 1)
+	twoThreeAlone := gcon(twoThree, sixteenth, wcon(duration.Eighth, 0, twoThree))
+	fourTwoAlone := gcon(fourTwo, wr(duration.Sixteenth, 1), wcon(duration.Quarter, 1, fourTwo))
+
+	// Readings of two sounding 3/16 under 4:2 and 2:3 with free contents and
+	// one dot, in the order of Readings: the same shape as for two quarters
+	// above, with 2:3 in place of 2:2 and 4:2 in place of 3:2. A group over
+	// both durations has the span 3/8: in 2:3 an eighth unit with two eighths,
+	// in 4:2 a dotted eighth unit with two dotted quarters; it comes after the
+	// group of the same ratio over one duration, whose unit is shorter.
+	twoDottedEighthsFree := [][]duration.Content{
+		{dottedEighth, dottedEighth},
+		{dottedEighth, twoThreeAlone},
+		{dottedEighth, fourTwoAlone},
+		{twoThreeAlone, dottedEighth},
+		{gcon(twoThree, eighth, wcon(duration.Eighth, 0, twoThree), wcon(duration.Eighth, 0, twoThree))},
+		{fourTwoAlone, dottedEighth},
+		{gcon(fourTwo, wr(duration.Eighth, 1), wcon(duration.Quarter, 1, fourTwo), wcon(duration.Quarter, 1, fourTwo))},
+		{twoThreeAlone, twoThreeAlone},
+		{twoThreeAlone, fourTwoAlone},
+		{fourTwoAlone, twoThreeAlone},
+		{fourTwoAlone, fourTwoAlone},
+	}
+
+	// The normal count is the second key: at the equal actual count 3, 3:2
+	// precedes 3:4, although its unit for three sounding 1/6 is longer (a
+	// quarter against an eighth), so the unit alone would order the pair the
+	// other way.
+	threeFour := tp(3, 4)
+
+	require.Equal(t, noErr(triplet.Actual()), noErr(threeFour.Actual()), "3:2 and 3:4 have equal actual counts")
+	require.Less(t, noErr(triplet.Normal()), noErr(threeFour.Normal()), "3:2 has the smaller normal count")
+	require.Negative(t, eighth.Compare(quarter), "an eighth unit precedes a quarter unit")
+
+	// Three sounding 1/6 have no reading outside groups (1/6 is no sign) and,
+	// without free contents, exactly one group of three items per ratio: in
+	// 3:2 three quarters over a quarter unit (written 1/4 sounds 1/4 times
+	// 2/3 = 1/6), in 3:4 three eighths over an eighth unit (written 1/8 sounds
+	// 1/8 times 4/3 = 1/6).
+	threeSixths := [][]duration.Content{
+		{gcon(triplet, quarter, wcon(duration.Quarter, 0, triplet), wcon(duration.Quarter, 0, triplet),
+			wcon(duration.Quarter, 0, triplet))},
+		{gcon(threeFour, eighth, wcon(duration.Eighth, 0, threeFour), wcon(duration.Eighth, 0, threeFour),
+			wcon(duration.Eighth, 0, threeFour))},
+	}
+
 	tests := []struct {
 		name string
 		ds   []duration.Duration
@@ -215,6 +275,43 @@ func TestReadingsExactOrder(t *testing.T) {
 				Allowed: []tuplet.Tuplet{triplet, neutral}, MaxDots: 1, FreeContents: true, MaxReadings: 5,
 			},
 			want: twoQuartersFree[:5],
+		},
+		{
+			// The actual count decides before the normal count: in every pair
+			// with equal group counts whose first differing items are groups
+			// of 2:3 and 4:2, the 2:3 reading comes first.
+			name: "two 3/16 under 4:2 and 2:3 with free contents, all readings",
+			ds:   repeatDur(2, 3, 16),
+			opts: duration.ReadingsOptions{
+				Allowed: []tuplet.Tuplet{fourTwo, twoThree}, MaxDots: 1, FreeContents: true,
+				MaxReadings: manyReadings,
+			},
+			want: twoDottedEighthsFree,
+		},
+		{
+			// MaxReadings keeps the reading with the 2:3 group and drops the
+			// one with the 4:2 group, which follows it.
+			name: "two 3/16 under 4:2 and 2:3 with free contents truncated to two",
+			ds:   repeatDur(2, 3, 16),
+			opts: duration.ReadingsOptions{
+				Allowed: []tuplet.Tuplet{fourTwo, twoThree}, MaxDots: 1, FreeContents: true, MaxReadings: 2,
+			},
+			want: twoDottedEighthsFree[:2],
+		},
+		{
+			// At the equal actual count the normal count decides, before the
+			// unit: 3:2 in quarters precedes 3:4 in eighths.
+			name: "three 1/6 under 3:4 and 3:2, all readings",
+			ds:   repeatDur(3, 1, 6),
+			opts: duration.ReadingsOptions{Allowed: []tuplet.Tuplet{threeFour, triplet}, MaxReadings: manyReadings},
+			want: threeSixths,
+		},
+		{
+			// MaxReadings keeps the 3:2 reading and drops the 3:4 one.
+			name: "three 1/6 under 3:4 and 3:2 truncated to one",
+			ds:   repeatDur(3, 1, 6),
+			opts: duration.ReadingsOptions{Allowed: []tuplet.Tuplet{threeFour, triplet}, MaxReadings: 1},
+			want: threeSixths[:1],
 		},
 	}
 
