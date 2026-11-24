@@ -754,6 +754,9 @@ func TestMIDITempoMapStretchAcrossBaseSteps(t *testing.T) {
 // The rational tail must use exact fractional-linear comparisons; an
 // ErrOutOfRange from a finite interval fallback is not an allowed result.
 func TestMIDITempoMapStretchRationalFragmentWithWeightedLogTime(t *testing.T) {
+	if testing.Short() {
+		t.Skip("stretched rational fragment with weighted log time: heavy single-threaded check; runs in the coverage job without -short")
+	}
 	t.Parallel()
 	m := ritardandoMap().MustWithExtension(tempomap.MustNewExtension(at(5, 4), sec(1, 1)))
 	for _, mode := range allModes {
@@ -782,6 +785,9 @@ func TestMIDITempoMapStretchRationalFragmentWithWeightedLogTime(t *testing.T) {
 // Thus f(S) is strictly between M and M+1/2: only Up/AwayFromZero
 // select M+1 (E-5); every other mode selects M, without an E-8 fallback.
 func TestMIDITempoMapStretchWeightedLogTimeAtFormatLimit(t *testing.T) {
+	if testing.Short() {
+		t.Skip("stretched weighted log time at the format limit: heavy single-threaded check; runs in the coverage job without -short")
+	}
 	t.Parallel()
 	m := tempomap.MustNew(quarterTempo(120, 1)).
 		MustWithChange(tempomap.MustNewGradual(at(0, 1), tempomap.LinearSpeed).MustWithSlot(tempomap.SlotSecond)).
