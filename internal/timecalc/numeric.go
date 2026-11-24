@@ -83,15 +83,18 @@ func intervalScale(a interval, factor *big.Rat, precision uint) interval {
 }
 
 // intervalWidenFrac widens a on both sides by the error bound num/den, which
-// is rounded up to precision first. den must be nonzero; as with big.Rat, a
-// zero den panics with "division by zero".
+// is rounded up to precision first. It requires num >= 0 and den > 0: both
+// callers pass a nonnegative power over a positive denominator. As with
+// big.Rat, a zero den panics with "division by zero".
 //
 // The fraction is deliberately not reduced. The series remainders passed here
 // have operands of hundreds of thousands of bits, and reducing them with
-// big.Rat costs a quadratic GCD while the rounded bound does not change:
-// big.Float.Quo rounds the exact quotient correctly, so its result depends
-// only on the value of num/den, exactly as big.Float.SetRat of the reduced
-// fraction does.
+// big.Rat costs a quadratic GCD while the rounded bound does not change.
+// Under the precondition above, the bound is bit-identical to
+// big.Float.SetRat of the reduced big.Rat num/den: big.Float.Quo rounds the
+// exact quotient correctly, so a nonzero result depends only on the value of
+// the fraction, and a zero num gives +0 in both. The precondition matters for
+// zero only: 0 divided by a negative den would give -0, while SetRat gives +0.
 func intervalWidenFrac(a interval, num, den *big.Int, precision uint) interval {
 	if den.Sign() == 0 {
 		panic("division by zero")
