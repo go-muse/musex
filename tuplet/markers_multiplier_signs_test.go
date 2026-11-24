@@ -83,7 +83,12 @@ func TestFormatLilyPondMultiplierRoundTripSigns(t *testing.T) {
 }
 
 // A coefficient that is not positive fails with ErrInvalidCount whatever the
-// signs of its pair, and an unset one with ErrInvalidArgument.
+// signs of its pair, and an unset one with ErrInvalidArgument. A positive
+// coefficient whose components, written with positive signs, do not fit in
+// int fails with ErrOutOfRange alone and gives no text: the negated
+// math.MinInt is 2^63, above math.MaxInt. The checks run in that order, so
+// math.MinInt over a positive denominator is not positive and fails with
+// ErrInvalidCount. MustFormatLilyPondMultiplier panics with the same error.
 func TestFormatLilyPondMultiplierRejects(t *testing.T) {
 	t.Parallel()
 
@@ -98,14 +103,21 @@ func TestFormatLilyPondMultiplierRejects(t *testing.T) {
 		{"negative integer", frac(-4, 1), tuplet.ErrInvalidCount},
 		{"zero", frac(0, 3), tuplet.ErrInvalidCount},
 		{"zero over a negative denominator", frac(0, -3), tuplet.ErrInvalidCount},
+		{"min int over a positive denominator", frac(math.MinInt, 1), tuplet.ErrInvalidCount},
+		{"min int over min int", frac(math.MinInt, math.MinInt), tuplet.ErrOutOfRange},
+		{"min int over minus one", frac(math.MinInt, -1), tuplet.ErrOutOfRange},
+		{"minus one over min int", frac(-1, math.MinInt), tuplet.ErrOutOfRange},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := tuplet.FormatLilyPondMultiplier(tt.c)
+			text, err := tuplet.FormatLilyPondMultiplier(tt.c)
 			assertErr(t, err, tt.want)
+			assert.Empty(t, text)
+
+			_ = assertPanicErr(t, func() { tuplet.MustFormatLilyPondMultiplier(tt.c) }, tt.want)
 		})
 	}
 }
