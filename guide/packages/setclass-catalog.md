@@ -13,7 +13,7 @@ The `setclass/catalog` package provides the complete, read-only reference catalo
 
 `setclass/catalog` represents **abstract equivalence classes** and their precomputed invariants, not concrete pitch-class sets (`pcset`) or live set-class reductions (`setclass`).
 
-- A concrete pitch-class set (planned in `pcset`) holds a specific collection of pitch classes such as $\{2, 6, 9\}$ (D, F♯, A).
+- A concrete [pitch-class set](pcset.md) (a `pcset.Set`, built for example with `pcset.New(12, 2, 6, 9)`) holds a specific collection of pitch classes such as $\{2, 6, 9\}$ (D, F♯, A).
 - A catalog entry in `setclass/catalog` represents the canonical equivalence class itself — here `ForteClass` `3-11` with prime form `(0, 3, 7)` and directed transpositional types `3-11A` `(0, 3, 7)` (minor triad) and `3-11B` `(0, 4, 7)` (major triad).
 
 The catalog package has zero external dependencies and performs all lookups in $O(1)$ time over static tables.
