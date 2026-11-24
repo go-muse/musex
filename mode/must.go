@@ -326,6 +326,26 @@ func (m Mode) MustStepsBetweenFrom(sys *system.System, start spelling.Spelling, 
 	return must(m.StepsBetweenFrom(sys, start, from, to))
 }
 
+// MustSuggestLetterPlan is like SuggestLetterPlan but panics with its error.
+func MustSuggestLetterPlan(sys *system.System, adjacent []system.Step, start spelling.Spelling, rule system.SpellingRule) LetterPlan {
+	return must(SuggestLetterPlan(sys, adjacent, start, rule))
+}
+
+// MustFromNumbersFromWithRule is like FromNumbersFromWithRule but panics with its error.
+func MustFromNumbersFromWithRule(sys *system.System, adjacent []system.Step, start spelling.Spelling, rule system.SpellingRule) Mode {
+	return must(FromNumbersFromWithRule(sys, adjacent, start, rule))
+}
+
+// MustOpenFromNumbers is like OpenFromNumbers but panics with its error.
+func MustOpenFromNumbers(sys *system.System, adjacent []system.Step, sizes []int) Mode {
+	return must(OpenFromNumbers(sys, adjacent, sizes))
+}
+
+// MustOpenFromNumbersFrom is like OpenFromNumbersFrom but panics with its error.
+func MustOpenFromNumbersFrom(sys *system.System, adjacent []system.Step, start spelling.Spelling, sizes []int) Mode {
+	return must(OpenFromNumbersFrom(sys, adjacent, start, sizes))
+}
+
 // MustCycleIn is like CycleIn but panics with its error.
 func (m Mode) MustCycleIn(sys *system.System) CycleInfo {
 	return must(m.CycleIn(sys))
@@ -384,6 +404,16 @@ func (r Repository) MustIdentifyRotationsInSystem(m Mode, sys *system.System) []
 // MustIdentifyRotationsInSystemFrom is like IdentifyRotationsInSystemFrom but panics with its error.
 func (r Repository) MustIdentifyRotationsInSystemFrom(m Mode, sys *system.System, start spelling.Spelling) []Rotation {
 	return must(r.IdentifyRotationsInSystemFrom(m, sys, start))
+}
+
+// MustIdentifyNumbers is like IdentifyNumbers but panics with its error.
+func (r Repository) MustIdentifyNumbers(kind Kind, sys *system.System, adjacent []system.Step) []template.Entry {
+	return must(r.IdentifyNumbers(kind, sys, adjacent))
+}
+
+// MustIdentifyNumbersFrom is like IdentifyNumbersFrom but panics with its error.
+func (r Repository) MustIdentifyNumbersFrom(kind Kind, sys *system.System, adjacent []system.Step, start spelling.Spelling) []template.Entry {
+	return must(r.IdentifyNumbersFrom(kind, sys, adjacent, start))
 }
 
 // MustRebuild is like Rebuild but panics with its error.
