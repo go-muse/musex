@@ -26,7 +26,9 @@ func TestUnapplyChainErrors(t *testing.T) {
 func TestABCMarkerErrors(t *testing.T) {
 	t.Parallel()
 
-	for _, text := range []string{"", "3", "(0", "(01", "(3:", "(3:0", "(3:2:0", "(3:2:2:2", "(3::", "(-3", "( 3"} {
+	// "(3::" is a valid marker equal to "(3" (abc 2.1, section 4.13; issue
+	// #158), so it is not listed here; "(3:2:" stays rejected.
+	for _, text := range []string{"", "3", "(0", "(01", "(3:", "(3:0", "(3:2:", "(3:2:0", "(3:2:2:2", "(-3", "( 3"} {
 		t.Run(text, func(t *testing.T) {
 			t.Parallel()
 
