@@ -369,11 +369,18 @@ func TestReadingsOptionErrors(t *testing.T) {
 		opts    duration.ReadingsOptions
 		wantErr error
 	}{
+		{"MaxParts below zero", duration.ReadingsOptions{MaxParts: -1}, duration.ErrInvalidArgument},
 		{"MaxParts above the limit", duration.ReadingsOptions{MaxParts: duration.MaxParts + 1}, duration.ErrInvalidArgument},
 		{"MaxParts at the limit", duration.ReadingsOptions{MaxParts: duration.MaxParts}, nil},
 		{"Longest past the 1024th", duration.ReadingsOptions{Longest: duration.ThousandTwentyFourth + 1}, duration.ErrInvalidArgument},
 		{"Longest far outside the series", duration.ReadingsOptions{Longest: duration.Base(math.MaxUint8)}, duration.ErrInvalidArgument},
 		{"Longest maxima", duration.ReadingsOptions{Longest: duration.Maxima}, nil},
+		// Longest is checked before Allowed: an invalid Longest together with an
+		// unset tuplet of Allowed fails with ErrInvalidArgument alone, without
+		// tuplet.ErrUnset.
+		{"Longest before an unset tuplet of Allowed", duration.ReadingsOptions{
+			Longest: duration.ThousandTwentyFourth + 1, Allowed: []tuplet.Tuplet{{}},
+		}, duration.ErrInvalidArgument},
 	}
 
 	for _, tt := range tests {
