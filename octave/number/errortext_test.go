@@ -543,6 +543,10 @@ func TestErrorText(t *testing.T) {
 // The count is not deterministic (the pools of fmt, the race detector and the
 // coverage change it), so only the upper bound is checked.
 func TestErrorAllocations(t *testing.T) {
+	if testing.Short() {
+		t.Skip("allocations of errors of big numberings: heavy single-threaded check; runs in the coverage job without -short")
+	}
+
 	const calls = 8
 
 	var (

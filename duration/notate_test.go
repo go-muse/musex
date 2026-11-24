@@ -369,6 +369,9 @@ func TestNotateErrors(t *testing.T) {
 // sign with the same chain, the length is 1 to 1024, a single allowed sign
 // is returned alone.
 func TestNotateModel(t *testing.T) {
+	if testing.Short() {
+		t.Skip("notation model sweep: heavy single-threaded check; runs in the coverage job without -short")
+	}
 	t.Parallel()
 
 	var values []*big.Rat

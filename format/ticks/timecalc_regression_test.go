@@ -36,6 +36,9 @@ func requireUnboundedExport(t *testing.T, m tempomap.Map, options ticks.ExportOp
 // quantization. Decimal(110) independently gives the two EqualTime tempos
 // 810930.216216328763956026... and 575364.144903561854878438... .
 func TestMIDITempoMapOfEqualTimeWideComputedStep(t *testing.T) {
+	if testing.Short() {
+		t.Skip("equal-time export with a wide computed step: heavy single-threaded check; runs in the coverage job without -short")
+	}
 	t.Parallel()
 	f, err := fraction.FromBigInt(big.NewInt(1), fraction.MaxComponentBig())
 	require.NoError(t, err)

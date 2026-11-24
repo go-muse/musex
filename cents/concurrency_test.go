@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"runtime"
 	"sync"
 	"testing"
 
@@ -377,7 +376,9 @@ func assertSameLines(t *testing.T, want, got []string, msgAndArgs ...any) bool {
 // A failure reports, for each worker, the first line that differs from the
 // expected results.
 func TestConcurrentUse(t *testing.T) {
-	workers := min(runtime.GOMAXPROCS(0)*4, 32)
+	// A fixed number of workers keeps concurrent access for the race
+	// detector without scaling the cost with the number of CPUs.
+	const workers = 8
 
 	// First use: every worker creates its own values from the same inputs.
 	// The expected results are computed after the workers, in the test

@@ -3,7 +3,6 @@ package number_test
 import (
 	"errors"
 	"fmt"
-	"runtime"
 	"sync"
 	"testing"
 
@@ -53,7 +52,9 @@ func TestConcurrentUse(t *testing.T) {
 	const iterations = 3
 
 	want := newExpectations(criteriaSet(t))
-	workers := runtime.GOMAXPROCS(0) * 4
+	// A fixed number of workers keeps concurrent access for the race
+	// detector without scaling the cost with the number of CPUs.
+	const workers = 8
 	failures := make([][]string, workers)
 	start := make(chan struct{})
 
