@@ -2,6 +2,7 @@ package tuplet
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
@@ -114,13 +115,18 @@ func MustParseLilyPondMultiplier(text string) fraction.Fraction {
 
 // FormatLilyPondMultiplier returns the LilyPond duration multiplier of c:
 // "*" followed by the stored numerator and denominator separated by a slash,
-// as [ParseLilyPondMultiplier] reads them; the pair is not reduced. A
-// denominator of 1 is written in the integer form "*a", so both "*4" and
-// "*4/1" parse to the same coefficient and format as "*4".
+// as [ParseLilyPondMultiplier] reads them; the pair is not reduced. A positive
+// coefficient stored with two negative components is written with both signs
+// removed, since the grammar has no signs: the pair (-2, -3) is written as
+// "*2/3" and (-4, -6) as "*4/6". A denominator of 1, after that, is written
+// in the integer form "*a", so both "*4" and "*4/1" parse to the same
+// coefficient and format as "*4", and the pair (-4, -1) is written as "*4".
+// Parsing the result gives a coefficient equal to c by fraction.Fraction.Equal.
 //
 // In order of checking, it returns an error wrapping ErrInvalidArgument if c
 // is unset, ErrInvalidCount if c is not positive, and ErrOutOfRange if a
-// component of the stored pair does not fit in int.
+// component of the stored pair, with its sign removed, does not fit in int,
+// such as the pair (math.MinInt, -1).
 func FormatLilyPondMultiplier(c fraction.Fraction) (string, error) {
 	if !c.IsValid() {
 		return "", fmt.Errorf("%w: unset fraction", ErrInvalidArgument)
@@ -130,6 +136,12 @@ func FormatLilyPondMultiplier(c fraction.Fraction) (string, error) {
 	}
 
 	num, den, ok := c.Pair()
+	if ok && num < 0 {
+		// A positive coefficient has components of the same sign; the
+		// negation of math.MinInt does not fit in int.
+		ok = num != math.MinInt && den != math.MinInt
+		num, den = -num, -den
+	}
 	if !ok {
 		return "", fmt.Errorf("%w: coefficient component exceeds int", ErrOutOfRange)
 	}

@@ -140,17 +140,18 @@ const defaultMaxReadings = 256
 // without a search. An input of exactly MaxParts durations is read.
 //
 // The search is exhaustive within opts: every exact reading is found, and no
-// two returned readings are equal by [Reading.Equal]. The readings are
-// ordered deterministically: fewer groups first, then lexicographically by
-// their items, a list that is a prefix of the other first. Two items compare
-// by kind first, a written value before a group; two written values compare
-// by [Written.Compare]; two groups compare by ratio, then by unit, then by
-// contents. Two ratios compare by the actual count first and by the normal
-// count second, so 2:2 precedes 3:2 and 3:2 precedes 6:4; this is not the
-// order of tuplet.Tuplet.Compare, which compares coefficients first. Two units
-// compare by [Written.Compare], and two contents lexicographically by the same
-// order of items. At most MaxReadings readings are returned, the first ones
-// in that order. No reading is an empty result, not an error.
+// two returned readings are equal by [Reading.Equal]. The readings are ordered
+// deterministically: fewer groups first, nested groups included, then
+// lexicographically by their items, a list that is a prefix of the other
+// first. Two items compare by kind first, a written value before a group; two
+// written values compare by [Written.Compare]; two groups compare by ratio,
+// then by unit, then by contents. Two ratios compare by the actual count first
+// and by the normal count second, so 2:2 precedes 3:2 and 3:2 precedes 6:4;
+// this is not the order of [tuplet.Tuplet.Compare], which compares
+// coefficients first. Two units compare by [Written.Compare], and two contents
+// lexicographically by the same order of items. At most MaxReadings readings
+// are returned, the first ones in that order. No reading is an empty result,
+// not an error.
 //
 // The work of a call is bounded independently of the input and the result
 // count: every step of the search counts toward a fixed bound, including the
@@ -169,13 +170,13 @@ const defaultMaxReadings = 256
 // better split into parts, for example by measures, and read part by part;
 // otherwise the search reaches its bound.
 //
-// In order of checking, it returns an error wrapping ErrInvalidArgument for
-// an empty list; ErrUnset for the first unset duration in the list, as the
-// shared check of a list of durations reports it; ErrInvalidArgument for a
-// negative MaxDots, MaxDepth, or MaxReadings, for a MaxParts below zero or
-// above MaxParts, if Longest is set but is not a base, and for an unset
-// tuplet of Allowed (together with tuplet.ErrUnset); and ErrSearchLimit if
-// the search exceeds its work bound. The inputs and opts are only read.
+// In order of checking, it returns an error wrapping ErrInvalidArgument for an
+// empty list; ErrUnset for the first unset duration in the list, as [Sum],
+// [Min], and [Max] do; ErrInvalidArgument for a negative MaxDots, MaxDepth, or
+// MaxReadings, for a MaxParts below zero or above [MaxParts], if Longest is
+// set but is not a base, and for an unset tuplet of Allowed (together with
+// tuplet.ErrUnset); and ErrSearchLimit if the search exceeds its work bound.
+// The inputs and opts are only read.
 func Readings(ds []Duration, opts ReadingsOptions) ([]Reading, error) {
 	const op = "Readings"
 	if err := checkList(op, ds); err != nil {

@@ -650,12 +650,16 @@ func (w Written) MustSubdivide() (count int, part Written) {
 // two eighths sounding 3/16 each; a dotted quarter in 3:2 gives three dotted
 // eighths.
 //
-// In order of checking, it returns an error wrapping ErrUnset if w is unset,
-// ErrInvalidArgument together with tuplet.ErrUnset if t is unset,
-// ErrOutOfRange if the value of the part or its duration is outside the range
-// of package common/fraction, ErrNotNotatable if the equal part is not one
-// written sign, and ErrOutsideSeries if the base of the part would be outside
-// the series.
+// In order of checking, it returns an error wrapping ErrUnset if w is unset;
+// ErrInvalidArgument together with tuplet.ErrUnset if t is unset;
+// ErrOutOfRange together with fraction.ErrOutOfRange if the written value of
+// the part, w.Value()/t.Normal(), is outside the range of package
+// common/fraction; ErrNotNotatable if the equal part is not one written sign;
+// ErrOutsideSeries if the base of the part would be outside the series; and,
+// only after those, ErrOutOfRange if the coefficient of the chain extended by
+// t (together with tuplet.ErrOutOfRange and fraction.ErrOutOfRange) or the
+// duration of the part (together with fraction.ErrOutOfRange) is outside the
+// range of package common/fraction.
 func (w Written) SubdivideTuplet(t tuplet.Tuplet) (count int, part Written, err error) {
 	const op = "Written.SubdivideTuplet"
 	if !w.IsSet() {
