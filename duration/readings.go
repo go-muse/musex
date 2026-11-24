@@ -20,7 +20,8 @@ import (
 // value per input duration, so an input longer than MaxParts has no reading.
 // MaxDepth is the largest nesting depth of groups; 0 (the default) means no
 // nesting. MaxReadings is the largest number of readings returned; 0 means
-// 256.
+// 256. The memory of the result is proportional to MaxReadings times the
+// length of the input, since each returned reading holds its own items.
 //
 // FreeContents lets a group hold any number, at least one, of consecutive
 // items whose written sum under the chain of the group is the actual count
@@ -153,11 +154,14 @@ const defaultMaxReadings = 256
 // first MaxReadings readings are chosen by comparing the found covers, which
 // also counts toward the bound, and only those are built. Exceeding the bound
 // fails with ErrSearchLimit rather than exhausting time or memory; within it,
-// a call returns its readings or an empty result. The
-// number of readings grows quickly with the length of the input, the number
-// of ratios, and the nesting depth, especially with FreeContents, so a long
-// input is better split into parts, for example by measures, and read part by
-// part; otherwise the search reaches its bound.
+// a call returns its readings or an empty result. Building the returned
+// readings is outside the bound: each reading holds its own items, so the
+// memory of the result is proportional to the number of returned readings
+// times the length of the input, and MaxReadings limits it. The number of
+// readings grows quickly with the length of the input, the number of ratios,
+// and the nesting depth, especially with FreeContents, so a long input is
+// better split into parts, for example by measures, and read part by part;
+// otherwise the search reaches its bound.
 //
 // In order of checking, it returns an error wrapping ErrInvalidArgument for
 // an empty list, an unset duration, a negative MaxDots, MaxDepth or
@@ -512,8 +516,8 @@ func (s *readingSearch) cover(i, end, n int, chain *chainInfo) []coverResult {
 
 // groupCover is one exactly filled group starting at a position: the group
 // as an item, the inputs it consumes, and the number of groups it holds,
-// itself included. The item is shared by every cover
-// that holds the group; covers are only read.
+// itself included. The item is shared by every cover that holds the group;
+// covers are only read.
 type groupCover struct {
 	item   Content
 	used   int
