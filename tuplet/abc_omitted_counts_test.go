@@ -186,18 +186,14 @@ func TestParseABCMarker_BothCountsOmittedNoDefault(t *testing.T) {
 	}
 }
 
-// The forms "(p:" and "(p:q:", a fourth part, and other malformed spellings
+// A fourth part, including an empty one, and other malformed spellings
 // around the empty parts stay rejected as text that does not match the
-// grammar, in both divisions.
+// grammar, in both divisions. The forms "(p:" and "(p:q:" are accepted since
+// issue #162 and are covered by abc_empty_last_part_test.go.
 func TestParseABCMarker_OmittedCountsStillRejected(t *testing.T) {
 	t.Parallel()
 
 	texts := []string{
-		"(3:",
-		"(5:",
-		"(3:2:",
-		"(5:2:",
-		"(10:3:",
 		"(3:2:2:2",
 		"(3::2:2",
 		"(3::2:",

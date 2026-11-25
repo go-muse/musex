@@ -27,8 +27,12 @@ func TestABCMarkerErrors(t *testing.T) {
 	t.Parallel()
 
 	// "(3::" is a valid marker equal to "(3" (abc 2.1, section 4.13; issue
-	// #158), so it is not listed here; "(3:2:" stays rejected.
-	for _, text := range []string{"", "3", "(0", "(01", "(3:", "(3:0", "(3:2:", "(3:2:0", "(3:2:2:2", "(-3", "( 3"} {
+	// #158), and "(3:" and "(3:2:" read as "(3" and "(3:2" (issue #162), so
+	// they are not listed here. The rows are KP-22.
+	for _, text := range []string{
+		"", "3", "(0", "(01", "(3:0", "(3:2:0", "(3:2:2:2", "(-3", "( 3",
+		"(:", "(0:", "(01:", "(3:0:", "(3:02", "(3:02:", "(3:2:2:", "(3:::", "(3::2:", "(3: ",
+	} {
 		t.Run(text, func(t *testing.T) {
 			t.Parallel()
 
@@ -43,6 +47,9 @@ func TestABCMarkerErrors(t *testing.T) {
 	_, err = tuplet.ParseABCMarker("(99999999999999999999:2", tuplet.Binary)
 	assert.ErrorIs(t, err, tuplet.ErrOutOfRange)
 
+	_, err = tuplet.ParseABCMarker("(99999999999999999999", tuplet.Binary)
+	assert.ErrorIs(t, err, tuplet.ErrOutOfRange)
+
 	_, err = tuplet.FormatABCMarker(tuplet.ABCMarker{}, tuplet.Binary)
 	assert.ErrorIs(t, err, tuplet.ErrUnset)
 
@@ -53,7 +60,12 @@ func TestABCMarkerErrors(t *testing.T) {
 func TestLilyPondErrors(t *testing.T) {
 	t.Parallel()
 
-	for _, text := range []string{"", "3/2", "\\tuplet 3", "\\tuplet 0/2", "\\tuplet 3/0", "\\tuplet 03/2", "\\tuplet 3/2 ", "\\tuplet -3/2"} {
+	// `\tuplet 03/2` reads as `\tuplet 3/2` since issue #162, so it is not
+	// listed here. The rows are KP-22.
+	for _, text := range []string{
+		"", "3/2", "\\tuplet 3", "\\tuplet 0/2", "\\tuplet 3/0", "\\tuplet 3/2 ", "\\tuplet -3/2",
+		"\\tuplet 00/2", "\\tuplet 3/00", "\\tuplet /2", "\\tuplet 3/", "\\tuplet +03/2",
+	} {
 		t.Run(text, func(t *testing.T) {
 			t.Parallel()
 
@@ -65,10 +77,16 @@ func TestLilyPondErrors(t *testing.T) {
 	_, err := tuplet.ParseLilyPondTuplet(`\tuplet 99999999999999999999/2`)
 	assert.ErrorIs(t, err, tuplet.ErrOutOfRange)
 
-	for _, text := range []string{"", "2/3", "*0/3", "*2/0", "*2/3 "} {
+	for _, text := range []string{
+		"", "2/3", "*0/3", "*2/0", "*2/3 ",
+		"*0", "*00", "*00/3", "*2/00", "*", "*/3", "*2/", "*-02/3",
+	} {
 		_, err := tuplet.ParseLilyPondMultiplier(text)
-		assert.ErrorIs(t, err, tuplet.ErrInvalidText)
+		assert.ErrorIs(t, err, tuplet.ErrInvalidText, text)
 	}
+
+	_, err = tuplet.ParseLilyPondMultiplier("*09223372036854775808")
+	assert.ErrorIs(t, err, tuplet.ErrOutOfRange)
 
 	_, err = tuplet.FormatLilyPondTuplet(tuplet.Tuplet{})
 	assert.ErrorIs(t, err, tuplet.ErrUnset)
