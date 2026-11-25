@@ -150,19 +150,20 @@ func TestConnectMeasurementFailures(t *testing.T) {
 }
 
 const (
-	mt21Source = "Music Theory for the 21st-Century Classroom, 26.7.1, 26.7.2, 26.13"
+	mt21Source = "Music Theory for the 21st-Century Classroom, 26.7.1, 26.7.2"
 	mt21Scope  = "four sounding voices; root-position triads with a doubled bass, as asserted by the composer"
 )
 
 func TestCheckMT21Connection(t *testing.T) {
 	t.Parallel()
 	v1, v2 := voiceleading.MT21CommonToneAndSteps, voiceleading.MT21SameDirection
-	two, one := voiceleading.MT21TwoCommonTones, voiceleading.MT21OneCommonTone
+	two := voiceleading.MT21TwoCommonTones
 	fourthOrFifth := func(first, second bool) []voiceleading.VariantCheck {
 		return []voiceleading.VariantCheck{{Variant: v1, Satisfied: first}, {Variant: v2, Satisfied: second}}
 	}
-	thirdOrSixth := func(first, second bool) []voiceleading.VariantCheck {
-		return []voiceleading.VariantCheck{{Variant: two, Satisfied: first}, {Variant: one, Satisfied: second}}
+	// A bass by a third or a sixth has the single variant of 26.7.1.
+	thirdOrSixth := func(satisfied bool) []voiceleading.VariantCheck {
+		return []voiceleading.VariantCheck{{Variant: two, Satisfied: satisfied}}
 	}
 	cases := []struct {
 		name     string
@@ -172,14 +173,14 @@ func TestCheckMT21Connection(t *testing.T) {
 	}{
 		{"SA-2 C3 E4 G4 C5 to F3 F4 A4 C5", []string{"C3", "E4", "G4", "C5"}, []string{"F3", "F4", "A4", "C5"}, fourthOrFifth(true, false), true},
 		{"SA-2 C3 E4 G4 C5 to F3 C4 F4 A4", []string{"C3", "E4", "G4", "C5"}, []string{"F3", "C4", "F4", "A4"}, fourthOrFifth(false, true), true},
-		{"SA-2 C3 E4 G4 C5 to A2 E4 A4 C5", []string{"C3", "E4", "G4", "C5"}, []string{"A2", "E4", "A4", "C5"}, thirdOrSixth(true, false), true},
+		{"SA-2 C3 E4 G4 C5 to A2 E4 A4 C5", []string{"C3", "E4", "G4", "C5"}, []string{"A2", "E4", "A4", "C5"}, thirdOrSixth(true), true},
 		{"a bass up a fifth, one kept tone and two steps", []string{"C3", "E4", "G4", "C5"}, []string{"G3", "D4", "G4", "B4"}, fourthOrFifth(true, false), true},
 		{"a bass up a fifth with leaps in two directions", []string{"C3", "E4", "G4", "C5"}, []string{"G3", "B3", "D4", "G5"}, fourthOrFifth(false, false), false},
 		{"a bass down a fourth, all upper voices up", []string{"C3", "E4", "G4", "C5"}, []string{"G2", "G4", "B4", "D5"}, fourthOrFifth(false, true), true},
 		{"a bass up a fourth, one kept tone and a leap", []string{"C3", "E4", "G4", "C5"}, []string{"F3", "A3", "F4", "C5"}, fourthOrFifth(false, false), false},
-		{"a bass up a sixth keeping two tones", []string{"C3", "E4", "G4", "C5"}, []string{"A3", "E4", "A4", "C5"}, thirdOrSixth(true, false), true},
-		{"a bass up a third keeping two tones", []string{"C3", "E4", "G4", "C5"}, []string{"E3", "E4", "G4", "B4"}, thirdOrSixth(true, false), true},
-		{"a bass down a third keeping no tone", []string{"C3", "E4", "G4", "C5"}, []string{"A2", "C4", "E4", "A4"}, thirdOrSixth(false, false), false},
+		{"a bass up a sixth keeping two tones", []string{"C3", "E4", "G4", "C5"}, []string{"A3", "E4", "A4", "C5"}, thirdOrSixth(true), true},
+		{"a bass up a third keeping two tones", []string{"C3", "E4", "G4", "C5"}, []string{"E3", "E4", "G4", "B4"}, thirdOrSixth(true), true},
+		{"a bass down a third keeping no tone", []string{"C3", "E4", "G4", "C5"}, []string{"A2", "C4", "E4", "A4"}, thirdOrSixth(false), false},
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {

@@ -734,9 +734,7 @@ func referencePasses(t *testing.T, sys *system.System, from, to []pitch.Pitch, c
 				return false
 			}
 		case 3, 6:
-			twoCommonTones := kept == 2 && steps == 1
-			oneCommonTone := kept == 1 && steps == 2
-			if !twoCommonTones && !oneCommonTone {
+			if kept != 2 || steps != 1 {
 				return false
 			}
 		default:
