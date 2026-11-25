@@ -49,11 +49,11 @@ func abcDefaultNormal(actual int, division Division) (int, bool) {
 // count r defaults to p. An empty part is an omitted count: "(p::" omits both
 // q and r and reads exactly as "(p" in the same division, as section 4.13 of
 // the standard states for "(3::"; "(p:" also reads exactly as "(p", and
-// "(p:q:" exactly as "(p:q", giving the same result or the same error. The
-// standard does not define these two forms; they are read as abcm2ps,
-// abc2midi, and music21 read them. Actual counts other than 2 through 9 have
-// no ABC default and require an explicit q. A fourth part, even an empty one
-// such as "(3:2:2:", is rejected.
+// "(p:q:" exactly as "(p:q", giving the same result or an error of the same
+// kind. The standard does not define these two forms; they are read as
+// abcm2ps, abc2midi, and music21 read them. Actual counts other than 2
+// through 9 have no ABC default and require an explicit q. A fourth part,
+// even an empty one such as "(3:2:2:", is rejected.
 //
 // In order of checking, it returns an error wrapping ErrInvalidText if text
 // does not match the grammar, ErrOutOfRange if a count exceeds math.MaxInt,
@@ -115,8 +115,8 @@ func MustParseABCMarker(text string, division Division) ABCMarker {
 // by division. The formatter omits the parts that [ParseABCMarker] restores
 // in the same division: "(p" when q is the ABC default for p and r equals p;
 // "(p:q" when r equals p; "(p:q:r" otherwise. The forms with an empty part,
-// "(p:", "(p::", "(p:q:", and "(p::r", are never produced. Parsing the result in the same division returns an
-// equal marker.
+// "(p:", "(p::", "(p:q:", and "(p::r", are never produced. Parsing the result
+// in the same division returns an equal marker.
 //
 // In order of checking, it returns an error wrapping ErrUnset if the tuplet
 // of m is unset, ErrInvalidCount if Events is less than 1, and ErrNoDefault

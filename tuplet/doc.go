@@ -149,19 +149,20 @@
 // defaults are those of the ABC 2.1 standard, not [Default]: "(5" gives 5:2
 // in Binary and 5:3 in Ternary. An empty part is an omitted count: "(p:" and
 // "(p::" read exactly as "(p", and "(p:q:" exactly as "(p:q", with the same
-// result or the same error. A fourth part, zero counts, and leading zeros are
-// rejected. [FormatABCMarker] omits the parts the parser restores in the same
-// context and never writes an empty part, so parsing a formatted marker
-// returns the same marker.
+// result or an error of the same kind. A fourth part, zero counts, and
+// leading zeros are rejected. [FormatABCMarker] omits the parts the parser
+// restores in the same context and never writes an empty part, so parsing a
+// formatted marker returns the same marker.
 // [ParseLilyPondTuplet] reads the group marker "\tuplet 3/2" as the tuplet
 // 3:2; the optional span duration is not supported.
 // [ParseLilyPondMultiplier] reads the duration multiplier "*2/3" as the
 // coefficient 2/3, a fraction rather than a tuplet, because it declares no
 // group; the integer form "*4" (as in R1*4) is read as 4/1. Unlike the
 // canonical notation, the counts of both LilyPond forms may have leading
-// zeros, as LilyPond reads them: "\tuplet 03/2" gives 3:2 and "*02/3" gives
-// 2/3, and the range limit applies to the value, not to the length of the
-// text. A count that is zero in value, such as "*00", is still rejected.
+// zeros, which do not change the value (LilyPond's number syntax allows them
+// in the multiplier): "\tuplet 03/2" gives 3:2 and "*02/3" gives 2/3, and
+// the range limit applies to the value, not to the length of the text. A
+// count that is zero in value, as in "*00" or "\tuplet 0/2", is rejected.
 // [FormatLilyPondTuplet] and [FormatLilyPondMultiplier] write the two forms
 // back without leading zeros; a multiplier with denominator 1 is written in
 // the integer form, and a positive coefficient stored with two negative
