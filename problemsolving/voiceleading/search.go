@@ -70,13 +70,16 @@ func (a *Analysis) FindParallels(opts ParallelOptions) ([]Transition, error) {
 	if !validPerfect(opts.Perfect) {
 		return nil, ErrOption
 	}
-	return a.find(func(t Transition) bool {
-		if t.Motion != MotionParallel || consecutive(t, opts.Perfect) == 0 || t.From.Specific.Size() != t.To.Specific.Size() {
-			return false
-		}
-		n := t.To.Specific.Size()
-		return n == 5 || n == 8 || n == 1 && opts.Unisons || n > 8 && opts.Compound
-	}), nil
+	return a.find(func(t Transition) bool { return strictParallel(t, opts) }), nil
+}
+
+// strictParallel reports whether FindParallels with opts accepts t.
+func strictParallel(t Transition, opts ParallelOptions) bool {
+	if t.Motion != MotionParallel || consecutive(t, opts.Perfect) == 0 || t.From.Specific.Size() != t.To.Specific.Size() {
+		return false
+	}
+	n := t.To.Specific.Size()
+	return n == 5 || n == 8 || n == 1 && opts.Unisons || n > 8 && opts.Compound
 }
 
 // MustFindParallels is like FindParallels but panics with its error.

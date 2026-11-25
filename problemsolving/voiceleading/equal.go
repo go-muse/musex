@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/go-muse/musex/interval"
+	"github.com/go-muse/musex/system"
 )
 
 // Equal compares part names and order, nominal order, the presence and value
@@ -42,4 +43,17 @@ func equalVertical(x, y Vertical) bool {
 
 func equalTransition(x, y Transition) bool {
 	return equalVertical(x.From, y.From) && equalVertical(x.To, y.To) && equalInterval(x.First, y.First) && equalInterval(x.Second, y.Second) && x.FirstChromatic == y.FirstChromatic && x.SecondChromatic == y.SecondChromatic && x.Motion == y.Motion
+}
+
+// equalSystem compares the presence and value of two borrowed systems.
+func equalSystem(x, y *system.System) bool {
+	if x == nil || y == nil {
+		return x == nil && y == nil
+	}
+	return x.Equal(y)
+}
+
+func equalMove(x, y Move) bool {
+	return equalElement(x.From, y.From) && equalElement(x.To, y.To) && equalInterval(x.Interval, y.Interval) &&
+		x.Chromatic == y.Chromatic && x.ThroughRest == y.ThroughRest
 }

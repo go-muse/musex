@@ -427,6 +427,9 @@ linters:
             - github.com/go-muse/musex/system$
             - github.com/go-muse/musex/note$
             - github.com/go-muse/musex/pitch$
+            - github.com/go-muse/musex/chord$
+            - github.com/go-muse/musex/spelling$
+            - github.com/go-muse/musex/pitchclass$
         problemsolving-hindemith:
           list-mode: strict
           files:
