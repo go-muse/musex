@@ -11,9 +11,12 @@ import (
 
 // ParseLilyPondTuplet parses the LilyPond group marker "\tuplet a/b": the
 // prefix "\tuplet " followed by two counts of ASCII decimal digits without
-// signs, leading zeros, or zero values, separated by a single slash. The
-// result is the tuplet a:b, stored as given: the fraction a/b is the
-// reciprocal coefficient of the group, as in [FromReciprocalCoefficient].
+// signs or spaces, separated by a single slash. As LilyPond reads numbers as
+// unsigned integers, a count may have leading zeros, which do not change its
+// value: "\tuplet 03/2" gives 3:2 and "\tuplet 006/004" gives 6:4. A count
+// that is empty or zero in value, such as "00", is rejected. The result is the
+// tuplet a:b, stored as given: the fraction a/b is the reciprocal coefficient
+// of the group, as in [FromReciprocalCoefficient].
 //
 // The optional span duration of LilyPond ("\tuplet 3/2 4") is not supported:
 // any trailing token gives an error wrapping ErrInvalidText. The span chooses
@@ -21,8 +24,10 @@ import (
 // (package duration); it is not a property of the ratio.
 //
 // In order of checking, it returns an error wrapping ErrInvalidText if text
-// does not match the grammar and ErrOutOfRange if a count exceeds
-// math.MaxInt. Every error message quotes an excerpt of text as [Parse] does.
+// does not match the grammar and ErrOutOfRange if the value of a count
+// exceeds math.MaxInt; leading zeros are not counted, so a long run of zeros
+// before a count in range is accepted. Every error message quotes an excerpt
+// of text as [Parse] does.
 func ParseLilyPondTuplet(text string) (Tuplet, error) {
 	body, ok := strings.CutPrefix(text, "\\tuplet ")
 	if !ok {
@@ -30,7 +35,9 @@ func ParseLilyPondTuplet(text string) (Tuplet, error) {
 	}
 
 	before, after, found := strings.Cut(body, "/")
-	if !found || !isCount(before) || !isCount(after) {
+	before, okBefore := lyCount(before)
+	after, okAfter := lyCount(after)
+	if !found || !okBefore || !okAfter {
 		return Tuplet{}, parseError(ErrInvalidText, text)
 	}
 
@@ -50,8 +57,8 @@ func MustParseLilyPondTuplet(text string) Tuplet {
 }
 
 // FormatLilyPondTuplet returns the LilyPond group marker of t: "\tuplet "
-// followed by the actual and normal counts separated by a slash, as
-// [ParseLilyPondTuplet] reads them. It returns an error wrapping ErrUnset if
+// followed by the actual and normal counts, without leading zeros, separated
+// by a slash, as [ParseLilyPondTuplet] reads them. It returns an error wrapping ErrUnset if
 // t is unset.
 func FormatLilyPondTuplet(t Tuplet) (string, error) {
 	if !t.IsSet() {
@@ -68,17 +75,20 @@ func MustFormatLilyPondTuplet(t Tuplet) string {
 
 // ParseLilyPondMultiplier parses the LilyPond duration multiplier "*a/b" or
 // its integer form "*a" (as in R1*4): the prefix "*" followed by one or two
-// counts of ASCII decimal digits without signs, leading zeros, or zero
-// values, separated by a single slash. The result is the fraction a/b (a/1
-// for the integer form) with the stored pair (a, b): a duration multiplied
-// by it sounds for that part of its written value. The multiplier declares
-// no group, so the result is a coefficient, not a tuplet.
+// counts of ASCII decimal digits without signs or spaces, separated by a
+// single slash. As in LilyPond, a count may have leading zeros, which do not
+// change its value: "*02/3" gives the pair (2, 3) and "*04" the pair (4, 1).
+// A count that is empty or zero in value is rejected, so "*0", "*00", and
+// "*2/0" are errors. The result is the fraction a/b (a/1 for the integer
+// form) with the stored pair (a, b): a duration multiplied by it sounds for
+// that part of its written value. The multiplier declares no group, so the
+// result is a coefficient, not a tuplet.
 //
 // In order of checking, it returns an error wrapping ErrInvalidText if text
-// does not match the grammar and ErrOutOfRange if a count exceeds
-// math.MaxInt or the fraction is outside the range of package
-// common/fraction. Every error message quotes an excerpt of text as [Parse]
-// does.
+// does not match the grammar and ErrOutOfRange if the value of a count
+// exceeds math.MaxInt (leading zeros are not counted) or the fraction is
+// outside the range of package common/fraction. Every error message quotes
+// an excerpt of text as [Parse] does.
 func ParseLilyPondMultiplier(text string) (fraction.Fraction, error) {
 	body, ok := strings.CutPrefix(text, "*")
 	if !ok {
@@ -86,7 +96,9 @@ func ParseLilyPondMultiplier(text string) (fraction.Fraction, error) {
 	}
 
 	before, after, found := strings.Cut(body, "/")
-	if !isCount(before) || (found && !isCount(after)) {
+	before, okBefore := lyCount(before)
+	after, okAfter := lyCount(after)
+	if !okBefore || (found && !okAfter) {
 		return fraction.Fraction{}, parseError(ErrInvalidText, text)
 	}
 
@@ -114,8 +126,8 @@ func MustParseLilyPondMultiplier(text string) fraction.Fraction {
 }
 
 // FormatLilyPondMultiplier returns the LilyPond duration multiplier of c:
-// "*" followed by the stored numerator and denominator separated by a slash,
-// as [ParseLilyPondMultiplier] reads them; the pair is not reduced. A positive
+// "*" followed by the stored numerator and denominator, without leading
+// zeros, separated by a slash, as [ParseLilyPondMultiplier] reads them; the pair is not reduced. A positive
 // coefficient stored with two negative components is written with both signs
 // removed, since the grammar has no signs: the pair (-2, -3) is written as
 // "*2/3" and (-4, -6) as "*4/6". A denominator of 1, after that, is written
@@ -155,4 +167,14 @@ func FormatLilyPondMultiplier(c fraction.Fraction) (string, error) {
 // with the returned error.
 func MustFormatLilyPondMultiplier(c fraction.Fraction) string {
 	return must(FormatLilyPondMultiplier(c))
+}
+
+// lyCount matches s against the LilyPond count grammar ly-count = *"0" count:
+// ASCII decimal digits with optional leading zeros and a value of at least 1.
+// It returns s without its leading zeros, ready for countValue, so the range
+// check is by value and the cost is linear in len(s) however long the run of
+// zeros is.
+func lyCount(s string) (string, bool) {
+	digits := strings.TrimLeft(s, "0")
+	return digits, isCount(digits)
 }
