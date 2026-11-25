@@ -2948,7 +2948,8 @@ func TestFromGeneratorContract(t *testing.T) {
 		t.Parallel()
 
 		// g = 700 +- 1e-16 cents: the points k*g mod 1200 lie 1e-16*k cents away from the 12-EDO grid,
-		// so for N = 120 each grid point collects ten distinct chain points that float64 cannot tell apart.
+		// so for N = 120 each grid point collects ten distinct chain points; away from 0 cents float64 cannot tell
+		// most of them apart (about a hundred neighbouring pairs share a float64 value per case).
 		// The table must still be the exact ascending order of the points (architecture, FromGenerator item 6).
 		// Both signs are used: inside a group the exact order is ascending in k for +1e-16 and descending for -1e-16,
 		// so neither the chain order nor its reverse yields the table without exact comparison.
