@@ -363,7 +363,7 @@ func TestEDOPresetsAndConstructor(t *testing.T) {
 		}
 	})
 
-	t.Run("G-2: large microtonal divisions N=72, 1200, 65536", func(t *testing.T) {
+	t.Run("G-2: large microtonal divisions N=72 and 1200", func(t *testing.T) {
 		t.Parallel()
 
 		edo72 := temperament.MustEDO(72)
@@ -377,6 +377,13 @@ func TestEDOPresetsAndConstructor(t *testing.T) {
 		assert.True(t, edo1200.MustOffset(1).Equal(cents.Cent()))
 		assert.True(t, edo1200.MustMinStepSize().Equal(cents.Cent()))
 		assert.True(t, edo1200.MustMaxStepSize().Equal(cents.Cent()))
+	})
+
+	t.Run("G-2: largest division N=MaxStepsPerOctave (65536)", func(t *testing.T) {
+		if testing.Short() {
+			t.Skip("65536-EDO sweep: heavy single-threaded check; runs in the coverage job without -short")
+		}
+		t.Parallel()
 
 		edoMax, err := temperament.EDO(temperament.MaxStepsPerOctave)
 		require.NoError(t, err)
@@ -2933,6 +2940,44 @@ func TestFromGeneratorContract(t *testing.T) {
 					assertValidTemperamentInvariants(t, got, "Generated", n)
 					assert.True(t, got.Equal(temperament.MustNew("Generated", want)), "N=%d g=%v kMin=%d", n, g, kMin)
 				}
+			}
+		}
+	})
+
+	t.Run("exact ascending order when neighbouring points share a float64 approximation", func(t *testing.T) {
+		t.Parallel()
+
+		// g = 700 +- 1e-16 cents: the points k*g mod 1200 lie 1e-16*k cents away from the 12-EDO grid,
+		// so for N = 120 each grid point collects ten distinct chain points that float64 cannot tell apart.
+		// The table must still be the exact ascending order of the points (architecture, FromGenerator item 6).
+		// Both signs are used: inside a group the exact order is ascending in k for +1e-16 and descending for -1e-16,
+		// so neither the chain order nor its reverse yields the table without exact comparison.
+		const n = 120
+		const den = 10_000_000_000_000_000
+		for _, g := range []cents.Cents{
+			cents.MustFromFraction(700*den+1, den),
+			cents.MustFromFraction(700*den-1, den),
+		} {
+			for _, kMin := range []int{0, -1, -(n - 1) / 2, -(n - 1)} {
+				want, ok := generatorOracle(n, g, kMin)
+				require.True(t, ok, "g=%v kMin=%d: chain points must be pairwise distinct", g, kMin)
+
+				floatTies := 0
+				for m := 1; m < n; m++ {
+					if want[m-1].Float64() == want[m].Float64() {
+						floatTies++
+					}
+				}
+				require.Positive(t, floatTies, "g=%v kMin=%d: the case must contain neighbours with equal float64 values", g, kMin)
+
+				got, err := temperament.FromGenerator("Near 12-EDO", n, g, kMin)
+				require.NoError(t, err, "g=%v kMin=%d", g, kMin)
+				assertValidTemperamentInvariants(t, got, "Near 12-EDO", n)
+				offsets := got.Offsets()
+				for m := range n {
+					assert.True(t, offsets[m].Equal(want[m]), "g=%v kMin=%d m=%d: got %v, want %v", g, kMin, m, offsets[m], want[m])
+				}
+				assert.True(t, got.Equal(temperament.MustNew("Near 12-EDO", want)), "g=%v kMin=%d", g, kMin)
 			}
 		}
 	})
