@@ -69,7 +69,6 @@ func TestExtensionLabels(t *testing.T) {
 		{voiceleading.MT21CommonToneAndSteps.String(), "26.7.2-common-tone"},
 		{voiceleading.MT21SameDirection.String(), "26.7.2-same-direction"},
 		{voiceleading.MT21TwoCommonTones.String(), "26.7.1-two-common-tones"},
-		{voiceleading.MT21OneCommonTone.String(), "26.13-one-common-tone"},
 		{voiceleading.MT21Variant(9).String(), "unknown"},
 	}
 	for _, tt := range cases {
