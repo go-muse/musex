@@ -338,9 +338,13 @@ func FromGenerator(name string, stepsPerOctave int, generator cents.Cents, kMin 
 // so no NaN can disturb the float64 order.
 //
 // The exact sort stays authoritative: it alone decides the order within such
-// runs, and on nearly sorted input it needs about n comparisons. The order
-// that it produces is unique, because exactly equal values are identical
-// (cents values are canonical), so the result does not depend on the pre-sort.
+// runs. When the float64 values are distinct, the presorted slice is already
+// in exact order, and the exact sort only confirms it with about n
+// comparisons (n-1 for the final scan plus a few for pivot selection). Long
+// runs of equal float64 values can still need up to about n log n
+// comparisons, as without the pre-sort. The order that the exact sort
+// produces is unique, because exactly equal values are identical (cents
+// values are canonical), so the result does not depend on the pre-sort.
 func sortCents(points []cents.Cents) {
 	type keyed struct {
 		approx float64
