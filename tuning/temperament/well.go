@@ -1,6 +1,7 @@
 package temperament
 
 import (
+	"cmp"
 	"slices"
 
 	"github.com/go-muse/musex/cents"
@@ -320,8 +321,40 @@ func FromGenerator(name string, stepsPerOctave int, generator cents.Cents, kMin 
 		}
 		_, points[j] = diff.SplitOctaves()
 	}
-	slices.SortFunc(points, cents.Cents.Compare)
+	sortCents(points)
 	return newChecked(op, name, points)
+}
+
+// sortCents sorts points in ascending order of their exact values, with the
+// same result as slices.SortFunc(points, cents.Cents.Compare).
+//
+// An exact comparison of irrational values is expensive, and a chain of
+// thousands of points would need about n log n of them. The points are
+// therefore first sorted by their float64 values, each computed once.
+// [cents.Cents.Float64] rounds the exact value correctly to the nearest
+// float64, and correct rounding is monotonic: a < b implies
+// a.Float64() <= b.Float64(). So the presorted slice is already in exact order
+// except possibly within runs of equal float64 values. The values are finite,
+// so no NaN can disturb the float64 order.
+//
+// The exact sort stays authoritative: it alone decides the order within such
+// runs, and on nearly sorted input it needs about n comparisons. The order
+// that it produces is unique, because exactly equal values are identical
+// (cents values are canonical), so the result does not depend on the pre-sort.
+func sortCents(points []cents.Cents) {
+	type keyed struct {
+		approx float64
+		value  cents.Cents
+	}
+	keys := make([]keyed, len(points))
+	for i, p := range points {
+		keys[i] = keyed{approx: p.Float64(), value: p}
+	}
+	slices.SortFunc(keys, func(a, b keyed) int { return cmp.Compare(a.approx, b.approx) })
+	for i, k := range keys {
+		points[i] = k.value
+	}
+	slices.SortFunc(points, cents.Cents.Compare)
 }
 
 // MustFromGenerator is like [FromGenerator] but panics on error.
