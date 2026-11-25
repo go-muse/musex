@@ -126,7 +126,9 @@ func TestMelodyNorms(t *testing.T) {
 		{"SK-4 augmented unison", intervals, []string{"C4", "C#4"}, []wantViolation{{0, []string{voiceleading.ReasonAugmented}, false}}},
 		{"SK-4 augmented second", intervals, []string{"C4", "D#4"}, []wantViolation{{0, []string{voiceleading.ReasonAugmented}, false}}},
 		{"SK-4 diminished second", intervals, []string{"C#4", "Db4"}, []wantViolation{{0, []string{voiceleading.ReasonDiminished}, false}}},
-		{"SK-4 augmented seventh lists both reasons", intervals, []string{"C4", "B#4"}, []wantViolation{{0, []string{voiceleading.ReasonAugmented, voiceleading.ReasonSeventh}, false}}},
+		// line() reads the digit as the positional octave: B# in positional
+		// octave 5 is the written B#4, an augmented seventh above C4.
+		{"SK-4 augmented seventh lists both reasons", intervals, []string{"C4", "B#5"}, []wantViolation{{0, []string{voiceleading.ReasonAugmented, voiceleading.ReasonSeventh}, false}}},
 		{"SK-4 augmented sixth lists both reasons", intervals, []string{"C4", "A#4"}, []wantViolation{{0, []string{voiceleading.ReasonAugmented, voiceleading.ReasonSixth}, false}}},
 		{"SK-4 diminished seventh lists both reasons", intervals, []string{"C#4", "Bb4"}, []wantViolation{{0, []string{voiceleading.ReasonDiminished, voiceleading.ReasonSeventh}, false}}},
 		{"SK-4 augmented fifteenth lists both reasons", intervals, []string{"C4", "C#6"}, []wantViolation{{0, []string{voiceleading.ReasonAugmented, voiceleading.ReasonWiderThanOctave}, false}}},
