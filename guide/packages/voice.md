@@ -2,7 +2,7 @@
 
 A melodic line is a voice as a line of the texture: the soprano of a chorale, the subject of a fugue, a doubling at the octave. It is a sequence of sounds and rests that follow each other in time, with a name and three roles. A line sounds **at most one pitch at a time**.
 
-A melodic line is not the voice of a track. In notation, a voice is also a layer of a part written in measures, as in MusicXML, with ties between events, grace notes, and fermatas at bar lines; that layer belongs to a separate package for tracks. A line knows no measures, no track, and no other lines: how lines move against each other is the subject of [voice leading](../../README.md#analyze-voice-leading), analyzed by the separate `problemsolving/voiceleading` package.
+A melodic line is not the voice of a track. In notation, a voice is also a layer of a part written in measures, as in MusicXML, with ties between events, grace notes, and fermatas at bar lines; that layer belongs to a separate package for tracks. A line knows no measures, no track, and no other lines: how lines move against each other is the subject of [voice leading](problemsolving/voiceleading.md), analyzed by the separate `problemsolving/voiceleading` package.
 
 ## Elements
 

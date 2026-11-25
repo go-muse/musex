@@ -99,7 +99,7 @@ Definitions may differ from conventional ones.
 
 **[Scale choice](guide/packages/problemsolving/scalechoice.md)** supports a composer's choice of pitch collection: inspect compatible modal readings, common and missing notes, possible continuations, and the consequences of one trial replacement in a set or a phrase. The caller chooses the scope, comparison, condition, and optional center.
 
-**[Voice leading](#analyze-voice-leading)** compares existing melodic lines: written and chromatic intervals, kinds of two-part motion, perfect parallels, consecutive perfect families, direct arrivals, crossings, and overlaps. A separate, explicit assessment checks one Open Music Theory first-species rule.
+**[Voice leading](guide/packages/problemsolving/voiceleading.md)** compares existing melodic lines: written and chromatic intervals, kinds of two-part motion, perfect parallels, consecutive perfect families, direct arrivals, crossings, and overlaps. A separate, explicit assessment checks one Open Music Theory first-species rule. It also measures the moves and leaps of one voice under explicit melodic norms, describes the spacing, distances, and doublings of a chord voiced from the bass upward, decomposes chord sequences into lines, and describes, checks, and chooses connections of two chords.
 
 **[Hindemith analysis](guide/packages/problemsolving/hindemith.md)** reads dyads, voiced chords, and progressions through Hindemith's harmonic theory: Series II positions and interval roots, the chord groups I-VI with subgroups, bass and root with the intra-chord intervals behind them, and harmonic fluctuation. The model and its twelve-tone equal-temperament assumption are documented; the result is an analysis under stated rules, not a heard center.
 
@@ -131,6 +131,7 @@ Definitions may differ from conventional ones.
 - **Choose a collection and try a change.** Use `problemsolving/scalechoice` to compare collection groups and readings, filter them by added notes, or branch into a replacement trial with observed-set differences and local written/chromatic motions. Analyses snapshot source contexts and preserve the original material.
 - **Write and analyze a melodic line.** Use `voice` to build a monophonic line of sounds and rests with a name and roles, read positions and the element at a moment without measures, get seconds from a tempo map, melodic intervals, the range, the ambitus, and the tessitura against a singing voice or an instrument, and build transpositions, doublings, exact imitations, inversions, and retrogrades.
 - **Inspect how parts move together.** Use `problemsolving/voiceleading` to analyze two or more existing lines on independent pairwise grids. Keep the original notes and element boundaries, choose interval-family filters explicitly, and supply nominal order when looking for crossings or overlaps.
+- **Check leaps, spacing, and chord connections.** Use `problemsolving/voiceleading` to list the moves of a voice and runs of leaps under a chosen leap definition, apply OMT, Fux, or MT21 melodic norms, classify the spacing of a chord by three definitions, check distances between adjacent voices, read doublings and missing or extra chord members by spelling or by sound, split chord sequences into lines, and describe a connection, check it against the MT21 norm, or list every upper-voice choice toward a target chord under selected conditions.
 - **Classify chords and progressions by Hindemith.** Use `problemsolving/hindemith` to read a dyad's Series II position and root, a voiced chord's group, subgroup, bass, and root with its intra-chord evidence, and a progression's harmonic fluctuation. A chord is classified by the lowest note of each pitch class, so higher doublings and the listing order never change the result; groups V and VI report no root in isolation.
 - **Score consonance of sets and voicings.** Use `problemsolving/sonance` to score a pitch-class set's interval-class vector or the actual pitch pairs of a voicing under Huron's published weights or a caller-supplied profile, and inspect which intervals drive the value.
 - **Write rhythms and import notated material.** Divide written durations into tuplet parts, build tuplet groups with contents and sounding spans, and find the exact rhythmic readings of a sequence of sounding durations under allowed ratios. Read and write ABC and LilyPond tuplet markers, group spellings into a keyboard palette by pitch class, and build scales from names or tokens with a chromatic spelling rule.
@@ -246,5 +247,6 @@ collections are non-nil. Invalid inputs return zero results and errors
 inspectable with `errors.Is` or contextual `PartError` and `MeasurementError`.
 Every fallible operation has a `Must` wrapper that panics with its error.
 
-Chord spacing, chord distribution, leap checking, and chord connections remain
-planned work beyond this first version.
+Leaps in one voice, sonorities and spacing, doublings, decomposition of chord
+sequences, and chord connections are described in the
+[voice-leading guide](guide/packages/problemsolving/voiceleading.md).

@@ -17,6 +17,11 @@ var (
 	ErrNoSystem         = errors.New("voiceleading: no system for a note")
 	ErrDifferentSystems = errors.New("voiceleading: different systems")
 	ErrTransition       = errors.New("voiceleading: positions are not adjacent starts")
+	ErrNoOctave         = errors.New("voiceleading: note without octave")
+	ErrVoiceCount       = errors.New("voiceleading: voice count mismatch")
+	ErrEmpty            = errors.New("voiceleading: empty sequence")
+	ErrNoVoices         = errors.New("voiceleading: number of voices undefined")
+	ErrSilentPart       = errors.New("voiceleading: a part is silent")
 )
 
 // PartError identifies an input slot and original element. Element -1 denotes
@@ -41,6 +46,35 @@ func (e *PartError) Unwrap() error {
 	}
 	return e.Err
 }
+
+// ChordError identifies a chord argument of a sequence (Chord is its index;
+// 0 for an operation with one chord argument) and a note in its record order
+// (Note is -1 for the chord itself). Use errors.Is and errors.AsType.
+type ChordError struct {
+	Chord, Note int
+	Err         error
+}
+
+// Error returns a nonempty description, also for a nil receiver or cause.
+func (e *ChordError) Error() string {
+	if e == nil {
+		return "voiceleading: chord error"
+	}
+	return fmt.Sprintf("voiceleading: chord %d note %d: %v", e.Chord, e.Note, e.Err)
+}
+
+// Unwrap returns the cause, or nil for a nil receiver.
+func (e *ChordError) Unwrap() error {
+	if e == nil {
+		return nil
+	}
+	return e.Err
+}
+
+func chordErr(i, k int, err error) error { return &ChordError{Chord: i, Note: k, Err: err} }
+
+// cause wraps a dependency failure with the package prefix and no sentinel.
+func cause(what string, err error) error { return fmt.Errorf("voiceleading: %s: %w", what, err) }
 
 // MeasurementError identifies a pair and the start of the failed vertical;
 // for melodic movement At is the target vertical's start.

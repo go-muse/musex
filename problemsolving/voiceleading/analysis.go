@@ -30,6 +30,9 @@ type Analysis struct {
 	sys   *system.System
 	data  []pairData
 	index map[Pair]int
+	// parts keeps every element of every part, including tails beyond all
+	// pairwise intersections, for the melody and sonority operations.
+	parts [][]ElementAt
 }
 
 type partInput struct {
@@ -64,7 +67,7 @@ func Analyze(lines []*voice.Line, opts Options) (*Analysis, error) {
 	if opts.System != nil && !opts.System.IsValid() {
 		return nil, unset("system", system.ErrInvalid)
 	}
-	a := &Analysis{names: make([]string, len(lines)), order: opts.Order, sys: opts.System, index: make(map[Pair]int)}
+	a := &Analysis{names: make([]string, len(lines)), order: opts.Order, sys: opts.System, index: make(map[Pair]int), parts: make([][]ElementAt, len(lines))}
 	parts := make([]partInput, len(lines))
 	for i, line := range lines {
 		a.names[i] = line.MustName()
@@ -73,6 +76,7 @@ func Analyze(lines []*voice.Line, opts Options) (*Analysis, error) {
 		for j, e := range elems {
 			parts[i].elements[j] = ElementAt{Index: j, Element: e, Start: line.MustStartOf(j), End: line.MustEndOf(j)}
 		}
+		a.parts[i] = parts[i].elements
 	}
 	for i := range parts {
 		for j := i + 1; j < len(parts); j++ {
