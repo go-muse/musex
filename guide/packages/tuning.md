@@ -33,4 +33,4 @@ Eight ready-made references are available:
 
 First released in v0.21.0.
 
-[Package reference](https://pkg.go.dev/github.com/go-muse/musex/tuning) · [Go examples](../../../tuning/example_test.go) · [Roadmap](../../../ROADMAP.md)
+[Package reference](https://pkg.go.dev/github.com/go-muse/musex/tuning) · [Go examples](../../tuning/example_test.go) · [Roadmap](../../ROADMAP.md)
