@@ -41,6 +41,8 @@ linters:
         # Package rules: one rule per planned package, in the order of the
         # package plan. Each rule allows the standard library and exactly the
         # planned direct musex imports of its package, for non-test files.
+        # common/fraction has no package rule: its imports are not restricted
+        # beyond the module and tests rules above.
         # Every rule of a package outside common/ also allows the whole
         # common/ tree of shared helper packages, so a new such rule must
         # keep that entry. Do not add a github.com/go-muse/musex/common/<name>$
@@ -488,13 +490,6 @@ linters:
             - github.com/go-muse/musex/note$
             - github.com/go-muse/musex/pcset$
             - github.com/go-muse/musex/system$
-        common-fraction:
-          list-mode: strict
-          files:
-            - "**/common/fraction/*.go"
-            - "!$test"
-          allow:
-            - $gostd
         tuplet:
           list-mode: strict
           files:
