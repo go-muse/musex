@@ -3,6 +3,8 @@ package fraction_test
 import (
 	"errors"
 	"fmt"
+	"math"
+	"math/big"
 
 	"github.com/go-muse/musex/common/fraction"
 	"github.com/go-muse/musex/common/rounding"
@@ -243,4 +245,104 @@ func ExampleFraction_RoundToMultiple() {
 	// 2 1/2
 	// true
 	// true
+}
+
+func ExampleFraction_GCD() {
+	quarter, sixth := fraction.MustNew(1, 4), fraction.MustNew(1, 6)
+	// The largest step that fits both a whole number of times, and the shortest common period.
+	fmt.Println(quarter.MustGCD(sixth), quarter.MustLCM(sixth))
+
+	// The sign does not matter; the result is reduced.
+	fmt.Println(fraction.MustNew(6, 8).MustGCD(fraction.MustNew(-1, 2)), fraction.MustNew(6, 8).MustLCM(fraction.MustNew(-1, 2)))
+
+	// Zero: GCD(x, 0) = |x|, LCM(x, 0) = 0.
+	fmt.Println(fraction.MustNew(6, 12).MustGCD(fraction.Zero()), fraction.MustNew(2, 3).MustLCM(fraction.Zero()))
+
+	var invalid fraction.Fraction
+	_, err := quarter.GCD(invalid)
+	fmt.Println(errors.Is(err, fraction.ErrInvalid))
+	// Output:
+	// 1/12 1/2
+	// 1/4 3/2
+	// 1/2 0/1
+	// true
+}
+
+func ExampleCommonDenominator() {
+	fmt.Println(fraction.MustCommonDenominator(fraction.MustNew(1, 4), fraction.MustNew(1, 6), fraction.MustNew(5, 12)))
+
+	// Reduced denominators count: 6/12 needs only halves.
+	fmt.Println(fraction.MustCommonDenominator(fraction.MustNew(6, 12), fraction.MustNew(0, 7)))
+	fmt.Println(fraction.MustCommonDenominator())
+
+	// Beyond math.MaxInt only the big form has a result.
+	tiny := fraction.MustNew(1, math.MinInt)
+	_, err := fraction.CommonDenominator(tiny)
+	fmt.Println(errors.Is(err, fraction.ErrNotRepresentable), fraction.MustCommonDenominatorBig(tiny))
+	// Output:
+	// 12
+	// 2
+	// 1
+	// true 9223372036854775808
+}
+
+func ExampleSum() {
+	fmt.Println(fraction.MustSum(fraction.MustNew(1, 3), fraction.MustNew(1, 6)))
+	fmt.Println(fraction.MustSum(fraction.MustNew(1, 4), fraction.MustNew(1, 4), fraction.MustNew(2, 4)))
+	fmt.Println(fraction.MustSum())
+
+	// Only the exact result is range-checked: MaxComponent + 1 − 1 is fine,
+	// while folding with Add stops at the intermediate value.
+	maxC := fraction.MustFromBigInt(fraction.MaxComponentBig(), big.NewInt(1))
+	sum, err := fraction.Sum(maxC, fraction.One(), fraction.MinusOne())
+	fmt.Println(sum.Equal(maxC), err)
+	_, err = maxC.Add(fraction.One())
+	fmt.Println(errors.Is(err, fraction.ErrOutOfRange))
+	// Output:
+	// 1/2
+	// 1/1
+	// 0/1
+	// true <nil>
+	// true
+}
+
+func ExampleProduct() {
+	fmt.Println(fraction.MustProduct(fraction.MustNew(1, 8), fraction.MustNew(2, 3)))
+	fmt.Println(fraction.MustProduct())
+
+	// 2^200 · 2^200 · 2^-200 = 2^200, although 2^400 is out of range.
+	p := fraction.MustFromBigInt(new(big.Int).Lsh(big.NewInt(1), 200), big.NewInt(1))
+	inv := p.MustReciprocal()
+	fmt.Println(fraction.MustProduct(p, p, inv).Equal(p))
+
+	// A zero factor gives 0/1 whatever the other valid factors are.
+	fmt.Println(fraction.MustProduct(p, p, fraction.MustNew(0, 5)))
+	// Output:
+	// 1/12
+	// 1/1
+	// true
+	// 0/1
+}
+
+func ExampleFraction_BigRatTo() {
+	// One big.Rat is reused for several values.
+	z := new(big.Rat)
+	r, ok := fraction.MustNew(6, 12).BigRatTo(z)
+	fmt.Println(r, ok, r == z)
+	r, ok = fraction.MustNew(-6, 2).BigRatTo(z)
+	fmt.Println(r, ok, r == z)
+
+	// An invalid fraction leaves z unchanged.
+	var invalid fraction.Fraction
+	r, ok = invalid.BigRatTo(z)
+	fmt.Println(r, ok)
+
+	// With nil a new big.Rat is created, as by BigRat.
+	r, _ = fraction.MustNew(2, -4).BigRatTo(nil)
+	fmt.Println(r)
+	// Output:
+	// 1/2 true true
+	// -3/1 true true
+	// -3/1 false
+	// -1/2
 }
