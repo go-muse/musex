@@ -1,7 +1,6 @@
 package fraction
 
 import (
-	"errors"
 	"math"
 	"math/big"
 	"math/bits"
@@ -176,9 +175,8 @@ func Sum(fs ...Fraction) (Fraction, error) {
 	for i := 1; i < len(fs); i++ {
 		next, err := acc.Add(fs[i])
 		if err != nil {
-			if !errors.Is(err, ErrOutOfRange) {
-				return Fraction{}, err
-			}
+			// Both operands are valid, so Add can only fail with
+			// ErrOutOfRange; the exact tail decides the result.
 			return sumTail(acc, fs[i:])
 		}
 		acc = next
@@ -227,9 +225,8 @@ func Product(fs ...Fraction) (Fraction, error) {
 	for i := 1; i < len(fs); i++ {
 		next, err := acc.Mul(fs[i])
 		if err != nil {
-			if !errors.Is(err, ErrOutOfRange) {
-				return Fraction{}, err
-			}
+			// Both operands are valid, so Mul can only fail with
+			// ErrOutOfRange; the exact tail decides the result.
 			return productTail(acc, fs[i:])
 		}
 		acc = next
