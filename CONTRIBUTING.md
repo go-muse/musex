@@ -36,8 +36,9 @@ then third-party packages, separated by blank lines and sorted alphabetically
 within each group. Both formatting and linting use `.golangci.yml`.
 The depguard rule of each package in `.golangci.yml` sets which musex packages
 it may import; when the package plan changes, update the rule in the same change.
-Every package may import the shared helper packages under `common/`, so those
-need no per-package entry.
+Every package outside `common/` may import the shared helper packages under
+`common/`: its rule allows the whole `common/` tree, so the helper packages
+need no entries of their own; keep that entry in new rules.
 
 The tests run twice: once with the race detector in short mode, and once
 without it to measure coverage. In short mode, `testing.Short()` lets heavy
