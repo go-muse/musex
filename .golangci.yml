@@ -39,10 +39,14 @@ linters:
             - github.com/stretchr/testify/
 
         # Package rules: one rule per planned package, in the order of the
-        # package plan. Each rule allows the standard library, the shared
-        # helper packages under common/ (any package may import them), and
-        # exactly the planned direct musex imports of its package, for
-        # non-test files.
+        # package plan. Each rule allows the standard library and exactly the
+        # planned direct musex imports of its package, for non-test files.
+        # Every rule of a package outside common/ also allows the whole
+        # common/ tree of shared helper packages, so a new such rule must
+        # keep that entry. Do not add a github.com/go-muse/musex/common/<name>$
+        # entry next to it: depguard checks an import against only the
+        # closest matching entry, so the narrower entry would reject the
+        # other common/ packages.
         # A rule covers only its own directory, not subdirectories. The rule
         # name is the package path with "/" replaced by "-". When the planned
         # imports of a package change, change its rule in the same change.
@@ -179,7 +183,6 @@ linters:
             - "!$test"
           allow:
             - $gostd
-            - github.com/go-muse/musex/common/
         cents:
           list-mode: strict
           files:
@@ -492,7 +495,6 @@ linters:
             - "!$test"
           allow:
             - $gostd
-            - github.com/go-muse/musex/common/
         tuplet:
           list-mode: strict
           files:
