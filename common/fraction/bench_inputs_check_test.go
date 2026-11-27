@@ -3,7 +3,6 @@ package fraction_test
 import (
 	"fmt"
 	"math/big"
-	"slices"
 	"testing"
 
 	"github.com/go-muse/musex/common/fraction"
@@ -325,29 +324,13 @@ func TestBenchmarkInputs(t *testing.T) {
 	})
 }
 
-// benchZeroAllocs reports whether T-2 requires 0 allocations for the operation in the class.
-func benchZeroAllocs(op string, in benchInput) bool {
-	class := in.baseClass()
-	switch {
-	case class == "w31" || class == "alt" || class == "w63":
-		return true
-	case slices.Contains([]string{"Compare", "Equal", "IsMultipleOf", "IsInteger", "Split", "SplitFloor", "RoundToInt", "RoundToDenominator"}, op):
-		return true
-	case class == "w128":
-		return slices.Contains([]string{"Reduce", "IsReduced", "WithDenominator", "AddWithUnreducedLCM"}, op)
-	}
-	return false
-}
-
-// TestZeroAllocsByClass checks T-2: the operations and classes of the list run
-// without heap allocations on the benchmark inputs. It is not parallel:
-// AllocsPerRun measures process-wide allocation counters.
+// TestZeroAllocsByClass checks T-2: every operation of the list runs without
+// heap allocations on every benchmark input of every class, including the
+// "-short" inputs. It is not parallel: AllocsPerRun measures process-wide
+// allocation counters.
 func TestZeroAllocsByClass(t *testing.T) {
 	for _, op := range benchOps() {
 		for _, in := range benchInputs(op.family) {
-			if !benchZeroAllocs(op.name, in) {
-				continue
-			}
 			t.Run(op.name+"/"+in.class, func(t *testing.T) {
 				require.NoError(t, op.run(in))
 				allocs := testing.AllocsPerRun(100, func() {
