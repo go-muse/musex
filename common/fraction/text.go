@@ -86,14 +86,18 @@ func (f Fraction) MustDecimal(digits int) string {
 }
 
 // FormatDecimal formats f as a fixed-point decimal string with digits
-// fractional digits rounded according to mode. It returns [ErrInvalid] if f is
-// invalid and [ErrNotRepresentable] if digits < 0, digits > [MaxDigits], or
-// mode is unknown.
+// fractional digits: f·10^digits is rounded to an integer according to mode.
+// It returns [ErrInvalid] if f is invalid, the mode error (see [RoundingMode])
+// if mode is unset or unknown, and then [ErrNotRepresentable] if digits < 0 or
+// digits > [MaxDigits].
 func (f Fraction) FormatDecimal(digits int, mode RoundingMode) (string, error) {
 	if !f.IsValid() {
 		return "", ErrInvalid
 	}
-	if digits < 0 || digits > MaxDigits || mode > RoundTrunc {
+	if err := checkRoundingMode(mode); err != nil {
+		return "", err
+	}
+	if digits < 0 || digits > MaxDigits {
 		return "", ErrNotRepresentable
 	}
 	pow10 := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(digits)), nil)
@@ -102,22 +106,8 @@ func (f Fraction) FormatDecimal(digits int, mode RoundingMode) (string, error) {
 	q, rem := new(big.Int).QuoRem(scaledNum, denBig, new(big.Int))
 	neg := f.Sign() < 0
 	if rem.Sign() != 0 {
-		var inc bool
-		switch mode {
-		case RoundTrunc:
-			inc = false
-		case RoundFloor:
-			inc = neg
-		case RoundCeil:
-			inc = !neg
-		case RoundHalfAwayFromZero:
-			rem2 := new(big.Int).Lsh(rem, 1)
-			inc = rem2.Cmp(denBig) >= 0
-		case RoundHalfToEven:
-			rem2 := new(big.Int).Lsh(rem, 1)
-			c := rem2.Cmp(denBig)
-			inc = c > 0 || (c == 0 && q.Bit(0) == 1)
-		}
+		half := new(big.Int).Lsh(rem, 1).Cmp(denBig)
+		inc := roundsAway(mode, half, neg, q.Bit(0) == 1)
 		if inc {
 			q.Add(q, big.NewInt(1))
 		}

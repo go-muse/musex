@@ -60,13 +60,17 @@ Musical timelines and pitch grids frequently test whether a value lands on an ex
 
 ## Explicit rounding and floating-point conversion
 
-Exact rational arithmetic never rounds implicitly. When a calculation must be quantized to an integer or to a positive denominator `D > 0` (preserving `D` without reduction, such as rounding `1/3` to denominator `12` as `4/12` or `3/8` to denominator `4` as `2/4`), the caller selects one of five explicit rounding rules:
+Exact rational arithmetic never rounds implicitly. When a calculation must be quantized to an integer, to a positive denominator `D > 0` (preserving `D` without reduction, such as rounding `1/3` to denominator `12` as `4/12` or `3/8` to denominator `4` as `2/4`), to a multiple of a positive step, or to decimal places, the caller selects one of the nine rounding modes of [common/rounding](rounding.md). The fraction's mode type is the same type as the rounding mode, so a mode chosen once can be passed to both packages:
 
-- **Half away from zero** (ties round away from zero: `+1/2 → +1`, `−1/2 → −1`)
+- **Floor** (toward `−∞`) and **ceiling** (toward `+∞`)
+- **Truncation** (toward zero) and **away from zero**
+- **Half up** and **half down** (nearest value, ties toward `+∞` or `−∞`)
+- **Half away from zero** and **half toward zero** (nearest value, ties away from or toward zero: `+1/2 → +1`, `−1/2 → −1` or both to `0`)
 - **Half to even** (banker's rounding: ties round to the nearest even integer or even numerator)
-- **Floor** (toward `−∞`)
-- **Ceiling** (toward `+∞`)
-- **Truncation** (toward zero)
+
+A value that is already on the target grid is returned unchanged in every mode. There is no default mode: the zero value of the mode is unset, and rounding with an unset or unknown mode is rejected with an error that matches both the fraction's "not representable" error and the corresponding `common/rounding` error.
+
+Rounding to a multiple of a step, such as quantizing a position to a grid of quarter units, returns both the step count `k` and the reduced value `k · step`: `7/10` rounded to the step `1/4` with ties to even gives `k = 3` and `3/4`, while the tie `5/8` gives `k = 2` and `1/2`. The step count is available as a machine integer or, for arbitrarily large counts, as an arbitrary-precision integer.
 
 Explicit conversion to a 64-bit IEEE 754 floating-point number is also available when interfacing with external synthesis or rendering pipelines.
 
@@ -77,7 +81,7 @@ Fractions format to and parse from plain ASCII text:
 - **Stored pair notation** (`"6/12"`, `"1/-2"`, `"0/3"`, and `"0/0"` for the undefined zero value) and **canonical reduced notation** (`"1/2"`, `"-1/2"`, `"0/1"`).
 - **Compact notation**, which formats the reduced fraction and omits `/1` for whole numbers (`"2"`, `"-3"`, `"1/2"`).
 - **Mixed-number notation**, which separates a non-zero integer part from a proper reduced fractional part (`"1 3/4"`, `"-1 3/4"`, `"3/4"`, `"2"`, `"0"`).
-- **Fixed-precision decimal formatting**, which formats a fraction with a chosen number of digits after the decimal point (`0` through `100`), rounding either half away from zero by default or according to any of the five explicit rounding rules (and never producing `"-0"` or `"-0.00"` when the rounded value is zero).
+- **Fixed-precision decimal formatting**, which formats a fraction with a chosen number of digits after the decimal point (`0` through `100`), rounding either half away from zero by default or according to any of the nine rounding modes (and never producing `"-0"` or `"-0.00"` when the rounded value is zero).
 - **Parsing**, which accepts four exact forms without surrounding whitespace: signed integers (`"3"`, `"-2"`), ordinary fractions (`"6/12"`, `"1/-2"`), mixed fractions (`"1 3/4"`, `"-1 3/4"`), and finite decimal numbers (`"1.75"`, `"-0.125"`, `"2."`), converting decimal input to its reduced rational form.
 
 First released in v0.8.0.

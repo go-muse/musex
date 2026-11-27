@@ -1,32 +1,96 @@
 package fraction
 
 import (
+	"fmt"
 	"math"
 	"math/big"
+
+	"github.com/go-muse/musex/common/rounding"
 )
 
-// RoundingMode specifies the rounding rule for explicit rounding operations.
-type RoundingMode uint8
+// RoundingMode selects how explicit rounding operations replace a value lying
+// strictly between two adjacent integers (or grid nodes) by one of them. It is
+// an alias of [rounding.Mode]: values of the two types are interchangeable and
+// the methods of [rounding.Mode] (IsValid, String, Name, text encoding) apply.
+//
+// The zero value is the unset mode. Every rounding operation rejects it, and
+// any value outside the nine modes below, with an error that matches both
+// [ErrNotRepresentable] and [rounding.ErrUnset] or [rounding.ErrUnknownMode]
+// via [errors.Is]. The results of all nine modes are tabulated in the package
+// documentation of common/rounding.
+type RoundingMode = rounding.Mode
 
-// Supported explicit rounding rules.
+// Supported explicit rounding modes. Each constant equals the [rounding.Mode]
+// named in its comment.
 const (
-	// RoundHalfAwayFromZero rounds ties (exact halves) away from zero
-	// (±1/2 -> ±1).
-	RoundHalfAwayFromZero RoundingMode = iota
+	// RoundFloor rounds toward negative infinity (-∞); [rounding.Down].
+	RoundFloor = rounding.Down
 
-	// RoundHalfToEven rounds ties (exact halves) to the nearest even integer
-	// (±1/2 -> 0, ±3/2 -> ±2).
-	RoundHalfToEven
+	// RoundCeil rounds toward positive infinity (+∞); [rounding.Up].
+	RoundCeil = rounding.Up
 
-	// RoundFloor rounds toward negative infinity (-∞).
-	RoundFloor
+	// RoundTrunc rounds toward zero (truncates the fractional part);
+	// [rounding.TowardZero].
+	RoundTrunc = rounding.TowardZero
 
-	// RoundCeil rounds toward positive infinity (+∞).
-	RoundCeil
+	// RoundAwayFromZero rounds away from zero (±0.5 -> ±1, ±0.2 -> ±1);
+	// [rounding.AwayFromZero].
+	RoundAwayFromZero = rounding.AwayFromZero
 
-	// RoundTrunc rounds toward zero (truncates the fractional part).
-	RoundTrunc
+	// RoundHalfUp rounds to the nearest integer and ties (exact halves) toward
+	// positive infinity (1/2 -> 1, -1/2 -> 0); [rounding.HalfUp].
+	RoundHalfUp = rounding.HalfUp
+
+	// RoundHalfDown rounds to the nearest integer and ties toward negative
+	// infinity (1/2 -> 0, -1/2 -> -1); [rounding.HalfDown].
+	RoundHalfDown = rounding.HalfDown
+
+	// RoundHalfAwayFromZero rounds to the nearest integer and ties away from
+	// zero (±1/2 -> ±1); [rounding.HalfAwayFromZero].
+	RoundHalfAwayFromZero = rounding.HalfAwayFromZero
+
+	// RoundHalfTowardZero rounds to the nearest integer and ties toward zero
+	// (±1/2 -> 0, ±3/2 -> ±1); [rounding.HalfTowardZero].
+	RoundHalfTowardZero = rounding.HalfTowardZero
+
+	// RoundHalfToEven rounds to the nearest integer and ties to the nearest
+	// even integer (±1/2 -> 0, ±3/2 -> ±2); [rounding.HalfEven].
+	RoundHalfToEven = rounding.HalfEven
 )
+
+// Errors for an unset or unknown rounding mode. Each matches
+// ErrNotRepresentable and the corresponding common/rounding sentinel.
+var (
+	errRoundingModeUnset   = fmt.Errorf("%w: %w", ErrNotRepresentable, rounding.ErrUnset)
+	errRoundingModeUnknown = fmt.Errorf("%w: %w", ErrNotRepresentable, rounding.ErrUnknownMode)
+)
+
+// checkRoundingMode returns the mode error for an unset or unknown mode and
+// nil for one of the nine modes.
+func checkRoundingMode(mode RoundingMode) error {
+	if mode == 0 {
+		return errRoundingModeUnset
+	}
+	if !mode.IsValid() {
+		return errRoundingModeUnknown
+	}
+	return nil
+}
+
+// roundsAway reports whether mode replaces a non-integer value with magnitude
+// q + rem/den (0 < rem < den) and sign neg by the neighbor of larger magnitude
+// q + 1. half is the sign of 2·rem − den, qOdd the parity of q. mode must be
+// valid.
+func roundsAway(mode RoundingMode, half int, neg, qOdd bool) bool {
+	// For x > 0 the lower neighbor is q; for x < 0 it is -(q+1), which is
+	// nearer when half > 0 and even when q is odd.
+	side, cmp, lowerEven := rounding.Positive, half, !qOdd
+	if neg {
+		side, cmp, lowerEven = rounding.Negative, -half, qOdd
+	}
+	n, _ := mode.Choose(cmp, side, lowerEven)
+	return (n == rounding.Upper) != neg
+}
 
 func u512ToInt(u u512, neg bool) (int, bool) {
 	if !u.fitsU256Max() {
@@ -442,6 +506,8 @@ func (f Fraction) MustInProgression(start, step Fraction) (steps int, ok bool) {
 	return s, ok
 }
 
+// roundRatioU512 rounds the exact value ±num/den (den > 0, sign neg) to an
+// integer in the valid mode and returns its magnitude and sign.
 func roundRatioU512(num, den u512, neg bool, mode RoundingMode) (qMag u512, qNeg bool) {
 	if num.isZero() {
 		return u512{}, false
@@ -450,26 +516,7 @@ func roundRatioU512(num, den u512, neg bool, mode RoundingMode) (qMag u512, qNeg
 	if rem.isZero() {
 		return q, neg
 	}
-	var inc bool
-	switch mode {
-	case RoundTrunc:
-		inc = false
-	case RoundFloor:
-		inc = neg
-	case RoundCeil:
-		inc = !neg
-	case RoundHalfAwayFromZero:
-		inc = u512Cmp(rem, u512Sub(den, rem)) >= 0
-	case RoundHalfToEven:
-		diff := u512Sub(den, rem)
-		c := u512Cmp(rem, diff)
-		if c > 0 {
-			inc = true
-		} else if c == 0 {
-			inc = (q[0] & 1) != 0
-		}
-	}
-	if inc {
+	if roundsAway(mode, u512Cmp(rem, u512Sub(den, rem)), neg, q[0]&1 != 0) {
 		q = u512Add(q, u512{1})
 	}
 	if q.isZero() {
@@ -478,15 +525,17 @@ func roundRatioU512(num, den u512, neg bool, mode RoundingMode) (qMag u512, qNeg
 	return q, neg
 }
 
-// RoundToInt rounds f to an int according to mode. It returns [ErrInvalid] if
-// f is invalid and [ErrNotRepresentable] if mode is unknown or the rounded
-// integer does not fit in int.
+// RoundToInt rounds f to an int according to mode: an integer f is returned
+// unchanged, otherwise mode selects floor(f) or floor(f) + 1. It returns
+// [ErrInvalid] if f is invalid, the mode error (see [RoundingMode]) if mode is
+// unset or unknown, and [ErrNotRepresentable] if the rounded integer does not
+// fit in int.
 func (f Fraction) RoundToInt(mode RoundingMode) (int, error) {
 	if !f.IsValid() {
 		return 0, ErrInvalid
 	}
-	if mode > RoundTrunc {
-		return 0, ErrNotRepresentable
+	if err := checkRoundingMode(mode); err != nil {
+		return 0, err
 	}
 	qMag, qNeg := roundRatioU512(u512FromU256(f.num), u512FromU256(f.den), f.Sign() < 0, mode)
 	res, ok := u512ToInt(qMag, qNeg)
@@ -505,14 +554,15 @@ func (f Fraction) MustRoundToInt(mode RoundingMode) int {
 	return v
 }
 
-// RoundToBigInt rounds f to a *big.Int according to mode. It returns
-// [ErrInvalid] if f is invalid and [ErrNotRepresentable] if mode is unknown.
+// RoundToBigInt rounds f to a new *big.Int according to mode, as
+// [Fraction.RoundToInt] does. It returns [ErrInvalid] if f is invalid and the
+// mode error (see [RoundingMode]) if mode is unset or unknown.
 func (f Fraction) RoundToBigInt(mode RoundingMode) (*big.Int, error) {
 	if !f.IsValid() {
 		return nil, ErrInvalid
 	}
-	if mode > RoundTrunc {
-		return nil, ErrNotRepresentable
+	if err := checkRoundingMode(mode); err != nil {
+		return nil, err
 	}
 	qMag, qNeg := roundRatioU512(u512FromU256(f.num), u512FromU256(f.den), f.Sign() < 0, mode)
 	return qMag.toBigInt(qNeg), nil
@@ -537,11 +587,12 @@ func (f Fraction) roundToTargetDenU256(targetDen u256, mode RoundingMode) (Fract
 	return makeFraction(mMag.low256(), targetDen, mNeg, false), nil
 }
 
-// RoundToDenominator rounds f to the nearest multiple of 1/den (den > 0)
-// according to mode, returning a Fraction with stored denominator den. It
-// returns [ErrInvalid] if f is invalid, [ErrZeroDenominator] if den <= 0,
-// [ErrNotRepresentable] if mode is unknown, and [ErrOutOfRange] if the rounded
-// numerator exceeds [MaxComponent].
+// RoundToDenominator rounds f to a multiple of 1/den (den > 0) according to
+// mode, returning the Fraction m/den with stored denominator den, where m is
+// f·den rounded to an integer. It returns [ErrInvalid] if f is invalid,
+// [ErrZeroDenominator] if den <= 0, the mode error (see [RoundingMode]) if
+// mode is unset or unknown, and [ErrOutOfRange] if the rounded numerator
+// exceeds [MaxComponent].
 func (f Fraction) RoundToDenominator(den int, mode RoundingMode) (Fraction, error) {
 	if !f.IsValid() {
 		return Fraction{}, ErrInvalid
@@ -549,8 +600,8 @@ func (f Fraction) RoundToDenominator(den int, mode RoundingMode) (Fraction, erro
 	if den <= 0 {
 		return Fraction{}, ErrZeroDenominator
 	}
-	if mode > RoundTrunc {
-		return Fraction{}, ErrNotRepresentable
+	if err := checkRoundingMode(mode); err != nil {
+		return Fraction{}, err
 	}
 	targetDen, _ := u256FromInt(den)
 	return f.roundToTargetDenU256(targetDen, mode)
@@ -566,11 +617,12 @@ func (f Fraction) MustRoundToDenominator(den int, mode RoundingMode) Fraction {
 	return res
 }
 
-// RoundToBigDenominator rounds f to the nearest multiple of 1/den (den > 0)
-// according to mode, returning a Fraction with stored denominator den. It
-// returns [ErrInvalid] if f is invalid, [ErrZeroDenominator] if den == nil or
-// den.Sign() <= 0, [ErrNotRepresentable] if mode is unknown, and
-// [ErrOutOfRange] if den or the rounded numerator exceeds [MaxComponent].
+// RoundToBigDenominator rounds f to a multiple of 1/den (den > 0) according to
+// mode, returning the Fraction m/den with stored denominator den, where m is
+// f·den rounded to an integer. It returns [ErrInvalid] if f is invalid,
+// [ErrZeroDenominator] if den == nil or den.Sign() <= 0, the mode error (see
+// [RoundingMode]) if mode is unset or unknown, and [ErrOutOfRange] if den or
+// the rounded numerator exceeds [MaxComponent]. den is not modified.
 func (f Fraction) RoundToBigDenominator(den *big.Int, mode RoundingMode) (Fraction, error) {
 	if !f.IsValid() {
 		return Fraction{}, ErrInvalid
@@ -578,8 +630,8 @@ func (f Fraction) RoundToBigDenominator(den *big.Int, mode RoundingMode) (Fracti
 	if den == nil || den.Sign() <= 0 {
 		return Fraction{}, ErrZeroDenominator
 	}
-	if mode > RoundTrunc {
-		return Fraction{}, ErrNotRepresentable
+	if err := checkRoundingMode(mode); err != nil {
+		return Fraction{}, err
 	}
 	targetDen, _, ok := u256FromBigInt(den)
 	if !ok {
@@ -596,6 +648,109 @@ func (f Fraction) MustRoundToBigDenominator(den *big.Int, mode RoundingMode) Fra
 		panic(err)
 	}
 	return res
+}
+
+// roundToMultiple rounds f/step (step > 0) to an integer k in the valid mode
+// and returns the magnitude and sign of k and the canonical reduced v = k·step.
+func (f Fraction) roundToMultiple(step Fraction, mode RoundingMode) (kMag u512, kNeg bool, v Fraction, err error) {
+	num512 := u256Mul(f.num, step.den)
+	den512 := u256Mul(f.den, step.num)
+	kMag, kNeg = roundRatioU512(num512, den512, f.Sign() < 0, mode)
+	if kMag.isZero() {
+		return kMag, false, Zero(), nil
+	}
+	// v = k·n/d with step = n/d reduced: gcd(k/g, d/g) = 1 for g = gcd(k, d),
+	// so (k/g)·n over d/g is already reduced.
+	red := step.Reduce()
+	stepDen := u512FromU256(red.den)
+	g := u512GCD(kMag, stepDen)
+	kRed, vDen := kMag, stepDen
+	if !g.isOne() {
+		kRed, _ = u512DivMod(kMag, g)
+		vDen, _ = u512DivMod(stepDen, g)
+	}
+	if !kRed.fitsU256Max() {
+		return kMag, kNeg, Fraction{}, ErrOutOfRange
+	}
+	vNum := u256Mul(kRed.low256(), red.num)
+	if !vNum.fitsU256Max() {
+		return kMag, kNeg, Fraction{}, ErrOutOfRange
+	}
+	return kMag, kNeg, makeFraction(vNum.low256(), vDen.low256(), kNeg, false), nil
+}
+
+// checkRoundToMultiple validates the operands of the RoundToMultiple methods
+// in the order of the error precedence.
+func checkRoundToMultiple(f, step Fraction, mode RoundingMode) error {
+	if !f.IsValid() || !step.IsValid() {
+		return ErrInvalid
+	}
+	if step.IsZero() {
+		return ErrDivisionByZero
+	}
+	if step.Sign() < 0 {
+		return ErrZeroDenominator
+	}
+	return checkRoundingMode(mode)
+}
+
+// RoundToMultiple rounds f to a multiple of the positive step according to
+// mode. The index k is f/step rounded to an integer (an integer f/step is
+// unchanged), and v = k·step in canonical reduced form (positive denominator,
+// 0/1 for zero). For example, 7/10 to the step 1/4 in [RoundHalfToEven] gives
+// k = 3 and v = 3/4.
+//
+// It returns [ErrInvalid] if f or step is invalid, [ErrDivisionByZero] if step
+// is zero, [ErrZeroDenominator] if step < 0, the mode error (see
+// [RoundingMode]) if mode is unset or unknown, [ErrNotRepresentable] if k does
+// not fit in int, and [ErrOutOfRange] if a component of v exceeds
+// [MaxComponent]. On error, k is 0 and v is Fraction{}.
+func (f Fraction) RoundToMultiple(step Fraction, mode RoundingMode) (k int, v Fraction, err error) {
+	if err = checkRoundToMultiple(f, step, mode); err != nil {
+		return 0, Fraction{}, err
+	}
+	kMag, kNeg, v, err := f.roundToMultiple(step, mode)
+	kInt, ok := u512ToInt(kMag, kNeg)
+	if !ok {
+		return 0, Fraction{}, ErrNotRepresentable
+	}
+	if err != nil {
+		return 0, Fraction{}, err
+	}
+	return kInt, v, nil
+}
+
+// MustRoundToMultiple is like [Fraction.RoundToMultiple] but panics on error.
+func (f Fraction) MustRoundToMultiple(step Fraction, mode RoundingMode) (k int, v Fraction) {
+	k, v, err := f.RoundToMultiple(step, mode)
+	if err != nil {
+		panic(err)
+	}
+	return k, v
+}
+
+// RoundToMultipleBig is like [Fraction.RoundToMultiple] but returns k as a new
+// *big.Int, so k is never out of range. On error, k is nil and v is
+// Fraction{}.
+func (f Fraction) RoundToMultipleBig(step Fraction, mode RoundingMode) (k *big.Int, v Fraction, err error) {
+	if err = checkRoundToMultiple(f, step, mode); err != nil {
+		return nil, Fraction{}, err
+	}
+	kMag, kNeg, v, err := f.roundToMultiple(step, mode)
+	if err != nil {
+		return nil, Fraction{}, err
+	}
+	return kMag.toBigInt(kNeg), v, nil
+}
+
+// MustRoundToMultipleBig is like [Fraction.RoundToMultipleBig] but panics on
+// error.
+func (f Fraction) MustRoundToMultipleBig(step Fraction, mode RoundingMode) (k *big.Int, v Fraction) {
+	k, v, err := f.RoundToMultipleBig(step, mode)
+	if err != nil {
+		panic(err)
+	}
+	return k, v
 }
 
 // Float64 converts f to the nearest IEEE-754 float64 value and reports whether

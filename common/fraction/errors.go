@@ -29,8 +29,9 @@ var (
 
 	// ErrNotRepresentable indicates that an exact rational value cannot be
 	// represented without remainder in the requested denominator or narrow int
-	// type, or that an unknown DenomMode, unknown RoundingMode, or out-of-range
-	// decimal digit count was supplied.
+	// type, or that an unknown DenomMode, an unset or unknown RoundingMode, or
+	// an out-of-range decimal digit count was supplied. The rounding mode error
+	// also wraps rounding.ErrUnset or rounding.ErrUnknownMode.
 	ErrNotRepresentable = errors.New("fraction: value is not representable in requested form")
 
 	// ErrOutOfRange indicates that a requested numerator or denominator magnitude

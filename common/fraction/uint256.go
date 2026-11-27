@@ -40,24 +40,6 @@ func (u u256) exceedsMax() bool {
 	return (u[3] >> 63) != 0
 }
 
-func (u u256) bitLen() int {
-	for i := 3; i >= 0; i-- {
-		if u[i] != 0 {
-			return i*64 + bits.Len64(u[i])
-		}
-	}
-	return 0
-}
-
-func (u u256) trailingZeros() int {
-	for i := range 4 {
-		if u[i] != 0 {
-			return i*64 + bits.TrailingZeros64(u[i])
-		}
-	}
-	return 256
-}
-
 func u256FromInt(n int) (u256, bool) {
 	if n < 0 {
 		mag := uint64(-(n + 1)) + 1
@@ -203,53 +185,7 @@ func u256Sub(a, b u256) u256 {
 	return res
 }
 
-func u256Shr(u u256, k int) u256 {
-	if k <= 0 {
-		return u
-	}
-	if k >= 256 {
-		return u256Zero
-	}
-	wordShift := k / 64
-	bitShift := uint(k % 64)
-	var res u256
-	for i := 0; i < 4-wordShift; i++ {
-		res[i] = u[i+wordShift] >> bitShift
-		if bitShift != 0 && i+wordShift+1 < 4 {
-			res[i] |= u[i+wordShift+1] << (64 - bitShift)
-		}
-	}
-	return res
-}
-
-func u256Shr1(u u256) u256 {
-	return u256{
-		(u[0] >> 1) | (u[1] << 63),
-		(u[1] >> 1) | (u[2] << 63),
-		(u[2] >> 1) | (u[3] << 63),
-		u[3] >> 1,
-	}
-}
-
-func u256Shl(u u256, k int) u256 {
-	if k <= 0 {
-		return u
-	}
-	if k >= 256 {
-		return u256Zero
-	}
-	wordShift := k / 64
-	bitShift := uint(k % 64)
-	var res u256
-	for i := wordShift; i < 4; i++ {
-		res[i] = u[i-wordShift] << bitShift
-		if bitShift != 0 && i-wordShift-1 >= 0 {
-			res[i] |= u[i-wordShift-1] >> (64 - bitShift)
-		}
-	}
-	return res
-}
-
+// gcdUint64 returns gcd(a, b), with gcd(x, 0) = x (Euclid's algorithm).
 func gcdUint64(a, b uint64) uint64 {
 	for b != 0 {
 		a, b = b, a%b
@@ -257,71 +193,93 @@ func gcdUint64(a, b uint64) uint64 {
 	return a
 }
 
+// u256GCD returns gcd(a, b), with gcd(x, 0) = x.
 func u256GCD(a, b u256) u256 {
-	if a.isUint64() && b.isUint64() {
-		return u256{gcdUint64(a[0], b[0]), 0, 0, 0}
+	if (a[2] | a[3] | b[2] | b[3]) == 0 {
+		g0, g1 := gcd2(a[0], a[1], b[0], b[1])
+		return u256{g0, g1, 0, 0}
 	}
-	if a.isZero() {
-		return b
-	}
-	if b.isZero() {
-		return a
-	}
-	za := a.trailingZeros()
-	zb := b.trailingZeros()
-	shift := min(za, zb)
-	a = u256Shr(a, za)
-	for !b.isZero() {
-		b = u256Shr(b, b.trailingZeros())
-		if u256Cmp(a, b) > 0 {
-			a, b = b, a
-		}
-		b = u256Sub(b, a)
-	}
-	return u256Shl(a, shift)
+	return u256GCDWide(a, b)
 }
 
+// u256GCDWide is u256GCD for values longer than one word.
+func u256GCDWide(a, b u256) u256 {
+	var g u256
+	natGCD(g[:], a[:], b[:])
+	return g
+}
+
+// u256DivMod returns a / b and a mod b for b != 0.
 func u256DivMod(a, b u256) (quo, rem u256) {
-	if a.isUint64() && b.isUint64() {
-		return u256{a[0] / b[0], 0, 0, 0}, u256{a[0] % b[0], 0, 0, 0}
+	if (a[2] | a[3] | b[2] | b[3]) == 0 {
+		q0, q1, r0, r1 := divMod2(a[0], a[1], b[0], b[1])
+		return u256{q0, q1, 0, 0}, u256{r0, r1, 0, 0}
 	}
-	if u256Cmp(a, b) < 0 {
-		return u256Zero, a
-	}
-	shift := a.bitLen() - b.bitLen()
-	divisor := u256Shl(b, shift)
-	rem = a
-	for i := shift; i >= 0; i-- {
-		if u256Cmp(rem, divisor) >= 0 {
-			rem = u256Sub(rem, divisor)
-			quo[i/64] |= uint64(1) << uint(i%64)
-		}
-		divisor = u256Shr1(divisor)
-	}
+	return u256DivModWide(a, b)
+}
+
+// u256DivModWide is u256DivMod for values longer than one word.
+func u256DivModWide(a, b u256) (quo, rem u256) {
+	natDivMod(quo[:], rem[:], a[:], b[:])
 	return quo, rem
 }
 
+// u256Mul returns the full 512-bit product a·b.
 func u256Mul(a, b u256) u512 {
 	if a.isUint64() && b.isUint64() {
 		hi, lo := bits.Mul64(a[0], b[0])
 		return u512{lo, hi, 0, 0, 0, 0, 0, 0}
 	}
+	if (a[2] | a[3] | b[2] | b[3]) == 0 {
+		return mul2x2(a[0], a[1], b[0], b[1])
+	}
+	// Row by row, skipping zero words of a.
 	var res u512
 	for i := range 4 {
-		if a[i] == 0 {
+		ai := a[i]
+		if ai == 0 {
 			continue
 		}
-		var carry uint64
-		for j := range 4 {
-			hi, lo := bits.Mul64(a[i], b[j])
-			var c1, c2 uint64
-			res[i+j], c1 = bits.Add64(res[i+j], lo, 0)
-			res[i+j], c2 = bits.Add64(res[i+j], carry, 0)
-			carry = hi + c1 + c2
-		}
-		res[i+4] = carry
+		// row = ai·b in five words; res[i+4] is still zero here.
+		h0, l0 := bits.Mul64(ai, b[0])
+		h1, l1 := bits.Mul64(ai, b[1])
+		h2, l2 := bits.Mul64(ai, b[2])
+		h3, l3 := bits.Mul64(ai, b[3])
+		var c uint64
+		r1, c := bits.Add64(l1, h0, 0)
+		r2, c := bits.Add64(l2, h1, c)
+		r3, c := bits.Add64(l3, h2, c)
+		r4 := h3 + c
+		res[i], c = bits.Add64(res[i], l0, 0)
+		res[i+1], c = bits.Add64(res[i+1], r1, c)
+		res[i+2], c = bits.Add64(res[i+2], r2, c)
+		res[i+3], c = bits.Add64(res[i+3], r3, c)
+		res[i+4] = r4 + c
 	}
 	return res
+}
+
+// mulAcc adds a·b to the three-word column accumulator c2:c1:c0.
+func mulAcc(a, b, c0, c1, c2 uint64) (uint64, uint64, uint64) {
+	h, l := bits.Mul64(a, b)
+	var c uint64
+	c0, c = bits.Add64(c0, l, 0)
+	c1, c = bits.Add64(c1, h, c)
+	return c0, c1, c2 + c
+}
+
+// mul2x2 returns (a1:a0)·(b1:b0) by columns.
+func mul2x2(a0, a1, b0, b1 uint64) u512 {
+	var r u512
+	h, l := bits.Mul64(a0, b0)
+	r[0] = l
+	c0, c1, c2 := h, uint64(0), uint64(0)
+	c0, c1, c2 = mulAcc(a0, b1, c0, c1, c2)
+	c0, c1, c2 = mulAcc(a1, b0, c0, c1, c2)
+	r[1] = c0
+	c0, c1, _ = mulAcc(a1, b1, c1, c2, 0)
+	r[2], r[3] = c0, c1
+	return r
 }
 
 func (u u512) isZero() bool {
@@ -330,10 +288,6 @@ func (u u512) isZero() bool {
 
 func (u u512) isOne() bool {
 	return u[0] == 1 && (u[1]|u[2]|u[3]|u[4]|u[5]|u[6]|u[7]) == 0
-}
-
-func (u u512) isUint64() bool {
-	return (u[1] | u[2] | u[3] | u[4] | u[5] | u[6] | u[7]) == 0
 }
 
 func (u u512) fitsU256Max() bool {
@@ -378,115 +332,33 @@ func u512Sub(a, b u512) u512 {
 	return res
 }
 
-func (u u512) bitLen() int {
-	for i := 7; i >= 0; i-- {
-		if u[i] != 0 {
-			return i*64 + bits.Len64(u[i])
-		}
-	}
-	return 0
-}
-
-func (u u512) trailingZeros() int {
-	for i := range 8 {
-		if u[i] != 0 {
-			return i*64 + bits.TrailingZeros64(u[i])
-		}
-	}
-	return 512
-}
-
-func u512Shr(u u512, k int) u512 {
-	if k <= 0 {
-		return u
-	}
-	if k >= 512 {
-		return u512{}
-	}
-	wordShift := k / 64
-	bitShift := uint(k % 64)
-	var res u512
-	for i := 0; i < 8-wordShift; i++ {
-		res[i] = u[i+wordShift] >> bitShift
-		if bitShift != 0 && i+wordShift+1 < 8 {
-			res[i] |= u[i+wordShift+1] << (64 - bitShift)
-		}
-	}
-	return res
-}
-
-func u512Shr1(u u512) u512 {
-	return u512{
-		(u[0] >> 1) | (u[1] << 63),
-		(u[1] >> 1) | (u[2] << 63),
-		(u[2] >> 1) | (u[3] << 63),
-		(u[3] >> 1) | (u[4] << 63),
-		(u[4] >> 1) | (u[5] << 63),
-		(u[5] >> 1) | (u[6] << 63),
-		(u[6] >> 1) | (u[7] << 63),
-		u[7] >> 1,
-	}
-}
-
-func u512Shl(u u512, k int) u512 {
-	if k <= 0 {
-		return u
-	}
-	if k >= 512 {
-		return u512{}
-	}
-	wordShift := k / 64
-	bitShift := uint(k % 64)
-	var res u512
-	for i := wordShift; i < 8; i++ {
-		res[i] = u[i-wordShift] << bitShift
-		if bitShift != 0 && i-wordShift-1 >= 0 {
-			res[i] |= u[i-wordShift-1] >> (64 - bitShift)
-		}
-	}
-	return res
-}
-
+// u512GCD returns gcd(a, b), with gcd(x, 0) = x.
 func u512GCD(a, b u512) u512 {
-	if a.isUint64() && b.isUint64() {
-		return u512{gcdUint64(a[0], b[0]), 0, 0, 0, 0, 0, 0, 0}
+	if (a[2] | a[3] | a[4] | a[5] | a[6] | a[7] | b[2] | b[3] | b[4] | b[5] | b[6] | b[7]) == 0 {
+		g0, g1 := gcd2(a[0], a[1], b[0], b[1])
+		return u512{g0, g1, 0, 0, 0, 0, 0, 0}
 	}
-	if a.isZero() {
-		return b
-	}
-	if b.isZero() {
-		return a
-	}
-	za := a.trailingZeros()
-	zb := b.trailingZeros()
-	shift := min(za, zb)
-	a = u512Shr(a, za)
-	for !b.isZero() {
-		b = u512Shr(b, b.trailingZeros())
-		if u512Cmp(a, b) > 0 {
-			a, b = b, a
-		}
-		b = u512Sub(b, a)
-	}
-	return u512Shl(a, shift)
+	return u512GCDWide(a, b)
 }
 
+// u512GCDWide is u512GCD for values longer than one word.
+func u512GCDWide(a, b u512) u512 {
+	var g u512
+	natGCD(g[:], a[:], b[:])
+	return g
+}
+
+// u512DivMod returns a / b and a mod b for b != 0.
 func u512DivMod(a, b u512) (quo, rem u512) {
-	if a.isUint64() && b.isUint64() {
-		return u512{a[0] / b[0]}, u512{a[0] % b[0]}
+	if (a[2] | a[3] | a[4] | a[5] | a[6] | a[7] | b[2] | b[3] | b[4] | b[5] | b[6] | b[7]) == 0 {
+		q0, q1, r0, r1 := divMod2(a[0], a[1], b[0], b[1])
+		return u512{q0, q1, 0, 0, 0, 0, 0, 0}, u512{r0, r1, 0, 0, 0, 0, 0, 0}
 	}
-	if u512Cmp(a, b) < 0 {
-		return u512{}, a
-	}
-	shift := a.bitLen() - b.bitLen()
-	divisor := u512Shl(b, shift)
-	rem = a
-	for i := shift; i >= 0; i-- {
-		if u512Cmp(rem, divisor) >= 0 {
-			rem = u512Sub(rem, divisor)
-			quo[i/64] |= uint64(1) << uint(i%64)
-		}
-		divisor = u512Shr1(divisor)
-	}
+	return u512DivModWide(a, b)
+}
+
+// u512DivModWide is u512DivMod for values longer than one word.
+func u512DivModWide(a, b u512) (quo, rem u512) {
+	natDivMod(quo[:], rem[:], a[:], b[:])
 	return quo, rem
 }

@@ -44,9 +44,9 @@
 // ties-to-even operation. Intermediate choices use exact arithmetic.
 //
 // These modes correspond to existing MuseX policies without importing their
-// packages: common/fraction's five rules are HalfAwayFromZero, HalfEven, Down,
-// Up, and TowardZero; cents uses HalfAwayFromZero; tuning/temperament resolves
-// ties like HalfDown.
+// packages: common/fraction's RoundingMode is an alias of Mode, so fractions
+// round in all nine modes; cents uses HalfAwayFromZero; tuning/temperament
+// resolves ties like HalfDown.
 //
 // Operations return ErrUnset, ErrUnknownMode, ErrInvalidArgument, or
 // ErrOutOfRange, in that precedence order. Errors.Is recognizes exactly one of
