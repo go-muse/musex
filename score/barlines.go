@@ -2,10 +2,8 @@ package score
 
 import (
 	"errors"
-	"math/big"
 	"slices"
 
-	"github.com/go-muse/musex/common/fraction"
 	"github.com/go-muse/musex/duration"
 	"github.com/go-muse/musex/measure"
 	"github.com/go-muse/musex/track"
@@ -186,12 +184,7 @@ func (s *Score) BarlinePeriod(a, b PartID) (duration.Duration, error) {
 	if err != nil {
 		return duration.Duration{}, err
 	}
-	an, ad, _ := x.MustFraction().ReducedBigPair()
-	bn, bd, _ := y.MustFraction().ReducedBigPair()
-	g := new(big.Int).GCD(nil, nil, an, bn)
-	num := new(big.Int).Mul(new(big.Int).Quo(an, g), bn)
-	den := new(big.Int).GCD(nil, nil, ad, bd)
-	f, err := fraction.FromBigIntReduced(num, den)
+	f, err := x.MustFraction().LCM(y.MustFraction())
 	if err != nil {
 		return duration.Duration{}, classify(err)
 	}
