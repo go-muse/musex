@@ -58,12 +58,33 @@ func TestFraction_GCDLCM(t *testing.T) {
 	outOfRange := wErr(fraction.ErrOutOfRange)
 	invalid := wErr(fraction.ErrInvalid)
 	var zero fraction.Fraction
+	// Wide operands next to a numerical zero: NOD(0, |p|) = |p|, so GCD(0, x)
+	// is |x| in reduced form and LCM(0, x) is 0/1 for reduced numerators of two
+	// words, [2^64, 2^128), and of three or more words, at least 2^128.
+	zeroAnd := agN(0, 1)
+	two64p3 := wOff(wPow2(64), 3)
+	mersenne128 := wOff(wPow2(128), -1)
+	two200p5 := wOff(wPow2(200), 5)
+	two200p5By3 := agQuoExact(t, two200p5, big.NewInt(3))
+	pow3To50 := new(big.Int).Exp(big.NewInt(3), big.NewInt(50), nil)
+	zeroLCM := agWantInts(0, 1)
 
 	tests := []struct {
 		name     string
 		x, y     fraction.Fraction
 		gcd, lcm wideWant
 	}{
+		{"zero and 2^64", zeroAnd, wFrac(wPow2(64), one), agWantPair(wPow2(64), one), zeroLCM},
+		{"zero and 2^64+3", zeroAnd, wFrac(two64p3, one), agWantPair(two64p3, one), zeroLCM},
+		{"zero over 5 and negative 2^64+3", agN(0, 5), wFrac(wNeg(two64p3), one), agWantPair(two64p3, one), zeroLCM},
+		{"zero and reducible two-word value", agN(0, -3), wFrac(wMul(two64p3, big.NewInt(6)), big.NewInt(-9)),
+			agWantPair(wMul(two64p3, big.NewInt(2)), big.NewInt(3)), zeroLCM},
+		{"zero and (2^128-1)/7", zeroAnd, wFrac(wNeg(mersenne128), big.NewInt(7)), agWantPair(mersenne128, big.NewInt(7)), zeroLCM},
+		{"zero and 2^128", agN(0, 7), wFrac(wNeg(wPow2(128)), one), agWantPair(wPow2(128), one), zeroLCM},
+		{"zero and (2^200+5)/3", zeroAnd, wFrac(two200p5, big.NewInt(3)), agWantPair(two200p5By3, one), zeroLCM},
+		{"zero over -2 and -2^150/3^50", agN(0, -2), wFrac(wNeg(wPow2(150)), pow3To50), agWantPair(wPow2(150), pow3To50), zeroLCM},
+		{"zero and MaxComponent/2", zeroAnd, wFrac(maxC, big.NewInt(-2)), agWantPair(maxC, big.NewInt(2)), zeroLCM},
+		{"zero and MaxComponent", agN(0, 3), wFrac(wNeg(maxC), one), agWantPair(maxC, one), zeroLCM},
 		{"quarter and sixth", agN(1, 4), agN(1, 6), agWantInts(1, 12), agWantInts(1, 2)},
 		{"opposite signs", agN(3, 4), agN(-1, 2), agWantInts(1, 4), agWantInts(3, 2)},
 		{"zero argument", agN(6, 12), agN(0, 5), agWantInts(1, 2), agWantInts(0, 1)},
