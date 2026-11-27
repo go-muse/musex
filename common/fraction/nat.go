@@ -214,14 +214,14 @@ func natDivMod(q, r, a, b []uint64) {
 		copy(r, a)
 		return
 	}
-	switch {
-	case n == 1:
+	// The callers (u256DivModWide and u512DivModWide) pass operands of which
+	// at least one has three or more words, so a >= b here means len(a) >= 3;
+	// natDivLong also covers len(a) == len(b) == 2 should that ever change.
+	if n == 1 {
 		r[0] = natDivWord(q, a, b[0])
-	case m == 2:
-		q[0], r[0], r[1] = div128(a[0], a[1], b[0], b[1])
-	default:
-		natDivLong(q[:m-n+1], r[:n], a, b)
+		return
 	}
+	natDivLong(q[:m-n+1], r[:n], a, b)
 }
 
 // natGCD sets g = gcd(a, b), with gcd(x, 0) = x. a and b may contain leading
@@ -258,12 +258,17 @@ func natGCD(g, a, b []uint64) {
 			}
 			continue
 		}
+		// A Lehmer update never makes y zero, so no zero check follows it. Let
+		// s be the shift of the leading words, X = ⌊x/2^s⌋ and Y = ⌊y/2^s⌋, so
+		// that x = 2^s·(X + εx) and y = 2^s·(Y + εy) with εx, εy in [0, 1).
+		// The new y is σ·(u1·x − v1·y) with σ = ±1, and its simulated value
+		// r = σ·(u1·X − v1·Y) is the last divisor of lehmerCosequence, which
+		// divides only when r >= v1. Once a step has been simulated (v0 != 0)
+		// the cofactors satisfy 0 <= u1 <= v1 and v1 >= 1, so
+		// σ·(u1·εx − v1·εy) > −v1 and the new y = 2^s·(r + σ·(u1·εx − v1·εy))
+		// exceeds 2^s·(r − v1) >= 0.
 		lehmerUpdate(x[:m], y[:m], u0, u1, v0, v1, even)
 		m, n = natLen(x[:m]), natLen(y[:m])
-		if n == 0 {
-			copy(g, x[:m])
-			return
-		}
 	}
 	if m > 2 {
 		var r [2]uint64
