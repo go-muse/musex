@@ -102,6 +102,108 @@ func TestFraction_GCDLCM(t *testing.T) {
 	}
 }
 
+// agFib returns the Fibonacci number F(n), F(1) = F(2) = 1.
+func agFib(n int) *big.Int {
+	a, b := big.NewInt(0), big.NewInt(1)
+	for range n {
+		a.Add(a, b)
+		a, b = b, a
+	}
+	return a
+}
+
+// agExactQuotientPairs returns pairs (a, b) = (u·g, v·g) of positive integers
+// within MaxComponent whose common factor g spans two to four 64-bit words.
+// The Euclidean remainder sequence of (u·g, v·g) is the sequence of (u, v)
+// scaled by g, so it reaches the remainder 0 exactly at the multi-word value
+// g·NOD(u, v): with v = 1 in the first division (b divides a), with the
+// cofactors u, v of a few words or of consecutive Fibonacci numbers after a
+// chain of single-word quotients. The inputs target the multi-word GCD whose
+// reduction step leaves the remainder 0 (review remark of task 26.7); they come
+// from the public contract only, and the oracle predicts every result.
+func agExactQuotientPairs() [][2]*big.Int {
+	maxC := fraction.MaxComponentBig()
+	gs := []*big.Int{
+		wOff(wPow2(64), 1),                      // two words, the smallest
+		wOff(wMul(wPow2(64), big.NewInt(3)), 5), // two words, a small top word
+		wOff(wPow2(127), -1),                    // two full words
+		bp(128, 0),                              // three words
+		bp(160, 0),
+		new(big.Int).Exp(big.NewInt(3), big.NewInt(100), nil),
+		bp(192, 0), // four words
+		bp(200, 1),
+		wOff(wPow2(254), 3),
+		maxC,
+	}
+	one := big.NewInt(1)
+	cofactors := [][2]*big.Int{
+		{one, one}, // a = b
+		{big.NewInt(2), one},
+		{big.NewInt(3), one},
+		{big.NewInt(7), one},
+		{big.NewInt(3), big.NewInt(2)},
+		{big.NewInt(5), big.NewInt(3)},
+		{big.NewInt(355), big.NewInt(113)},
+		{big.NewInt(math.MaxInt32), one},
+		{wOff(wPow2(32), 3), wOff(wPow2(32), 1)},
+		{wOff(wPow2(63), -25), one},
+		{wOff(wPow2(63), -25), wOff(wPow2(62), 1)},
+		{big.NewInt(math.MaxInt), big.NewInt(math.MaxInt - 1)},
+		{wOff(wPow2(64), 1), one},                 // a multi-word quotient
+		{wOff(wPow2(64), 1), wOff(wPow2(64), -1)}, // coprime multi-word cofactors
+		{wOff(wPow2(100), 1), big.NewInt(3)},
+	}
+	for _, n := range []int{5, 10, 20, 30, 46, 60, 75, 90} {
+		cofactors = append(cofactors, [2]*big.Int{agFib(n + 1), agFib(n)})
+	}
+	var pairs [][2]*big.Int
+	for _, g := range gs {
+		for _, c := range cofactors {
+			a, b := wMul(c[0], g), wMul(c[1], g)
+			if wInRange(a) && wInRange(b) {
+				pairs = append(pairs, [2]*big.Int{a, b})
+			}
+		}
+	}
+	return pairs
+}
+
+// TestGCD_MultiwordExactQuotients covers the multi-word GCD that ends with an
+// exact division: GCD and LCM of the integers and of their reciprocals, the
+// reduction of a/b, CommonDenominator of 1/a and 1/b, and Sum and Product of
+// these sets, all against the oracle. The expectations do not depend on how
+// the package computes the GCD.
+func TestGCD_MultiwordExactQuotients(t *testing.T) {
+	t.Parallel()
+
+	pairs := agExactQuotientPairs()
+	require.Greater(t, len(pairs), 100, "the input set must not shrink unnoticed")
+	one := big.NewInt(1)
+	for i, p := range pairs {
+		a, b := p[0], p[1]
+		t.Run(fmt.Sprintf("%d_%d_%d_bits", i, a.BitLen(), b.BitLen()), func(t *testing.T) {
+			t.Parallel()
+			label := fmt.Sprintf("a=%s b=%s", a, b)
+			agCheckGCDLCM(t, label+" integers", wFrac(a, one), wFrac(wNeg(b), one))
+			agCheckGCDLCM(t, label+" reciprocals", wFrac(one, a), wFrac(one, b))
+			agCheckGCDLCM(t, label+" a/b and b/a", wFrac(a, b), wFrac(b, a))
+
+			want := wantFromBigIntReduced(a, b)
+			got, err := fraction.FromBigIntReduced(a, b)
+			wCheckFrac(t, label+" FromBigIntReduced", got, err, want)
+			wCheckFrac(t, label+" Reduce", wFrac(a, wNeg(b)).Reduce(), nil, wantFromBigIntReduced(wNeg(a), b))
+			if assert.NoErrorf(t, want.err, "%s: the reduced form is within the range", label) {
+				assert.Truef(t, wFrac(a, b).Equal(wFrac(want.num, want.den)), "%s: a/b must equal its reduced form", label)
+			}
+
+			recips := []fraction.Fraction{wFrac(one, a), wFrac(one, b)}
+			agCheckCommonDenominator(t, label+" reciprocals", recips)
+			agCheckSumProduct(t, label+" reciprocals", recips)
+			agCheckSumProduct(t, label+" a/b and b/a", []fraction.Fraction{wFrac(a, b), wFrac(wNeg(b), a)})
+		})
+	}
+}
+
 // agLCMUpTo returns LCM(1, …, n) as the product of the largest prime powers
 // not above n, a computation independent of the oracle.
 func agLCMUpTo(n int64) *big.Int {
