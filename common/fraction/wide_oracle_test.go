@@ -3,6 +3,7 @@ package fraction_test
 import (
 	"errors"
 	"math/big"
+	"slices"
 	"strings"
 
 	"github.com/go-muse/musex/common/fraction"
@@ -50,14 +51,26 @@ var wideModes = []fraction.DenomMode{
 	fraction.DenomSmallerUnit + 1,
 }
 
-// wideRoundingModes lists every RoundingMode of the contract plus one unknown value.
-var wideRoundingModes = []fraction.RoundingMode{
+// wideKnownRounding lists the five named rounding modes. The tests identify
+// modes by these names only, never by their numeric values or order, so they
+// hold for any numbering of RoundingMode.
+var wideKnownRounding = []fraction.RoundingMode{
 	fraction.RoundHalfAwayFromZero,
 	fraction.RoundHalfToEven,
 	fraction.RoundFloor,
 	fraction.RoundCeil,
 	fraction.RoundTrunc,
-	fraction.RoundTrunc + 1,
+}
+
+// wideUnknownRounding is a value outside every set of named rounding modes.
+const wideUnknownRounding = fraction.RoundingMode(99)
+
+// wideRoundingModes lists the named rounding modes plus one unknown value.
+var wideRoundingModes = append(slices.Clone(wideKnownRounding), wideUnknownRounding)
+
+// wKnownRounding reports whether mode is one of the five named modes.
+func wKnownRounding(mode fraction.RoundingMode) bool {
+	return slices.Contains(wideKnownRounding, mode)
 }
 
 func wPow2(e uint) *big.Int {
@@ -397,7 +410,7 @@ func wRound(x, y *big.Int, mode fraction.RoundingMode) *big.Int {
 
 // wantRoundToBigInt predicts RoundToBigInt; RoundToInt adds the int check.
 func wantRoundToBigInt(x fraction.Fraction, mode fraction.RoundingMode) (*big.Int, error) {
-	if mode > fraction.RoundTrunc {
+	if !wKnownRounding(mode) {
 		return nil, fraction.ErrNotRepresentable
 	}
 	n, d := wNorm(x)
@@ -410,7 +423,7 @@ func wantRoundToBigDenominator(x fraction.Fraction, den *big.Int, mode fraction.
 	if den == nil || den.Sign() <= 0 {
 		return wErr(fraction.ErrZeroDenominator)
 	}
-	if mode > fraction.RoundTrunc {
+	if !wKnownRounding(mode) {
 		return wErr(fraction.ErrNotRepresentable)
 	}
 	if !wInRange(den) {
@@ -505,7 +518,7 @@ func wantCompactString(x fraction.Fraction) string {
 
 // wantFormatDecimal predicts FormatDecimal(digits, mode) (contract, section 8).
 func wantFormatDecimal(x fraction.Fraction, digits int, mode fraction.RoundingMode) (string, error) {
-	if digits < 0 || digits > fraction.MaxDigits || mode > fraction.RoundTrunc {
+	if digits < 0 || digits > fraction.MaxDigits || !wKnownRounding(mode) {
 		return "", fraction.ErrNotRepresentable
 	}
 	n, d := wNorm(x)
