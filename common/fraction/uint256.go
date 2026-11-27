@@ -202,7 +202,8 @@ func u256GCD(a, b u256) u256 {
 	return u256GCDWide(a, b)
 }
 
-// u256GCDWide is u256GCD for values longer than one word.
+// u256GCDWide is u256GCD for operands of which at least one is
+// longer than two words.
 func u256GCDWide(a, b u256) u256 {
 	var g u256
 	natGCD(g[:], a[:], b[:])
@@ -218,7 +219,8 @@ func u256DivMod(a, b u256) (quo, rem u256) {
 	return u256DivModWide(a, b)
 }
 
-// u256DivModWide is u256DivMod for values longer than one word.
+// u256DivModWide is u256DivMod for operands of which at least one is
+// longer than two words.
 func u256DivModWide(a, b u256) (quo, rem u256) {
 	natDivMod(quo[:], rem[:], a[:], b[:])
 	return quo, rem
@@ -341,7 +343,8 @@ func u512GCD(a, b u512) u512 {
 	return u512GCDWide(a, b)
 }
 
-// u512GCDWide is u512GCD for values longer than one word.
+// u512GCDWide is u512GCD for operands of which at least one is
+// longer than two words.
 func u512GCDWide(a, b u512) u512 {
 	var g u512
 	natGCD(g[:], a[:], b[:])
@@ -357,7 +360,8 @@ func u512DivMod(a, b u512) (quo, rem u512) {
 	return u512DivModWide(a, b)
 }
 
-// u512DivModWide is u512DivMod for values longer than one word.
+// u512DivModWide is u512DivMod for operands of which at least one is
+// longer than two words.
 func u512DivModWide(a, b u512) (quo, rem u512) {
 	natDivMod(quo[:], rem[:], a[:], b[:])
 	return quo, rem

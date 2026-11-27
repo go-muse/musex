@@ -327,7 +327,9 @@ func gcd128(a0, a1, b0, b1 uint64) (g0, g1 uint64) {
 // two values and returns the cosequence: the values are replaced by
 // u0·a + v0·b and u1·a + v1·b, where u0 and v1 are non-negative and u1 and v0
 // non-positive when even is true, and the signs are reversed otherwise.
-// v0 == 0 means that no step could be simulated.
+// v0 == 0 means that at most one step could be simulated; the cosequence of
+// a single step leaves the values unchanged, so callers then take a full
+// Euclidean step instead.
 func lehmerCosequence(x, y uint64) (u0, u1, v0, v1 uint64, even bool) {
 	var u2, v2 uint64
 	u1, v2 = 1, 1
