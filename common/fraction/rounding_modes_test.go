@@ -642,10 +642,10 @@ func TestDivInDenominatorErrorOrder(t *testing.T) {
 	wCheckErr(t, "invalid divisor", err, fraction.ErrInvalid)
 }
 
-// TestZeroAllocsRounding checks T-2 for F-1: the narrow RoundToMultiple in the
-// classes w31, alt, w63, and the rounding methods of the list in every mode,
-// run without heap allocations on the benchmark inputs. It is not parallel:
-// AllocsPerRun measures process-wide allocation counters.
+// TestZeroAllocsRounding checks T-2 for F-1: the narrow RoundToMultiple and the
+// rounding methods of the list run without heap allocations in every mode on
+// every benchmark input of every class. It is not parallel: AllocsPerRun
+// measures process-wide allocation counters.
 func TestZeroAllocsRounding(t *testing.T) {
 	for _, m := range f1Modes {
 		mode := m.mode
@@ -664,9 +664,6 @@ func TestZeroAllocsRounding(t *testing.T) {
 			})
 		}
 		for _, in := range benchInputs(benchDivMod) {
-			if c := in.baseClass(); c != "w31" && c != "alt" && c != "w63" {
-				continue
-			}
 			t.Run("RoundToMultiple/"+m.name+"/"+in.class, func(t *testing.T) {
 				_, _, err := in.x.RoundToMultiple(in.y, mode)
 				require.NoError(t, err)
