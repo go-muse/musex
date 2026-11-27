@@ -54,6 +54,11 @@ $RECYCLE.BIN/
 /.kimi-code/
 .opencode/
 .aider*
+.qwen/
+/.qwen-session*
+/.agents-workspace/
+/.worktreeinclude
+/AGENTS.override.md
 
 # Local MCP and Claude Desktop configuration
 .mcp.json
