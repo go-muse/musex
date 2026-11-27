@@ -120,6 +120,36 @@
 // reduced value k·step (7/10 to the step 1/4 in [RoundHalfToEven] gives k = 3
 // and 3/4).
 //
+// # Common measures, exact sums, and products
+//
+// [Fraction.GCD] returns the largest positive fraction that divides two
+// fractions into integers and [Fraction.LCM] the smallest positive fraction that
+// both divide into integers (1/4 and 1/6 give 1/12 and 1/2). The signs of the
+// operands do not matter; gcd(0, x) = |x| and the LCM with zero is 0/1.
+//
+// [CommonDenominator] and [CommonDenominatorBig] return the least positive
+// integer D for which every fraction of a set is an integer multiple of 1/D:
+// the least common multiple of the reduced denominators (1/4, 1/6, and 5/12
+// give 12; 6/12 contributes 2). An empty set gives 1. CommonDenominator
+// returns [ErrNotRepresentable] when D exceeds math.MaxInt; CommonDenominatorBig
+// has no limit.
+//
+// [Sum] and [Product] return the exact sum and product of a set in canonical
+// reduced form. Unlike a chain of [Fraction.Add] or [Fraction.Mul] calls, their
+// value and their [ErrOutOfRange] error depend only on the exact result: an
+// intermediate value outside the range does not fail when the final result is
+// in range. An empty sum is 0/1, an empty product is 1/1, and a product with a
+// zero element is 0/1. While every reduced prefix result is in range they do
+// not allocate; otherwise the computation continues exactly in math/big.
+//
+// # Conversion to math/big
+//
+// [Fraction.BigNumerator], [Fraction.BigDenominator], [Fraction.BigPair], their
+// Reduced* variants, [Fraction.BigInt], and [Fraction.BigRat] return new
+// math/big values. [Fraction.BigRatTo] writes the reduced value into an
+// existing *big.Rat instead and reuses its storage, so converting many
+// fractions into one *big.Rat does not need a new allocation per conversion.
+//
 // # Range, intermediate precision, and errors
 //
 // Every stored numerator and denominator has magnitude at most [MaxComponent]
@@ -151,5 +181,6 @@
 // [Fraction] values are immutable and the package maintains no mutable global
 // state. All functions and methods are safe for concurrent use by multiple
 // goroutines without external synchronization (except concurrent calls to
-// [Fraction.UnmarshalText] mutating the same *Fraction pointer).
+// [Fraction.UnmarshalText] mutating the same *Fraction pointer, and concurrent
+// calls to [Fraction.BigRatTo] or reads that use the same *big.Rat).
 package fraction
