@@ -256,7 +256,7 @@ func BenchmarkWithDenominator(b *testing.B) {
 
 // benchRats returns the big.Rat values of the operands, created before the loop.
 func benchRats(in benchInput) (x, y *big.Rat) {
-	return wRat(in.x), wRat(in.y)
+	return benchRat(in.x), benchRat(in.y)
 }
 
 func BenchmarkRatAdd(b *testing.B) {
