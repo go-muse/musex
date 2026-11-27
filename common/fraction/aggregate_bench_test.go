@@ -203,7 +203,7 @@ func BenchmarkRefLCM(b *testing.B) {
 func agCheckBigRatToInput(x fraction.Fraction, z *big.Rat) error {
 	got, ok := x.BigRatTo(z)
 	want, wantOK := x.BigRat()
-	if !ok || !wantOK || got.Cmp(want) != 0 {
+	if !ok || !wantOK || got == nil || got.Cmp(want) != 0 {
 		return errors.New("BigRatTo and BigRat disagree")
 	}
 	return nil

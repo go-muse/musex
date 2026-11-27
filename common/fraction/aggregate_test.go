@@ -466,6 +466,8 @@ func TestFraction_BigRatTo_Reuse(t *testing.T) {
 		z2, ok2 := f.BigRatTo(new(big.Rat))
 		require.True(t, ok1)
 		require.True(t, ok2)
+		require.NotNil(t, z1)
+		require.NotNil(t, z2)
 		require.False(t, z1 == z2)
 		want, _ := f.BigRat()
 		f0 := f
@@ -546,8 +548,9 @@ func TestAggregate_Concurrent(t *testing.T) {
 		wCheckFrac(t, label+": GCD", r.gcd, r.gcdErr, agWantGCD(fs[0], fs[1]))
 		wCheckFrac(t, label+": LCM", r.lcm, r.lcmErr, agWantLCM(fs[0], fs[1]))
 		want, _ := fs[2].BigRat()
-		assert.True(t, r.ratOK, label)
-		assert.Zero(t, r.rat.Cmp(want), label)
+		if assert.True(t, r.ratOK, label) && assert.NotNil(t, r.rat, label) {
+			assert.Zero(t, r.rat.Cmp(want), label)
+		}
 		assert.True(t, r.ownRatsOK, label)
 	}
 }

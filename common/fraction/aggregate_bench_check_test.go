@@ -262,7 +262,7 @@ func TestAggregateBenchmarkInputs(t *testing.T) {
 // CommonDenominator without allocations in every class; Sum and Product
 // without allocations when every reduced prefix is in range, both for
 // Sum(xs...) and for a call with listed arguments; CommonDenominatorBig with
-// at most 2 allocations for D ≤ 2^512; BigRatTo without allocations when z is
+// at most 2 allocations for D ≤ 2^512, including D in (2^256, 2^512]; BigRatTo without allocations when z is
 // reused and with at most 4 for nil z. It is not parallel: AllocsPerRun
 // measures process-wide allocation counters.
 func TestAggregate_Allocs(t *testing.T) {
@@ -287,12 +287,15 @@ func TestAggregate_Allocs(t *testing.T) {
 			fs := s.fs
 			_, err := fraction.CommonDenominator(fs...)
 			require.NoError(t, err)
-			assert.Zero(t, testing.AllocsPerRun(runs, func() { _, _ = fraction.CommonDenominator(fs...) }))
+			assert.Zero(t, testing.AllocsPerRun(runs, func() { _, _ = fraction.CommonDenominator(fs...) }), "CommonDenominator(xs...)")
+			a, b := fs[0], fs[1]
+			assert.Zero(t, testing.AllocsPerRun(runs, func() { _, _ = fraction.CommonDenominator(a, b) }), "CommonDenominator(a, b)")
 		})
 		t.Run("CommonDenominatorBig/"+s.name(), func(t *testing.T) {
 			fs := s.fs
 			d, err := fraction.CommonDenominatorBig(fs...)
 			require.NoError(t, err)
+			require.NotNil(t, d)
 			require.LessOrEqual(t, d.BitLen(), 512)
 			assert.LessOrEqual(t, testing.AllocsPerRun(runs, func() { _, _ = fraction.CommonDenominatorBig(fs...) }), 2.0)
 		})
@@ -342,6 +345,42 @@ func TestAggregate_Allocs(t *testing.T) {
 			assert.LessOrEqual(t, testing.AllocsPerRun(runs, func() { _, _ = x.BigRatTo(nil) }), 4.0, "nil z")
 		})
 	}
+	// CommonDenominatorBig with D above 2^256 and up to 2^512: the bound of
+	// T-2 holds over the whole interval, not only for the benchmark sets with
+	// D ≤ 2^62. The reciprocals of distinct primes give D = ∏p (· 15).
+	wideDens := []struct {
+		name   string
+		dens   []*big.Int
+		minLen int
+	}{
+		{"just above 2^256", []*big.Int{bp(128, 0), bp(128, 1)}, 257},
+		{"near 2^500", []*big.Int{bp(250, 0), bp(250, 1)}, 501},
+		{"near 2^512", []*big.Int{bp(254, 0), bp(254, 1), big.NewInt(15)}, 512},
+	}
+	for _, w := range wideDens {
+		t.Run("CommonDenominatorBig/"+w.name, func(t *testing.T) {
+			fs := make([]fraction.Fraction, len(w.dens))
+			for i, d := range w.dens {
+				fs[i] = wFrac(big.NewInt(int64(1-2*(i%2))), d) // ±1/d, already reduced
+			}
+			want, err := agWantCommonDenominatorBig(fs)
+			require.NoError(t, err)
+			require.GreaterOrEqual(t, want.BitLen(), w.minLen, "D above 2^256")
+			require.LessOrEqual(t, want.BitLen(), 512, "D ≤ 2^512")
+			got, err := fraction.CommonDenominatorBig(fs...)
+			require.NoError(t, err)
+			require.NotNil(t, got)
+			wCheckBigInt(t, w.name, got, want)
+			assert.LessOrEqual(t, testing.AllocsPerRun(runs, func() { _, _ = fraction.CommonDenominatorBig(fs...) }), 2.0, "CommonDenominatorBig(xs...)")
+			a, b := fs[0], fs[1]
+			if len(fs) == 2 {
+				assert.LessOrEqual(t, testing.AllocsPerRun(runs, func() { _, _ = fraction.CommonDenominatorBig(a, b) }), 2.0, "CommonDenominatorBig(a, b)")
+			} else {
+				c := fs[2]
+				assert.LessOrEqual(t, testing.AllocsPerRun(runs, func() { _, _ = fraction.CommonDenominatorBig(a, b, c) }), 2.0, "CommonDenominatorBig(a, b, c)")
+			}
+		})
+	}
 	// The narrow common denominator also stays without allocations at its
 	// boundary, where the result is math.MaxInt.
 	t.Run("CommonDenominator/MaxInt", func(t *testing.T) {
@@ -349,6 +388,8 @@ func TestAggregate_Allocs(t *testing.T) {
 		d, err := fraction.CommonDenominator(fs...)
 		require.NoError(t, err)
 		require.Equal(t, math.MaxInt, d)
-		assert.Zero(t, testing.AllocsPerRun(runs, func() { _, _ = fraction.CommonDenominator(fs...) }))
+		assert.Zero(t, testing.AllocsPerRun(runs, func() { _, _ = fraction.CommonDenominator(fs...) }), "CommonDenominator(xs...)")
+		a, b := fs[0], fs[1]
+		assert.Zero(t, testing.AllocsPerRun(runs, func() { _, _ = fraction.CommonDenominator(a, b) }), "CommonDenominator(a, b)")
 	})
 }
