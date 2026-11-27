@@ -39,8 +39,10 @@ linters:
             - github.com/stretchr/testify/
 
         # Package rules: one rule per planned package, in the order of the
-        # package plan. Each rule allows the standard library and exactly the
-        # planned direct musex imports of its package, for non-test files.
+        # package plan. Each rule allows the standard library, the shared
+        # helper packages under common/ (any package may import them), and
+        # exactly the planned direct musex imports of its package, for
+        # non-test files.
         # A rule covers only its own directory, not subdirectories. The rule
         # name is the package path with "/" replaced by "-". When the planned
         # imports of a package change, change its rule in the same change.
@@ -51,6 +53,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
         alteration:
           list-mode: strict
           files:
@@ -58,6 +61,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
           deny:
             - pkg: math/big
               desc: alteration values have a fixed size; arbitrary-precision numbers are not used
@@ -68,6 +72,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/letter$
             - github.com/go-muse/musex/alteration$
         octave-number:
@@ -77,6 +82,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
         octave-naming:
           list-mode: strict
           files:
@@ -84,6 +90,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
         octave:
           list-mode: strict
           files:
@@ -91,6 +98,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/octave/number$
             - github.com/go-muse/musex/octave/naming$
         pitch:
@@ -100,6 +108,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/spelling$
             - github.com/go-muse/musex/octave$
         pitchclass:
@@ -109,6 +118,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
         pcset:
           list-mode: strict
           files:
@@ -116,6 +126,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/pitchclass$
         setclass-catalog:
           list-mode: strict
@@ -124,6 +135,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
         setclass:
           list-mode: strict
           files:
@@ -131,6 +143,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/pitchclass$
             - github.com/go-muse/musex/pcset$
             - github.com/go-muse/musex/setclass/catalog$
@@ -141,6 +154,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/pitchclass$
             - github.com/go-muse/musex/pcset$
             - github.com/go-muse/musex/setclass$
@@ -151,6 +165,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/letter$
             - github.com/go-muse/musex/alteration$
             - github.com/go-muse/musex/spelling$
@@ -164,6 +179,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
         cents:
           list-mode: strict
           files:
@@ -171,6 +187,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
         tuning-temperament:
           list-mode: strict
           files:
@@ -178,6 +195,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/cents$
         frequency:
           list-mode: strict
@@ -186,6 +204,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/cents$
         tuning:
           list-mode: strict
@@ -194,8 +213,8 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/cents$
-            - github.com/go-muse/musex/common/rounding$
             - github.com/go-muse/musex/frequency$
             - github.com/go-muse/musex/pitch$
             - github.com/go-muse/musex/pitchclass$
@@ -209,6 +228,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/letter$
             - github.com/go-muse/musex/alteration$
             - github.com/go-muse/musex/spelling$
@@ -224,6 +244,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/alteration$
             - github.com/go-muse/musex/spelling$
             - github.com/go-muse/musex/octave/number$
@@ -239,6 +260,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/octave/number$
             - github.com/go-muse/musex/octave/naming$
             - github.com/go-muse/musex/pitch$
@@ -253,6 +275,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/letter$
             - github.com/go-muse/musex/alteration$
             - github.com/go-muse/musex/spelling$
@@ -263,7 +286,6 @@ linters:
             - github.com/go-muse/musex/cents$
             - github.com/go-muse/musex/tuning$
             - github.com/go-muse/musex/settings$
-            - github.com/go-muse/musex/common/rounding$
             - github.com/go-muse/musex/frequency$
         midi:
           list-mode: strict
@@ -272,6 +294,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/octave/number$
             - github.com/go-muse/musex/octave$
             - github.com/go-muse/musex/pitch$
@@ -287,6 +310,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/letter$
             - github.com/go-muse/musex/alteration$
             - github.com/go-muse/musex/spelling$
@@ -301,6 +325,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/interval$
         degree:
           list-mode: strict
@@ -309,6 +334,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/note$
         template:
           list-mode: strict
@@ -317,6 +343,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/alteration$
             - github.com/go-muse/musex/spelling$
             - github.com/go-muse/musex/interval$
@@ -329,6 +356,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/spelling$
             - github.com/go-muse/musex/alteration$
             - github.com/go-muse/musex/system$
@@ -347,6 +375,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/alteration$
             - github.com/go-muse/musex/cents$
             - github.com/go-muse/musex/frequency$
@@ -367,6 +396,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/letter$
             - github.com/go-muse/musex/alteration$
             - github.com/go-muse/musex/spelling$
@@ -385,6 +415,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/interval$
             - github.com/go-muse/musex/mode$
             - github.com/go-muse/musex/note$
@@ -400,6 +431,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/interval$
             - github.com/go-muse/musex/degree$
             - github.com/go-muse/musex/mode$
@@ -410,6 +442,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/interval$
             - github.com/go-muse/musex/alteration$
             - github.com/go-muse/musex/mode$
@@ -421,6 +454,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/voice$
             - github.com/go-muse/musex/duration$
             - github.com/go-muse/musex/interval$
@@ -437,6 +471,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/note$
             - github.com/go-muse/musex/system$
         problemsolving-sonance:
@@ -446,6 +481,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/note$
             - github.com/go-muse/musex/pcset$
             - github.com/go-muse/musex/system$
@@ -456,6 +492,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
         tuplet:
           list-mode: strict
           files:
@@ -463,7 +500,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
-            - github.com/go-muse/musex/common/fraction$
+            - github.com/go-muse/musex/common/
         duration:
           list-mode: strict
           files:
@@ -471,8 +508,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
-            - github.com/go-muse/musex/common/rounding$
-            - github.com/go-muse/musex/common/fraction$
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/tuplet$
         meter:
           list-mode: strict
@@ -481,7 +517,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
-            - github.com/go-muse/musex/common/fraction$
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/duration$
         measure:
           list-mode: strict
@@ -490,7 +526,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
-            - github.com/go-muse/musex/common/fraction$
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/duration$
             - github.com/go-muse/musex/meter$
         tempo-term:
@@ -500,7 +536,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
-            - github.com/go-muse/musex/common/fraction$
+            - github.com/go-muse/musex/common/
         tempo:
           list-mode: strict
           files:
@@ -508,8 +544,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
-            - github.com/go-muse/musex/common/rounding$
-            - github.com/go-muse/musex/common/fraction$
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/duration$
             - github.com/go-muse/musex/tempo/term$
         tempomap:
@@ -519,9 +554,8 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/internal/timecalc$
-            - github.com/go-muse/musex/common/rounding$
-            - github.com/go-muse/musex/common/fraction$
             - github.com/go-muse/musex/duration$
             - github.com/go-muse/musex/measure$
             - github.com/go-muse/musex/tempo$
@@ -532,9 +566,8 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/internal/timecalc$
-            - github.com/go-muse/musex/common/rounding$
-            - github.com/go-muse/musex/common/fraction$
             - github.com/go-muse/musex/duration$
             - github.com/go-muse/musex/meter$
             - github.com/go-muse/musex/measure$
@@ -547,7 +580,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
-            - github.com/go-muse/musex/common/rounding$
+            - github.com/go-muse/musex/common/
         chord:
           list-mode: strict
           files:
@@ -555,6 +588,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/note$
         event:
           list-mode: strict
@@ -563,8 +597,8 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/note$
-            - github.com/go-muse/musex/common/fraction$
             - github.com/go-muse/musex/duration$
             - github.com/go-muse/musex/chord$
         voice:
@@ -574,13 +608,12 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/pitch$
             - github.com/go-muse/musex/system$
-            - github.com/go-muse/musex/common/rounding$
             - github.com/go-muse/musex/instrument$
             - github.com/go-muse/musex/note$
             - github.com/go-muse/musex/interval$
-            - github.com/go-muse/musex/common/fraction$
             - github.com/go-muse/musex/duration$
             - github.com/go-muse/musex/tempomap$
             - github.com/go-muse/musex/event$
@@ -591,10 +624,9 @@ linters:
             - "!$test"
           allow:
             - $gostd
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/instrument$
-            - github.com/go-muse/musex/common/rounding$
             - github.com/go-muse/musex/note$
-            - github.com/go-muse/musex/common/fraction$
             - github.com/go-muse/musex/duration$
             - github.com/go-muse/musex/meter$
             - github.com/go-muse/musex/measure$
@@ -609,8 +641,7 @@ linters:
             - "!$test"
           allow:
             - $gostd
-            - github.com/go-muse/musex/common/fraction$
-            - github.com/go-muse/musex/common/rounding$
+            - github.com/go-muse/musex/common/
             - github.com/go-muse/musex/duration$
             - github.com/go-muse/musex/meter$
             - github.com/go-muse/musex/measure$
