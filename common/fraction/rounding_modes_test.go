@@ -205,15 +205,66 @@ func f1FormatInt(m *big.Int, digits int) string {
 	return sign + s[:len(s)-digits] + "." + s[len(s)-digits:]
 }
 
-// f1CheckMustSame checks that fn panics with exactly the value err, or does not panic when err is nil.
-func f1CheckMustSame(t *testing.T, label string, fn func(), err error) {
+// f1Multiple is the (k, v) result of RoundToMultiple (K = int) and
+// RoundToMultipleBig (K = *big.Int) and of their Must forms.
+type f1Multiple[K any] struct {
+	k K
+	v fraction.Fraction
+}
+
+// String formats the result for failure messages.
+func (m f1Multiple[K]) String() string {
+	return fmt.Sprintf("(%v, %s)", m.k, m.v)
+}
+
+// f1SameBigInt reports whether a and b are both nil or both non-nil with equal values.
+func f1SameBigInt(a, b *big.Int) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return a.Cmp(b) == 0
+}
+
+// f1SameResult reports whether the Must form returned the result of the
+// method: equal values for *big.Int components, == for everything else
+// (int, string, Fraction, whose == is the equality of the original pairs).
+func f1SameResult[T any](want, got T) bool {
+	switch w := any(want).(type) {
+	case *big.Int:
+		g, _ := any(got).(*big.Int)
+		return f1SameBigInt(w, g)
+	case f1Multiple[*big.Int]:
+		g, _ := any(got).(f1Multiple[*big.Int])
+		return f1SameBigInt(w.k, g.k) && w.v == g.v
+	default:
+		return any(want) == any(got)
+	}
+}
+
+// f1CheckMustSame checks the Must form of a method call that returned (want, err):
+// with an error the Must form panics with exactly the value err; without one it
+// does not panic and returns the same result as the method.
+func f1CheckMustSame[T any](t *testing.T, label string, must func() T, want T, err error) {
 	t.Helper()
-	rec := wCatch(fn)
-	if err == nil {
-		assert.Nilf(t, rec, "%s: Must must not panic", label)
+	var got T
+	rec := wCatch(func() { got = must() })
+	if err != nil {
+		assert.Equalf(t, err, rec, "%s: Must must panic with the error of the method", label)
 		return
 	}
-	assert.Equalf(t, err, rec, "%s: Must must panic with the error of the method", label)
+	if assert.Nilf(t, rec, "%s: Must must not panic", label) {
+		assert.Truef(t, f1SameResult(want, got), "%s: Must returned %v, the method %v", label, got, want)
+	}
+}
+
+// f1CheckMustPanics checks the Must form of a method call that failed with err:
+// the Must form panics with exactly the value err.
+func f1CheckMustPanics(t *testing.T, label string, fn func(), err error) {
+	t.Helper()
+	if !assert.Errorf(t, err, "%s: the method must fail", label) {
+		return
+	}
+	assert.Equalf(t, err, wCatch(fn), "%s: Must must panic with the error of the method", label)
 }
 
 func TestRoundingNineModes(t *testing.T) {
@@ -243,7 +294,7 @@ func TestRoundingNineModes(t *testing.T) {
 					wCheckErr(t, label+" RoundToInt", err, fraction.ErrNotRepresentable)
 					assert.Zerof(t, gotInt, "%s RoundToInt on error", label)
 				}
-				f1CheckMustSame(t, label+" MustRoundToInt", func() { f.MustRoundToInt(mode) }, err)
+				f1CheckMustSame(t, label+" MustRoundToInt", func() int { return f.MustRoundToInt(mode) }, gotInt, err)
 
 				// RoundToDenominator and RoundToBigDenominator: x = f·den, result (m, den).
 				dens := []*big.Int{
@@ -261,11 +312,11 @@ func TestRoundingNineModes(t *testing.T) {
 					dl := fmt.Sprintf("%s den %s", label, den)
 					got, err := f.RoundToBigDenominator(den, mode)
 					wCheckFrac(t, dl+" RoundToBigDenominator", got, err, wantD)
-					f1CheckMustSame(t, dl+" MustRoundToBigDenominator", func() { f.MustRoundToBigDenominator(den, mode) }, err)
+					f1CheckMustSame(t, dl+" MustRoundToBigDenominator", func() fraction.Fraction { return f.MustRoundToBigDenominator(den, mode) }, got, err)
 					if den.IsInt64() {
 						got, err := f.RoundToDenominator(int(den.Int64()), mode)
 						wCheckFrac(t, dl+" RoundToDenominator", got, err, wantD)
-						f1CheckMustSame(t, dl+" MustRoundToDenominator", func() { f.MustRoundToDenominator(int(den.Int64()), mode) }, err)
+						f1CheckMustSame(t, dl+" MustRoundToDenominator", func() fraction.Fraction { return f.MustRoundToDenominator(int(den.Int64()), mode) }, got, err)
 					}
 				}
 
@@ -316,7 +367,10 @@ func checkRoundToMultiple(t *testing.T, label string, f, step fraction.Fraction,
 	kb, vb, err := f.RoundToMultipleBig(step, mode)
 	wCheckBigInt(t, label+" RoundToMultipleBig k", kb, wantK)
 	wCheckFrac(t, label+" RoundToMultipleBig v", vb, err, wantV)
-	f1CheckMustSame(t, label+" MustRoundToMultipleBig", func() { f.MustRoundToMultipleBig(step, mode) }, err)
+	f1CheckMustSame(t, label+" MustRoundToMultipleBig", func() f1Multiple[*big.Int] {
+		k, v := f.MustRoundToMultipleBig(step, mode)
+		return f1Multiple[*big.Int]{k, v}
+	}, f1Multiple[*big.Int]{kb, vb}, err)
 
 	// Step 3 (k beyond int) precedes step 4 (v beyond the range) in the narrow form.
 	narrowV := wantV
@@ -330,7 +384,10 @@ func checkRoundToMultiple(t *testing.T, label string, f, step fraction.Fraction,
 		assert.Zerof(t, k, "%s RoundToMultiple k on error", label)
 	}
 	wCheckFrac(t, label+" RoundToMultiple v", v, err, narrowV)
-	f1CheckMustSame(t, label+" MustRoundToMultiple", func() { f.MustRoundToMultiple(step, mode) }, err)
+	f1CheckMustSame(t, label+" MustRoundToMultiple", func() f1Multiple[int] {
+		k, v := f.MustRoundToMultiple(step, mode)
+		return f1Multiple[int]{k, v}
+	}, f1Multiple[int]{k, v}, err)
 
 	assert.Equalf(t, fBefore, f, "%s: receiver unchanged", label)
 	assert.Equalf(t, stepBefore, step, "%s: step unchanged", label)
@@ -395,7 +452,7 @@ func TestRoundToMultipleContract(t *testing.T) {
 		wCheckErr(t, "RoundToMultiple", err, fraction.ErrNotRepresentable)
 		assert.Zero(t, k)
 		assert.Equal(t, fraction.Fraction{}, v)
-		f1CheckMustSame(t, "MustRoundToMultiple", func() { f.MustRoundToMultiple(fraction.One(), fraction.RoundHalfToEven) }, err)
+		f1CheckMustPanics(t, "MustRoundToMultiple", func() { f.MustRoundToMultiple(fraction.One(), fraction.RoundHalfToEven) }, err)
 
 		kb, vb, err := f.RoundToMultipleBig(fraction.One(), fraction.RoundHalfToEven)
 		require.NoError(t, err, "the wide form succeeds")
@@ -416,7 +473,7 @@ func TestRoundToMultipleContract(t *testing.T) {
 			wCheckErr(t, "RoundToMultipleBig", err, fraction.ErrOutOfRange)
 			assert.Nil(t, kb)
 			assert.Equal(t, fraction.Fraction{}, vb)
-			f1CheckMustSame(t, "MustRoundToMultipleBig", func() { f.MustRoundToMultipleBig(two, mode) }, err)
+			f1CheckMustPanics(t, "MustRoundToMultipleBig", func() { f.MustRoundToMultipleBig(two, mode) }, err)
 		}
 		// k = 3 fits int and v = MaxComponent is in range.
 		step := wFrac(maxC, big.NewInt(3))
@@ -429,7 +486,7 @@ func TestRoundToMultipleContract(t *testing.T) {
 		wCheckErr(t, "RoundToMultiple v beyond range", err, fraction.ErrOutOfRange)
 		assert.Zero(t, k)
 		assert.Equal(t, fraction.Fraction{}, v)
-		f1CheckMustSame(t, "MustRoundToMultiple", func() {
+		f1CheckMustPanics(t, "MustRoundToMultiple", func() {
 			wFrac(maxC, big.NewInt(1)).MustRoundToMultiple(bigStep, fraction.RoundCeil)
 		}, err)
 	})
@@ -510,7 +567,7 @@ func TestRoundingModeErrors(t *testing.T) {
 					label := fmt.Sprintf("%s(%s)", c.name, f)
 					err := c.call(f, bad.mode)
 					f1CheckModeErr(t, label, err, bad.sentinel)
-					f1CheckMustSame(t, "Must"+label, func() { c.must(f, bad.mode) }, err)
+					f1CheckMustPanics(t, "Must"+label, func() { c.must(f, bad.mode) }, err)
 				}
 			}
 
@@ -575,7 +632,7 @@ func TestRoundingModeErrorPriority(t *testing.T) {
 			for _, den := range []int{0, -1, math.MinInt} {
 				_, err := f.RoundToDenominator(den, mode)
 				wCheckErr(t, fmt.Sprintf("RoundToDenominator(%d)", den), err, fraction.ErrZeroDenominator)
-				f1CheckMustSame(t, "MustRoundToDenominator", func() { f.MustRoundToDenominator(den, mode) }, err)
+				f1CheckMustPanics(t, "MustRoundToDenominator", func() { f.MustRoundToDenominator(den, mode) }, err)
 			}
 			for _, den := range []*big.Int{nil, big.NewInt(0), big.NewInt(-7)} {
 				_, err := f.RoundToBigDenominator(den, mode)
@@ -629,7 +686,7 @@ func TestDivInDenominatorErrorOrder(t *testing.T) {
 				got, err := f.DivInDenominator(z, den)
 				wCheckErr(t, label, err, fraction.ErrDivisionByZero)
 				assert.Equalf(t, fraction.Fraction{}, got, "%s", label)
-				f1CheckMustSame(t, "Must"+label, func() { f.MustDivInDenominator(z, den) }, err)
+				f1CheckMustPanics(t, "Must"+label, func() { f.MustDivInDenominator(z, den) }, err)
 			}
 		}
 	}
