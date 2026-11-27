@@ -1,7 +1,6 @@
 package fraction_test
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -27,12 +26,7 @@ func wCheckErr(t *testing.T, label string, err, want error) bool {
 func wCheckFrac(t *testing.T, label string, got fraction.Fraction, err error, want wideWant) {
 	t.Helper()
 	if want.err != nil {
-		if want.alt != nil {
-			assert.Truef(t, wSentinelOnly(err, want.err) || wSentinelOnly(err, want.alt),
-				"%s: error %v, want only %v or only %v", label, err, want.err, want.alt)
-		} else {
-			wCheckErr(t, label, err, want.err)
-		}
+		wCheckErr(t, label, err, want.err)
 		assert.Equalf(t, fraction.Fraction{}, got, "%s: result on error must be Fraction{}", label)
 		return
 	}
@@ -193,14 +187,6 @@ func checkWideBinary(t *testing.T, x, y fraction.Fraction) {
 			want := wantInDenominator(op, x, y, den)
 			got, err := m.inDen(x, y, den)
 			wCheckFrac(t, label, got, err, want)
-			if want.alt != nil {
-				// The Must form panics with the sentinel the method returned.
-				for _, s := range []error{want.err, want.alt} {
-					if errors.Is(err, s) {
-						want = wErr(s)
-					}
-				}
-			}
 			wCheckMust(t, "Must"+label, func() fraction.Fraction { return m.mustDen(x, y, den) }, want)
 		}
 	}

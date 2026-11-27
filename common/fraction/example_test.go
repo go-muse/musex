@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/go-muse/musex/common/fraction"
+	"github.com/go-muse/musex/common/rounding"
 )
 
 func Example() {
@@ -184,4 +185,62 @@ func ExampleParse() {
 	// -5/4 -1 1/4
 	// 71/10 7.1
 	// -1/4 -0.25
+}
+
+func ExampleRoundingMode() {
+	modes := []struct {
+		name string
+		mode fraction.RoundingMode
+	}{
+		{"RoundFloor", fraction.RoundFloor},
+		{"RoundCeil", fraction.RoundCeil},
+		{"RoundTrunc", fraction.RoundTrunc},
+		{"RoundAwayFromZero", fraction.RoundAwayFromZero},
+		{"RoundHalfUp", fraction.RoundHalfUp},
+		{"RoundHalfDown", fraction.RoundHalfDown},
+		{"RoundHalfAwayFromZero", fraction.RoundHalfAwayFromZero},
+		{"RoundHalfTowardZero", fraction.RoundHalfTowardZero},
+		{"RoundHalfToEven", fraction.RoundHalfToEven},
+	}
+	pos, neg := fraction.MustNew(5, 2), fraction.MustNew(-5, 2)
+	fmt.Println("mode: 5/2 -5/2")
+	for _, m := range modes {
+		fmt.Printf("%s: %d %d\n", m.name, pos.MustRoundToInt(m.mode), neg.MustRoundToInt(m.mode))
+	}
+
+	// The zero value is the unset mode.
+	_, err := fraction.One().RoundToInt(fraction.RoundingMode(0))
+	fmt.Println(errors.Is(err, fraction.ErrNotRepresentable), errors.Is(err, rounding.ErrUnset))
+	// Output:
+	// mode: 5/2 -5/2
+	// RoundFloor: 2 -3
+	// RoundCeil: 3 -2
+	// RoundTrunc: 2 -2
+	// RoundAwayFromZero: 3 -3
+	// RoundHalfUp: 3 -2
+	// RoundHalfDown: 2 -3
+	// RoundHalfAwayFromZero: 3 -3
+	// RoundHalfTowardZero: 2 -2
+	// RoundHalfToEven: 2 -2
+	// true true
+}
+
+func ExampleFraction_RoundToMultiple() {
+	quarter := fraction.MustNew(1, 4)
+	k, v := fraction.MustNew(7, 10).MustRoundToMultiple(quarter, fraction.RoundHalfToEven)
+	fmt.Println(k, v)
+
+	// A tie goes to the even multiple.
+	k, v = fraction.MustNew(5, 8).MustRoundToMultiple(quarter, fraction.RoundHalfToEven)
+	fmt.Println(k, v)
+
+	_, _, err := fraction.MustNew(1, 2).RoundToMultiple(fraction.Zero(), fraction.RoundHalfToEven)
+	fmt.Println(errors.Is(err, fraction.ErrDivisionByZero))
+	_, _, err = fraction.MustNew(1, 2).RoundToMultiple(fraction.MustNew(-1, 4), fraction.RoundHalfToEven)
+	fmt.Println(errors.Is(err, fraction.ErrZeroDenominator))
+	// Output:
+	// 3 3/4
+	// 2 1/2
+	// true
+	// true
 }

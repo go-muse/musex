@@ -20,10 +20,6 @@ import (
 type wideWant struct {
 	num, den *big.Int
 	err      error
-	// alt is a second accepted sentinel when the contract does not order two
-	// checks of the same step (DivInDenominator with den <= 0 and a zero divisor:
-	// both are step 2 of section 9; decision of the architect, task 26.6).
-	alt error
 }
 
 // wideArith names the four arithmetic operations of the binary family.
@@ -275,15 +271,14 @@ func wantArith(op wideArith, x, y fraction.Fraction, mode fraction.DenomMode) wi
 }
 
 // wantInDenominator predicts the mode-7 operations (contract, section 6, mode 7).
+// A zero divisor is checked before the target denominator (section 9, step 2).
 func wantInDenominator(op wideArith, x, y fraction.Fraction, den int) wideWant {
 	value, ok := wValue(op, x, y)
 	switch {
-	case den <= 0 && !ok:
-		return wideWant{err: fraction.ErrZeroDenominator, alt: fraction.ErrDivisionByZero}
-	case den <= 0:
-		return wErr(fraction.ErrZeroDenominator)
 	case !ok:
 		return wErr(fraction.ErrDivisionByZero)
+	case den <= 0:
+		return wErr(fraction.ErrZeroDenominator)
 	}
 	return wInTarget(value, big.NewInt(int64(den)))
 }
