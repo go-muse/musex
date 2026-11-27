@@ -416,6 +416,44 @@ func (f Fraction) BigRat() (*big.Rat, bool) {
 	return r, true
 }
 
+// BigRatTo sets z to the value of f and returns z, true if f is valid. If z is
+// nil, a new *big.Rat is allocated, as in [Fraction.BigRat]. If f is invalid,
+// BigRatTo returns z, false and leaves z unchanged.
+//
+// The result holds the reduced canonical form of f (positive denominator, 0/1
+// for zero) and equals f.BigRat() by Cmp and String; it shares no memory with
+// f. BigRatTo reuses the storage of z, so converting many fractions into one
+// *big.Rat avoids a new allocation per conversion once z has enough capacity;
+// this is a property of the implementation, not a guarantee. References
+// obtained earlier through z.Num() and z.Denom() behave as for any other
+// assignment to a [big.Rat], so the caller must not keep references to the
+// previous value of a reused z.
+//
+// Like every assignment to a [big.Rat], BigRatTo must not be called
+// concurrently with other calls or reads that use the same z.
+func (f Fraction) BigRatTo(z *big.Rat) (*big.Rat, bool) {
+	if !f.IsValid() {
+		return z, false
+	}
+	if z == nil {
+		z = new(big.Rat)
+	}
+	red := f.Reduce()
+	// The numerator and denominator are written in place through the
+	// references returned by Num and Denom. The values are already reduced,
+	// so z stays normalized without SetFrac repeating the GCD.
+	num := z.Num()
+	red.num.setBigInt(num, red.numNeg())
+	// SetInt on its own numerator sets the denominator to 1 and initializes
+	// z: for an uninitialized (zero value) big.Rat, Denom returns a new Int
+	// rather than a reference to the denominator of z.
+	z.SetInt(num)
+	if !red.den.isOne() {
+		red.den.setBigInt(z.Denom(), false)
+	}
+	return z, true
+}
+
 // Reduce returns a new Fraction in canonical reduced form (positive
 // denominator, coprime numerator and denominator, 0/1 for zero). For an
 // invalid Fraction{}, it returns Fraction{}.

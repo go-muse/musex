@@ -362,3 +362,50 @@ func u512DivModWide(a, b u512) (quo, rem u512) {
 	natDivMod(quo[:], rem[:], a[:], b[:])
 	return quo, rem
 }
+
+// setBigInt sets x to the signed value (u, neg) and reuses the capacity of x:
+// one-word magnitudes go through SetUint64, longer ones through SetBytes from a
+// stack buffer.
+func (u u256) setBigInt(x *big.Int, neg bool) {
+	if u.isUint64() {
+		x.SetUint64(u[0])
+	} else {
+		var buf [32]byte
+		putUint64BE(buf[0:8], u[3])
+		putUint64BE(buf[8:16], u[2])
+		putUint64BE(buf[16:24], u[1])
+		putUint64BE(buf[24:32], u[0])
+		x.SetBytes(buf[:])
+	}
+	if neg {
+		x.Neg(x)
+	}
+}
+
+// u512MulU256 returns a·b and true if the product fits in 512 bits; otherwise
+// it returns an unspecified value and false.
+func u512MulU256(a u512, b u256) (u512, bool) {
+	var res [12]uint64
+	for i := range 4 {
+		bi := b[i]
+		if bi == 0 {
+			continue
+		}
+		var carry uint64
+		for j := range 8 {
+			hi, lo := bits.Mul64(a[j], bi)
+			var c uint64
+			lo, c = bits.Add64(lo, res[i+j], 0)
+			hi += c
+			lo, c = bits.Add64(lo, carry, 0)
+			hi += c
+			res[i+j] = lo
+			carry = hi
+		}
+		res[i+8] = carry
+	}
+	if (res[8] | res[9] | res[10] | res[11]) != 0 {
+		return u512{}, false
+	}
+	return u512(res[:8]), true
+}

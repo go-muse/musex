@@ -58,6 +58,14 @@ Musical timelines and pitch grids frequently test whether a value lands on an ex
 - **Exact integer scaling and multiples.** Scaling a fraction by an integer factor that must divide its reduced denominator, or testing whether a fraction is an exact integer multiple of a non-zero step (for example, whether `6/12` is a multiple of `1/6`), succeeds only when the division leaves zero remainder.
 - **Membership in an arithmetic progression.** Given a starting value `start` and a positive step `step > 0`, progression testing checks whether a fraction equals `start + k × step` for **any integer** step count `k` (negative, zero, or positive) and returns `k` when it does. For example, from start `1/4` with step `1/2`, the value `5/4` lies at `k = 2` and the value `-1/4` lies at `k = -1`.
 
+## Common measures, exact sums, and products
+
+Combining several rhythmic values or periods often needs a shared unit or an exact total:
+
+- **Greatest common divisor and least common multiple.** The greatest common divisor of two fractions is the largest positive value that fits into both a whole number of times, such as the common beat of two subdivisions: `1/4` and `1/6` give `1/12`. The least common multiple is the smallest positive value that both fit into a whole number of times, such as the common period of two cycles: `1/4` and `1/6` give `1/2`. Signs are ignored; the greatest common divisor of `0` and `x` is `|x|`, and the least common multiple with `0` is `0`.
+- **Common denominator of a set.** The finest grid shared by a set of values is the smallest positive integer `D` for which every value is a whole multiple of `1/D`, the least common multiple of the reduced denominators: `1/4`, `1/6`, and `5/12` give `12`, and `6/12` contributes only `2`. An empty set gives `1`. The machine-integer variant reports that the result is not representable when `D` is too large; the arbitrary-precision variant has no limit.
+- **Exact sums and products.** A whole set of values can be added or multiplied at once. The reduced result and any range error depend only on the exact total, not on the order of the values: `1/A + 1/B + (A − 1)/A` succeeds for very large coprime `A` and `B` even though the partial sum `1/A + 1/B` alone exceeds the range. An empty sum is `0`, an empty product is `1`, and a product with a zero factor is `0`.
+
 ## Explicit rounding and floating-point conversion
 
 Exact rational arithmetic never rounds implicitly. When a calculation must be quantized to an integer, to a positive denominator `D > 0` (preserving `D` without reduction, such as rounding `1/3` to denominator `12` as `4/12` or `3/8` to denominator `4` as `2/4`), to a multiple of a positive step, or to decimal places, the caller selects one of the nine rounding modes of [common/rounding](rounding.md). The fraction's mode type is the same type as the rounding mode, so a mode chosen once can be passed to both packages:
@@ -72,7 +80,7 @@ A value that is already on the target grid is returned unchanged in every mode. 
 
 Rounding to a multiple of a step, such as quantizing a position to a grid of quarter units, returns both the step count `k` and the reduced value `k · step`: `7/10` rounded to the step `1/4` with ties to even gives `k = 3` and `3/4`, while the tie `5/8` gives `k = 2` and `1/2`. The step count is available as a machine integer or, for arbitrarily large counts, as an arbitrary-precision integer.
 
-Explicit conversion to a 64-bit IEEE 754 floating-point number is also available when interfacing with external synthesis or rendering pipelines.
+Explicit conversion to a 64-bit IEEE 754 floating-point number is also available when interfacing with external synthesis or rendering pipelines. Conversion to arbitrary-precision integers and rational numbers either creates new values or, for rational numbers, writes into an existing value and reuses its storage, which avoids a new allocation for each of many conversions in a loop.
 
 ## Text formatting and parsing
 
