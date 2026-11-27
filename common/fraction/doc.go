@@ -106,10 +106,19 @@
 // progression membership without rounding.
 //
 // Rounding is never implicit. [Fraction.RoundToInt], [Fraction.RoundToBigInt],
-// [Fraction.RoundToDenominator], [Fraction.RoundToBigDenominator], and
-// [Fraction.FormatDecimal] round explicitly according to one of five
-// [RoundingMode] rules: [RoundHalfAwayFromZero], [RoundHalfToEven],
-// [RoundFloor], [RoundCeil], or [RoundTrunc].
+// [Fraction.RoundToDenominator], [Fraction.RoundToBigDenominator],
+// [Fraction.RoundToMultiple], [Fraction.RoundToMultipleBig], and
+// [Fraction.FormatDecimal] round explicitly according to one of the nine
+// modes of common/rounding. [RoundingMode] is an alias of [rounding.Mode], and
+// the constants [RoundFloor], [RoundCeil], [RoundTrunc], [RoundAwayFromZero],
+// [RoundHalfUp], [RoundHalfDown], [RoundHalfAwayFromZero],
+// [RoundHalfTowardZero], and [RoundHalfToEven] equal the corresponding
+// rounding modes. A value already on the target grid is unchanged; otherwise
+// the mode selects one of its two neighbors. The zero RoundingMode is unset:
+// it and any value outside the nine modes are rejected. RoundToMultiple rounds
+// f/step to an integer k for a positive step and returns k together with the
+// reduced value k·step (7/10 to the step 1/4 in [RoundHalfToEven] gives k = 3
+// and 3/4).
 //
 // # Range, intermediate precision, and errors
 //
@@ -122,7 +131,10 @@
 // Every error returned by the package matches exactly one of the six exported
 // sentinel errors via [errors.Is]: [ErrInvalid], [ErrZeroDenominator],
 // [ErrDivisionByZero], [ErrNotRepresentable], [ErrOutOfRange], or
-// [ErrInvalidText]. Every fallible constructor, function, and method has a
+// [ErrInvalidText]. The error for an unset or unknown rounding mode matches
+// [ErrNotRepresentable] and additionally [rounding.ErrUnset] or
+// [rounding.ErrUnknownMode]; it is checked before the other conditions of the
+// same precedence step. Every fallible constructor, function, and method has a
 // corresponding Must* wrapper that returns the value on success and panics with
 // the underlying error on failure.
 //
