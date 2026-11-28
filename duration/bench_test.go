@@ -1,6 +1,7 @@
 package duration_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/go-muse/musex/common/rounding"
@@ -14,6 +15,7 @@ var (
 	sinkDuration duration.Duration
 	sinkPosition duration.Position
 	sinkWritten  duration.Written
+	sinkTied     duration.Tied
 	sinkParts    []duration.Written
 	sinkString   string
 	sinkErr      error
@@ -118,5 +120,24 @@ func BenchmarkWrittenString(b *testing.B) {
 
 	for b.Loop() {
 		sinkString = w.String()
+	}
+}
+
+// BenchmarkNewTied measures the construction of a tied duration: the sum of
+// the parts moves to fraction.Sum in task 26.9.
+func BenchmarkNewTied(b *testing.B) {
+	for _, count := range []int{2, 16} {
+		b.Run(fmt.Sprintf("parts=%d", count), func(b *testing.B) {
+			parts := make([]duration.Written, count)
+			for i := range parts {
+				parts[i] = wr(duration.Quarter, i%2)
+			}
+
+			b.ReportAllocs()
+
+			for b.Loop() {
+				sinkTied, sinkErr = duration.NewTied(parts...)
+			}
+		})
 	}
 }
