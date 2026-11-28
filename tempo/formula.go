@@ -109,11 +109,12 @@ func (t Tempo) BarFor(bars fraction.Fraction, s Seconds) (r fraction.Fraction, b
 	if err != nil {
 		return fraction.Fraction{}, duration.Duration{}, err
 	}
-	l, err := toDuration(op, mul(unitRat(t.m.unit), rr))
+	l, err := t.m.unitFraction().Mul(rf)
+	barLen, err = durationResult(op, l, err)
 	if err != nil {
 		return fraction.Fraction{}, duration.Duration{}, err
 	}
-	return rf, l, nil
+	return rf, barLen, nil
 }
 
 // MustBarFor is like BarFor but panics with the returned error.
@@ -233,7 +234,8 @@ func BarLength(unit duration.Duration, r fraction.Fraction) (duration.Duration, 
 	if err := checkLengthArgs(op, unit, "unit", r); err != nil {
 		return duration.Duration{}, err
 	}
-	return toDuration(op, mul(durRat(unit), ratOf(r)))
+	l, err := durFraction(unit).Mul(r)
+	return durationResult(op, l, err)
 }
 
 // MustBarLength is like BarLength but panics with the returned error.

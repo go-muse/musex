@@ -55,14 +55,25 @@ func (m mark) speed() *big.Rat {
 	return mul(unitRat(m.unit), ratOf(m.bpm))
 }
 
-// speedFraction returns the speed of m as a fraction.
-func (m mark) speedFraction(op string) (fraction.Fraction, error) {
-	return toFraction(op, m.speed())
+// unitFraction returns u, the duration of the unit of the set mark m in whole
+// notes.
+func (m mark) unitFraction() fraction.Fraction {
+	return durFraction(m.unitDuration())
 }
 
-// quartersPerMinute returns 4·u·N for the set mark m.
+// speedFraction returns the speed u·N of m as a fraction.
+func (m mark) speedFraction(op string) (fraction.Fraction, error) {
+	speed, err := m.unitFraction().Mul(m.bpm)
+	return fractionResult(op, speed, err)
+}
+
+// quartersPerMinute returns 4·u·N for the set mark m. It is one product of
+// three factors rather than 4 times the speed: the speed u·N may be outside
+// the range when 4·u·N is not, since its reduced denominator can be four
+// times larger.
 func (m mark) quartersPerMinute(op string) (fraction.Fraction, error) {
-	return toFraction(op, mul(ratInt(4), m.speed()))
+	q, err := fraction.Product(four, m.unitFraction(), m.bpm)
+	return fractionResult(op, q, err)
 }
 
 // compare orders two set marks by speed and then by unit, as
