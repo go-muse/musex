@@ -25,6 +25,9 @@ func BenchmarkTessitura(b *testing.B) {
 	}
 	l := line(elements...)
 	ref := voice.PresetReference(soprano())
+	if _, err := l.TessituraBy(ref, voice.ByLength, voice.DefaultZones()); err != nil {
+		b.Fatal(err)
+	}
 
 	b.ReportAllocs()
 

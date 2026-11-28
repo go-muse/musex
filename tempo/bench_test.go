@@ -21,6 +21,9 @@ var (
 func BenchmarkDurationIn(b *testing.B) {
 	mark := tm(dq, fr(185, 2))
 	s := sec(90, 1)
+	if _, err := mark.DurationIn(s); err != nil {
+		b.Fatal(err)
+	}
 
 	b.ReportAllocs()
 
@@ -32,6 +35,9 @@ func BenchmarkDurationIn(b *testing.B) {
 func BenchmarkMul(b *testing.B) {
 	mark := tq(120)
 	k := fr(3, 2)
+	if _, err := mark.Mul(k); err != nil {
+		b.Fatal(err)
+	}
 
 	b.ReportAllocs()
 
@@ -42,6 +48,9 @@ func BenchmarkMul(b *testing.B) {
 
 func BenchmarkSpeed(b *testing.B) {
 	mark := tm(dq, fr(185, 2))
+	if _, err := mark.Speed(); err != nil {
+		b.Fatal(err)
+	}
 
 	b.ReportAllocs()
 
@@ -52,6 +61,9 @@ func BenchmarkSpeed(b *testing.B) {
 
 func BenchmarkQuartersPerMinute(b *testing.B) {
 	mark := tm(dq, fr(185, 2))
+	if _, err := mark.QuartersPerMinute(); err != nil {
+		b.Fatal(err)
+	}
 
 	b.ReportAllocs()
 
@@ -63,6 +75,9 @@ func BenchmarkQuartersPerMinute(b *testing.B) {
 func BenchmarkBarLength(b *testing.B) {
 	unit := dur(3, 8)
 	r := fr(7, 4)
+	if _, err := tempo.BarLength(unit, r); err != nil {
+		b.Fatal(err)
+	}
 
 	b.ReportAllocs()
 
@@ -73,6 +88,9 @@ func BenchmarkBarLength(b *testing.B) {
 
 func BenchmarkSecondsFromMinutes(b *testing.B) {
 	f := fr(5, 2)
+	if _, err := tempo.SecondsFromMinutes(f); err != nil {
+		b.Fatal(err)
+	}
 
 	b.ReportAllocs()
 
@@ -83,6 +101,9 @@ func BenchmarkSecondsFromMinutes(b *testing.B) {
 
 func BenchmarkSecondsAdd(b *testing.B) {
 	x, y := sec(5, 7), sec(3, 11)
+	if _, err := x.Add(y); err != nil {
+		b.Fatal(err)
+	}
 
 	b.ReportAllocs()
 
@@ -93,6 +114,9 @@ func BenchmarkSecondsAdd(b *testing.B) {
 
 func BenchmarkSecondsSub(b *testing.B) {
 	x, y := sec(5, 7), sec(3, 11)
+	if _, err := x.Sub(y); err != nil {
+		b.Fatal(err)
+	}
 
 	b.ReportAllocs()
 
