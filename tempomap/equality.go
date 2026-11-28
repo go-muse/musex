@@ -172,14 +172,17 @@ func (m Map) EqualTimeline(other Map, grid ...measure.Grid) (bool, error) {
 		return false, simpleError(ErrUnfinished, op, "right map has an unfinished gradual tail")
 	}
 	positions := uniqueChangePositions(left.index, right.index)
+	// The speed checks do not keep the positions, so the buffers are reused
+	// on every iteration; the midpoint is a new value.
+	var startBuf, nextBuf big.Rat
 	for i, position := range positions {
-		start := ratOfPosition(position)
+		start, _ := position.MustFraction().BigRatTo(&startBuf)
 		if !timelineSpeedsEqual(left.index, right.index, start) {
 			return false, nil
 		}
 		var next *big.Rat
 		if i+1 < len(positions) {
-			next = ratOfPosition(positions[i+1])
+			next, _ = positions[i+1].MustFraction().BigRatTo(&nextBuf)
 		} else {
 			next = new(big.Rat).SetInt(fraction.MaxComponentBig())
 			one := new(big.Rat).Add(start, big.NewRat(1, 1))

@@ -1,7 +1,6 @@
 package tempomap
 
 import (
-	"math/big"
 	"strings"
 
 	"github.com/go-muse/musex/common/fraction"
@@ -238,8 +237,9 @@ func (m Map) TempoAt(at Address, unit duration.Written, grid ...measure.Grid) (t
 	if err != nil {
 		return tempo.Tempo{}, dependencyArgumentError(op, err)
 	}
-	bpm := newBigRatQuo(ratOfFraction(speed), ratOfFraction(unitDuration.MustFraction()))
-	bpmFraction, err := fraction.FromBigRat(bpm)
+	// Both values are positive and in range, so the quotient fails only if
+	// it is outside the range.
+	bpmFraction, err := speed.Div(unitDuration.MustFraction())
 	if err != nil {
 		return tempo.Tempo{}, rangeError(op)
 	}
@@ -249,8 +249,6 @@ func (m Map) TempoAt(at Address, unit duration.Written, grid ...measure.Grid) (t
 	}
 	return mark, nil
 }
-
-func newBigRatQuo(a, b *big.Rat) *big.Rat { return new(big.Rat).Quo(a, b) }
 
 // MustTempoAt is like TempoAt but panics with its error.
 func (m Map) MustTempoAt(at Address, unit duration.Written, grid ...measure.Grid) tempo.Tempo {
