@@ -75,6 +75,9 @@ type timeEvent struct {
 func prepareTimeline(idx *mapIndex) {
 	prefix := zeroLogForm()
 	approximate := false
+	// The segment forms do not keep the speeds, so one pair of buffers serves
+	// every segment.
+	var startBuf, endBuf big.Rat
 	for i := range idx.changes {
 		idx.changes[i].startForm = cloneLogForm(prefix)
 		idx.changes[i].approximateBefore = approximate
@@ -85,8 +88,8 @@ func prepareTimeline(idx *mapIndex) {
 		if end.Compare(start) <= 0 {
 			continue
 		}
-		startSpeed := ratOfFraction(idx.changes[i].startSpeed)
-		endSpeed := ratOfFraction(idx.changes[i+1].startSpeed)
+		startSpeed, _ := idx.changes[i].startSpeed.BigRatTo(&startBuf)
+		endSpeed, _ := idx.changes[i+1].startSpeed.BigRatTo(&endBuf)
 		var elapsed logForm
 		if idx.changes[i].change.kind == ChangeGradual {
 			elapsed = gradualSegmentForm(start, end, startSpeed, endSpeed)
@@ -99,9 +102,11 @@ func prepareTimeline(idx *mapIndex) {
 		prefix = logFormAdd(prefix, elapsed)
 	}
 	extensionSum := new(big.Rat)
+	var secondsBuf big.Rat
 	for i := range idx.extensions {
 		idx.extensions[i].before = new(big.Rat).Set(extensionSum)
-		extensionSum.Add(extensionSum, ratOfSeconds(idx.extensions[i].extension.seconds))
+		seconds, _ := idx.extensions[i].extension.seconds.MustFraction().BigRatTo(&secondsBuf)
+		extensionSum.Add(extensionSum, seconds)
 	}
 	buildTimelineEvents(idx)
 }
@@ -119,8 +124,10 @@ func unfinishedAt(idx *mapIndex, position duration.Position) bool {
 }
 
 func speedRatAtIndex(idx *mapIndex, position *big.Rat) *big.Rat {
+	var buf big.Rat
 	i := sort.Search(len(idx.changes), func(i int) bool {
-		return ratOfPosition(idx.changes[i].position).Cmp(position) > 0
+		p, _ := idx.changes[i].position.MustFraction().BigRatTo(&buf)
+		return p.Cmp(position) > 0
 	}) - 1
 	current := idx.changes[i]
 	if current.change.kind != ChangeGradual {
