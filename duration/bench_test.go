@@ -132,6 +132,9 @@ func BenchmarkNewTied(b *testing.B) {
 			for i := range parts {
 				parts[i] = wr(duration.Quarter, i%2)
 			}
+			if _, err := duration.NewTied(parts...); err != nil {
+				b.Fatal(err)
+			}
 
 			b.ReportAllocs()
 

@@ -700,44 +700,80 @@ func TestTessituraSumOutOfRange(t *testing.T) {
 
 // Architecture 6.10 (as clarified for the move of the tessitura sums to
 // fraction.Sum): the failure of the sums is decided only by the final
-// values — the product wᵢ·D(xᵢ) of one sound, the final sums of the
-// numerator and the weights, the denominator W·Σ wᵢ and the final r —
-// without *voice.ItemError. Each input below overflows one final value and
-// keeps the others in range.
+// values — the product wᵢ·D(xᵢ) of one sound, the final sums Σ wᵢ·D(xᵢ) and
+// Σ wᵢ, the denominator W·Σ wᵢ and the final r — without *voice.ItemError.
+// Each input below overflows exactly one of these values and keeps the
+// others in range, so a check of r alone would not refuse the first three.
+// M is fraction.MaxComponent; the soprano reference has W = 19, C4 is at
+// D = 0, D4 at 2, E4 at 4 and C6 at 24.
 func TestTessituraFinalValueFailures(t *testing.T) {
 	t.Parallel()
-	maxDur := voice.MustValueDuration(bigDuration(fraction.MaxComponentBig(), big.NewInt(1)))
-	halfMaxDur := voice.MustValueDuration(bigDuration(fraction.MaxComponentBig(), big.NewInt(2)))
-	invP, restP, invQ := overflowDurations()
+	m := fraction.MaxComponentBig()
+	one := big.NewInt(1)
+	vd := func(num, den *big.Int) voice.Duration { return voice.MustValueDuration(bigDuration(num, den)) }
 	ref := voice.PresetReference(soprano())
 
+	// Σ wᵢ·D(xᵢ): a with M/24 < a ≤ M/19 and 5 ∤ a, split into x + y with
+	// 5 ∤ x, y.
+	five := big.NewInt(5)
+	a := new(big.Int).Quo(m, big.NewInt(20))
+	for new(big.Int).Mod(a, five).Sign() == 0 {
+		a.Sub(a, one)
+	}
+	x := new(big.Int).Rsh(a, 1)
+	for new(big.Int).Mod(x, five).Sign() == 0 || new(big.Int).Mod(new(big.Int).Sub(a, x), five).Sign() == 0 {
+		x.Sub(x, one)
+	}
+	y := new(big.Int).Sub(a, x)
+
+	// Σ wᵢ: s and t are coprime, 19 ∤ t and M/19 < s·t ≤ M.
+	s := new(big.Int).Add(new(big.Int).Lsh(one, 127), one)
+	tt := new(big.Int).Add(s, big.NewInt(2))
+	s19 := new(big.Int).Mul(s, big.NewInt(19))
+
+	// r: Q even with M/361 < Q and 19·Q + 1 ≤ M.
+	bigQ := new(big.Int).Quo(m, big.NewInt(100))
+	bigQ.Sub(bigQ, new(big.Int).And(bigQ, one))
+	q19 := new(big.Int).Mul(bigQ, big.NewInt(19))
+
+	halfMax := vd(m, big.NewInt(2))
 	tests := []struct {
 		name string
 		l    *voice.Line
 	}{
-		// E4 is 4 steps above C4: w·D = 4·MaxComponent is out of range.
-		{"product of one sound", line(snd(e4(), maxDur))},
-		// Σ wᵢ = (p+q)/(pq) has a denominator near 2^400; the sounds are C4,
-		// so the numerator sum is 0. The rest keeps the positions 0, 1/p, 1,
-		// 1+1/q of the line representable.
-		{"final weight sum", line(
-			snd(c4(), voice.MustValueDuration(invP)),
-			rst(voice.MustValueDuration(restP)),
-			snd(c4(), voice.MustValueDuration(invQ)),
+		// w₁·D = 4·(M−1)/M is out of range; Σ wᵢ·D(xᵢ) = 4, Σ wᵢ = 1,
+		// W·Σ wᵢ = 19 and r = 4/19 are not.
+		{"product of one sound", line(snd(e4(), vd(new(big.Int).Sub(m, one), m)), snd(e4(), vd(one, m)))},
+		// Σ wᵢ·D(xᵢ) = 24·a/5 is out of range; the products 24·x/5 and
+		// 24·y/5, Σ wᵢ = a/5, W·Σ wᵢ = 19·a/5 and r = 24/19 are not.
+		{"final numerator sum", line(
+			snd(nt(spelling.C(), 6), vd(x, five)),
+			snd(nt(spelling.C(), 6), vd(y, five)),
 		)},
-		// Σ wᵢ = MaxComponent is in range, but 19·Σ wᵢ is not; the numerator
-		// sum is 0.
-		{"final denominator", line(snd(c4(), halfMaxDur), snd(c4(), halfMaxDur))},
+		// Σ wᵢ = (19·s+t)/(19·s·t) is out of range; W·Σ wᵢ = (19·s+t)/(s·t),
+		// Σ wᵢ·D(xᵢ) = 0 and r = 0 are not. The rest carries no weight and
+		// keeps the positions 0, 1/(19·s), 1, 1+1/t representable.
+		{"final weight sum", line(
+			snd(c4(), vd(one, s19)),
+			rst(vd(new(big.Int).Sub(s19, one), s19)),
+			snd(c4(), vd(one, tt)),
+		)},
+		// W·Σ wᵢ = 19·M is out of range; Σ wᵢ = M, Σ wᵢ·D(xᵢ) = 0 and r = 0
+		// are not.
+		{"final denominator", line(snd(c4(), halfMax), snd(c4(), halfMax))},
+		// r = 2/(19·(19·Q+1)) is out of range; Σ wᵢ = (19·Q+1)/(19·Q),
+		// W·Σ wᵢ = (19·Q+1)/Q, Σ wᵢ·D(xᵢ) = 2/(19·Q) and the products are not.
+		{"final r", line(snd(c4(), w()), snd(d4(), vd(one, q19)))},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			assertFailure(t, fails(fraction.ErrOutOfRange),
-				func() (voice.Tessitura, error) { return tt.l.Tessitura(ref) },
-				func() voice.Tessitura { return tt.l.MustTessitura(ref) })
+				func() (voice.Tessitura, error) { return tc.l.Tessitura(ref) },
+				func() voice.Tessitura { return tc.l.MustTessitura(ref) })
 			assertFailure(t, fails(fraction.ErrOutOfRange),
-				func() (voice.Tessitura, error) { return tt.l.TessituraIn(traditional(), ref) },
-				func() voice.Tessitura { return tt.l.MustTessituraIn(traditional(), ref) })
+				func() (voice.Tessitura, error) { return tc.l.TessituraIn(traditional(), ref) },
+				func() voice.Tessitura { return tc.l.MustTessituraIn(traditional(), ref) })
 		})
 	}
 }
