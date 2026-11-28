@@ -1,7 +1,7 @@
 package duration
 
 import (
-	"math"
+	"errors"
 	"math/big"
 
 	"github.com/go-muse/musex/common/fraction"
@@ -188,15 +188,15 @@ func (d Duration) Compare(other Duration) int {
 	return d.v.Compare(other.v)
 }
 
-// binary checks that d and other are set and returns their values.
-func (d Duration) binary(op string, other Duration) (x, y *big.Rat, err error) {
+// binary checks that d and other are set.
+func (d Duration) binary(op string, other Duration) error {
 	if !d.IsSet() {
-		return nil, nil, unsetError(op, "receiver")
+		return unsetError(op, "receiver")
 	}
 	if !other.IsSet() {
-		return nil, nil, unsetError(op, "argument")
+		return unsetError(op, "argument")
 	}
-	return ratOf(d.v), ratOf(other.v), nil
+	return nil
 }
 
 // Add returns the exact sum d + other. It returns an error wrapping ErrUnset
@@ -204,11 +204,11 @@ func (d Duration) binary(op string, other Duration) (x, y *big.Rat, err error) {
 // package common/fraction.
 func (d Duration) Add(other Duration) (Duration, error) {
 	const op = "Duration.Add"
-	x, y, err := d.binary(op, other)
-	if err != nil {
+	if err := d.binary(op, other); err != nil {
 		return Duration{}, err
 	}
-	return newDuration(op, x.Add(x, y))
+	sum, err := d.v.Add(other.v)
+	return durationOf(op, sum, err)
 }
 
 // MustAdd is like Add but panics with the returned error.
@@ -222,15 +222,17 @@ func (d Duration) MustAdd(other Duration) Duration {
 // common/fraction.
 func (d Duration) Sub(other Duration) (Duration, error) {
 	const op = "Duration.Sub"
-	x, y, err := d.binary(op, other)
-	if err != nil {
+	if err := d.binary(op, other); err != nil {
 		return Duration{}, err
 	}
-	x.Sub(x, y)
-	if x.Sign() <= 0 {
+	// The sign is decided by an exact comparison before the subtraction, so
+	// a difference that is both not positive and outside the range reports
+	// ErrNotPositive.
+	if d.v.Compare(other.v) <= 0 {
 		return Duration{}, simpleError(ErrNotPositive, op)
 	}
-	return newDuration(op, x)
+	diff, err := d.v.Sub(other.v)
+	return durationOf(op, diff, err)
 }
 
 // MustSub is like Sub but panics with the returned error.
@@ -272,8 +274,8 @@ func (d Duration) Mul(f fraction.Fraction) (Duration, error) {
 	if err := d.positiveFactor(op, f); err != nil {
 		return Duration{}, err
 	}
-	x := ratOf(d.v)
-	return newDuration(op, x.Mul(x, ratOf(f)))
+	prod, err := d.v.Mul(f)
+	return durationOf(op, prod, err)
 }
 
 // MustMul is like Mul but panics with the returned error.
@@ -289,8 +291,8 @@ func (d Duration) MulInt(n int) (Duration, error) {
 	if err := d.positiveInt(op, n); err != nil {
 		return Duration{}, err
 	}
-	x := ratOf(d.v)
-	return newDuration(op, x.Mul(x, new(big.Rat).SetInt64(int64(n))))
+	prod, err := d.v.MulInt(n)
+	return durationOf(op, prod, err)
 }
 
 // MustMulInt is like MulInt but panics with the returned error.
@@ -307,8 +309,8 @@ func (d Duration) Div(f fraction.Fraction) (Duration, error) {
 	if err := d.positiveFactor(op, f); err != nil {
 		return Duration{}, err
 	}
-	x := ratOf(d.v)
-	return newDuration(op, x.Quo(x, ratOf(f)))
+	q, err := d.v.Div(f)
+	return durationOf(op, q, err)
 }
 
 // MustDiv is like Div but panics with the returned error.
@@ -324,8 +326,8 @@ func (d Duration) DivInt(n int) (Duration, error) {
 	if err := d.positiveInt(op, n); err != nil {
 		return Duration{}, err
 	}
-	x := ratOf(d.v)
-	return newDuration(op, x.Quo(x, new(big.Rat).SetInt64(int64(n))))
+	q, err := d.v.DivInt(n)
+	return durationOf(op, q, err)
 }
 
 // MustDivInt is like DivInt but panics with the returned error.
@@ -339,12 +341,11 @@ func (d Duration) MustDivInt(n int) Duration {
 // outside the range of package common/fraction.
 func (d Duration) Ratio(other Duration) (fraction.Fraction, error) {
 	const op = "Duration.Ratio"
-	x, y, err := d.binary(op, other)
-	if err != nil {
+	if err := d.binary(op, other); err != nil {
 		return fraction.Fraction{}, err
 	}
-	f, ok := fromRat(x.Quo(x, y))
-	if !ok {
+	f, err := d.v.Div(other.v)
+	if err != nil {
 		return fraction.Fraction{}, rangeError(op)
 	}
 	return f, nil
@@ -365,20 +366,20 @@ func (d Duration) MustRatio(other Duration) fraction.Fraction {
 // within the range.
 func (d Duration) QuoRem(other Duration) (quo int, rem fraction.Fraction, err error) {
 	const op = "Duration.QuoRem"
-	x, y, err := d.binary(op, other)
-	if err != nil {
+	if err := d.binary(op, other); err != nil {
 		return 0, fraction.Fraction{}, err
 	}
-	q := floorRat(new(big.Rat).Quo(x, y))
-	if !q.IsInt64() || q.Int64() > math.MaxInt {
+	// Both operands are positive, so the quotient toward zero of
+	// fraction.QuoRem is the floor. It checks the quotient before the
+	// remainder, which is the order of the errors of this operation.
+	q, rem, err := d.v.QuoRem(other.v)
+	switch {
+	case errors.Is(err, fraction.ErrNotRepresentable):
 		return 0, fraction.Fraction{}, wrapNotRepresentable(op)
-	}
-	y.Mul(y, new(big.Rat).SetInt(q))
-	f, ok := fromRat(x.Sub(x, y))
-	if !ok {
+	case err != nil:
 		return 0, fraction.Fraction{}, rangeError(op)
 	}
-	return int(q.Int64()), f, nil
+	return q, rem, nil
 }
 
 // MustQuoRem is like QuoRem but panics with the returned error.
