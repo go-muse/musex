@@ -2,7 +2,6 @@ package ticks
 
 import (
 	"math/big"
-	"math/bits"
 	"strconv"
 
 	"github.com/go-muse/musex/common/fraction"
@@ -39,19 +38,17 @@ func MinResolution(durations []duration.Duration, positions []duration.Position,
 	if err != nil {
 		return Resolution{}, err
 	}
-	// w = bb/32 = a/2^t in reduced form. The denominator of v/w is then
-	// x/gcd(x, 2^t) with x the denominator of v/a, so D0 = M/gcd(M, 2^t) with
-	// M the common denominator of all v/a. This relies on the denominator of w
-	// being a power of two. Dividing v by a never makes its numerator larger,
-	// whereas v/w itself can be outside the range of common/fraction while D0
-	// still fits in int.
-	s := uint(min(bits.TrailingZeros8(quarter.bb), 5))
-	a, t := int(quarter.bb>>s), 5-s
+	// w = bb/32. With v/bb = n/x in lowest terms, v/w = 32n/x and the
+	// denominator of v/w is x/gcd(x, 32), so D0 = M/gcd(M, 32) with M the
+	// common denominator of all v/bb. This relies on 32 being a power of two.
+	// Dividing v by bb never makes its numerator larger, whereas v/w itself
+	// can be outside the range of common/fraction while D0 still fits in int.
+	bb := int(quarter.bb)
 	ys := make([]fraction.Fraction, 0, len(durations)+len(positions))
 	add := func(v fraction.Fraction) error {
-		y, err := v.DivInt(a)
+		y, err := v.DivInt(bb)
 		if err != nil {
-			// The denominator of v/a is above MaxComponent, so the
+			// The denominator of v/bb is above MaxComponent, so the
 			// denominator of v/w, and D0 with it, is far above math.MaxInt.
 			return intRangeError(op, "result outside int")
 		}
@@ -69,7 +66,7 @@ func MinResolution(durations []duration.Duration, positions []duration.Position,
 		}
 	}
 	m := fraction.MustCommonDenominatorBig(ys...)
-	m.Rsh(m, min(m.TrailingZeroBits(), t))
+	m.Rsh(m, min(m.TrailingZeroBits(), 5))
 	d, err := intOf(op, m)
 	if err != nil {
 		return Resolution{}, err
