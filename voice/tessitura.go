@@ -390,7 +390,11 @@ func (l *Line) MustTessituraIn(sys *system.System, ref Reference) Tessitura {
 // choice of the system; the check of the reference range; ErrZeroWidth for a
 // range of width 0; system.ErrInadmissible for a sound and
 // system.ErrOutOfRange for its distance, in an *ItemError with its index;
-// fraction.ErrOutOfRange for the sums, without an *ItemError.
+// fraction.ErrOutOfRange, without an *ItemError, if one of the final values
+// is outside the range of package common/fraction: the product wᵢ·D(xᵢ) of a
+// sound, the sum Σ wᵢ·D(xᵢ), the sum Σ wᵢ, the denominator W·Σ wᵢ or r. The
+// sums are exact, so this failure depends neither on intermediate sums nor on
+// the order of the sounds.
 func (l *Line) TessituraBy(ref Reference, w Weighting, z Zones) (Tessitura, error) {
 	return l.tessitura(nil, false, ref, w, z)
 }
@@ -493,7 +497,7 @@ func (l *Line) tessituraInputs(sys *system.System, explicit bool, ref Reference,
 
 // tessituraNumber returns Σ wᵢ·dᵢ / (width · Σ wᵢ) in reduced form.
 func (l *Line) tessituraNumber(sounds []int, distances []system.Step, width system.Step, w Weighting) (fraction.Fraction, error) {
-	sum, weights := fraction.Zero(), fraction.Zero()
+	var sum, weights exactSum
 
 	for k, i := range sounds {
 		weight := fraction.One()
@@ -512,19 +516,67 @@ func (l *Line) tessituraNumber(sounds []int, distances []system.Step, width syst
 			return fraction.Fraction{}, err
 		}
 
-		if sum, err = sum.Add(term); err != nil {
-			return fraction.Fraction{}, err
-		}
-
-		if weights, err = weights.Add(weight); err != nil {
-			return fraction.Fraction{}, err
-		}
+		sum.add(term)
+		weights.add(weight)
 	}
 
-	den, err := weights.MulInt(int(width))
+	num, err := sum.result()
 	if err != nil {
 		return fraction.Fraction{}, err
 	}
 
-	return sum.Div(den)
+	total, err := weights.result()
+	if err != nil {
+		return fraction.Fraction{}, err
+	}
+
+	den, err := total.MulInt(int(width))
+	if err != nil {
+		return fraction.Fraction{}, err
+	}
+
+	return num.Div(den)
+}
+
+// exactSum accumulates the exact sum of valid fractions, so that its result
+// and its failure depend only on the exact total, as for fraction.Sum. It adds
+// in place while every partial sum is in range and keeps no list of the
+// elements; once a partial sum is outside the range, it keeps the last partial
+// sum in range and the remaining elements, and fraction.Sum decides the result.
+// The zero value is the empty sum.
+type exactSum struct {
+	acc  fraction.Fraction
+	tail []fraction.Fraction // nil while every partial sum is in range
+}
+
+// add adds the valid fraction f to s.
+func (s *exactSum) add(f fraction.Fraction) {
+	if s.tail == nil {
+		if !s.acc.IsValid() {
+			s.acc = f.Reduce()
+			return
+		}
+
+		if next, err := s.acc.Add(f); err == nil {
+			s.acc = next
+			return
+		}
+
+		s.tail = []fraction.Fraction{s.acc}
+	}
+
+	s.tail = append(s.tail, f)
+}
+
+// result returns the exact sum, 0 for the empty sum, or an error wrapping
+// fraction.ErrOutOfRange if it is outside the range.
+func (s *exactSum) result() (fraction.Fraction, error) {
+	switch {
+	case s.tail != nil:
+		return fraction.Sum(s.tail...)
+	case !s.acc.IsValid():
+		return fraction.Zero(), nil
+	default:
+		return s.acc, nil
+	}
 }
