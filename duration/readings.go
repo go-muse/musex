@@ -383,8 +383,12 @@ func (s *readingSearch) child(c *chainInfo, k int) *chainInfo {
 func prefixSums(ds []Duration) []*big.Rat {
 	out := make([]*big.Rat, len(ds)+1)
 	out[0] = new(big.Rat)
+	// The sums are new values; only the converted element is temporary, so
+	// one buffer serves every element.
+	var buf big.Rat
 	for k, d := range ds {
-		out[k+1] = new(big.Rat).Add(out[k], ratOf(d.v))
+		v, _ := d.v.BigRatTo(&buf)
+		out[k+1] = new(big.Rat).Add(out[k], v)
 	}
 	return out
 }

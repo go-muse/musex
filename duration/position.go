@@ -27,6 +27,17 @@ func newPosition(op string, r *big.Rat) (Position, error) {
 	return Position{v: f}, nil
 }
 
+// positionOf returns the value f ≥ 0 of a fraction operation as a position,
+// or an error wrapping ErrOutOfRange if the operation failed. The operands of
+// every such operation are set and in range, so the only possible failure is
+// a result outside the range of package common/fraction.
+func positionOf(op string, f fraction.Fraction, err error) (Position, error) {
+	if err != nil {
+		return Position{}, rangeError(op)
+	}
+	return Position{v: f}, nil
+}
+
 // Origin returns the position zero, the origin chosen by the caller.
 func Origin() Position {
 	return Position{v: fraction.Zero()}
@@ -105,15 +116,15 @@ func (p Position) Compare(other Position) int {
 	return p.v.Compare(other.v)
 }
 
-// withDuration checks that p and d are set and returns their values.
-func (p Position) withDuration(op string, d Duration) (x, y *big.Rat, err error) {
+// withDuration checks that p and d are set.
+func (p Position) withDuration(op string, d Duration) error {
 	if !p.IsSet() {
-		return nil, nil, unsetError(op, "receiver")
+		return unsetError(op, "receiver")
 	}
 	if !d.IsSet() {
-		return nil, nil, unsetError(op, "duration")
+		return unsetError(op, "duration")
 	}
-	return ratOf(p.v), ratOf(d.v), nil
+	return nil
 }
 
 // Add returns the position p + d. It returns an error wrapping ErrUnset if p
@@ -121,11 +132,11 @@ func (p Position) withDuration(op string, d Duration) (x, y *big.Rat, err error)
 // package common/fraction.
 func (p Position) Add(d Duration) (Position, error) {
 	const op = "Position.Add"
-	x, y, err := p.withDuration(op, d)
-	if err != nil {
+	if err := p.withDuration(op, d); err != nil {
 		return Position{}, err
 	}
-	return newPosition(op, x.Add(x, y))
+	sum, err := p.v.Add(d.v)
+	return positionOf(op, sum, err)
 }
 
 // MustAdd is like Add but panics with the returned error.
@@ -138,15 +149,17 @@ func (p Position) MustAdd(d Duration) Position {
 // ErrOutOfRange if it is outside the range of package common/fraction.
 func (p Position) Sub(d Duration) (Position, error) {
 	const op = "Position.Sub"
-	x, y, err := p.withDuration(op, d)
-	if err != nil {
+	if err := p.withDuration(op, d); err != nil {
 		return Position{}, err
 	}
-	x.Sub(x, y)
-	if x.Sign() < 0 {
+	// The sign is decided by an exact comparison before the subtraction, so
+	// a result that is both negative and outside the range reports
+	// ErrNegativePosition.
+	if p.v.Compare(d.v) < 0 {
 		return Position{}, simpleError(ErrNegativePosition, op)
 	}
-	return newPosition(op, x)
+	diff, err := p.v.Sub(d.v)
+	return positionOf(op, diff, err)
 }
 
 // MustSub is like Sub but panics with the returned error.
@@ -154,16 +167,17 @@ func (p Position) MustSub(d Duration) Position {
 	return must(p.Sub(d))
 }
 
-// between checks that p and end are set and returns end − p.
-func (p Position) between(op string, end Position) (*big.Rat, error) {
+// between checks that p and end are set and returns the sign of end − p,
+// decided by an exact comparison before any subtraction, so that the sign
+// errors of the callers precede the range error of the difference.
+func (p Position) between(op string, end Position) (int, error) {
 	if !p.IsSet() {
-		return nil, unsetError(op, "receiver")
+		return 0, unsetError(op, "receiver")
 	}
 	if !end.IsSet() {
-		return nil, unsetError(op, "argument")
+		return 0, unsetError(op, "argument")
 	}
-	x := ratOf(end.v)
-	return x.Sub(x, ratOf(p.v)), nil
+	return end.v.Compare(p.v), nil
 }
 
 // OffsetTo returns the offset end − p ≥ 0 as a position: from 1/2 to 1/2 it is
@@ -172,14 +186,15 @@ func (p Position) between(op string, end Position) (*big.Rat, error) {
 // outside the range of package common/fraction.
 func (p Position) OffsetTo(end Position) (Position, error) {
 	const op = "Position.OffsetTo"
-	r, err := p.between(op, end)
+	sign, err := p.between(op, end)
 	if err != nil {
 		return Position{}, err
 	}
-	if r.Sign() < 0 {
+	if sign < 0 {
 		return Position{}, simpleError(ErrNegativePosition, op)
 	}
-	return newPosition(op, r)
+	diff, err := end.v.Sub(p.v)
+	return positionOf(op, diff, err)
 }
 
 // MustOffsetTo is like OffsetTo but panics with the returned error.
@@ -193,14 +208,15 @@ func (p Position) MustOffsetTo(end Position) Position {
 // common/fraction.
 func (p Position) DurationTo(end Position) (Duration, error) {
 	const op = "Position.DurationTo"
-	r, err := p.between(op, end)
+	sign, err := p.between(op, end)
 	if err != nil {
 		return Duration{}, err
 	}
-	if r.Sign() <= 0 {
+	if sign <= 0 {
 		return Duration{}, simpleError(ErrNotPositive, op)
 	}
-	return newDuration(op, r)
+	diff, err := end.v.Sub(p.v)
+	return durationOf(op, diff, err)
 }
 
 // MustDurationTo is like DurationTo but panics with the returned error.

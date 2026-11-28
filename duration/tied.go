@@ -222,9 +222,8 @@ func (t Tied) MustCompareDuration(other Tied) int {
 // joined returns the tied duration with the packed parts of t followed by
 // extra parts with the given count and total duration.
 func (t Tied) joined(op string, n int, parts string, value fraction.Fraction) (Tied, error) {
-	sum := ratOf(t.value)
-	v, ok := fromRat(sum.Add(sum, ratOf(value)))
-	if !ok {
+	v, err := t.value.Add(value)
+	if err != nil {
 		return Tied{}, rangeError(op)
 	}
 	return Tied{n: t.n + n, parts: t.parts + parts, value: v}, nil
