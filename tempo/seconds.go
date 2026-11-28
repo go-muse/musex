@@ -182,7 +182,8 @@ func (s Seconds) Add(other Seconds) (Seconds, error) {
 	if err := s.checkPair(op, other); err != nil {
 		return Seconds{}, err
 	}
-	return toSeconds(op, new(big.Rat).Add(ratOf(s.v), ratOf(other.v)))
+	sum, err := s.v.Add(other.v)
+	return secondsResult(op, sum, err)
 }
 
 // MustAdd is like Add but panics with the returned error.
@@ -199,11 +200,14 @@ func (s Seconds) Sub(other Seconds) (Seconds, error) {
 	if err := s.checkPair(op, other); err != nil {
 		return Seconds{}, err
 	}
-	r := new(big.Rat).Sub(ratOf(s.v), ratOf(other.v))
-	if r.Sign() < 0 {
+	// The sign is decided by an exact comparison before the subtraction, so
+	// a difference that is both negative and outside the range reports
+	// ErrNegativeTime.
+	if s.v.Compare(other.v) < 0 {
 		return Seconds{}, simpleError(ErrNegativeTime, op, "negative difference")
 	}
-	return toSeconds(op, r)
+	diff, err := s.v.Sub(other.v)
+	return secondsResult(op, diff, err)
 }
 
 // MustSub is like Sub but panics with the returned error.
