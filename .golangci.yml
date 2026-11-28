@@ -625,7 +625,6 @@ linters:
             - github.com/go-muse/musex/instrument$
             - github.com/go-muse/musex/note$
             - github.com/go-muse/musex/duration$
-            - github.com/go-muse/musex/meter$
             - github.com/go-muse/musex/measure$
             - github.com/go-muse/musex/tempo$
             - github.com/go-muse/musex/tempomap$
