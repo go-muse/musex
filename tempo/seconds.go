@@ -75,14 +75,15 @@ func MustSecondsFromMinutes(f fraction.Fraction) Seconds {
 }
 
 // secondsFrom returns the time f·factor seconds.
-func secondsFrom(op string, f fraction.Fraction, factor int64) (Seconds, error) {
+func secondsFrom(op string, f fraction.Fraction, factor int) (Seconds, error) {
 	if unsetFraction(f) {
 		return Seconds{}, invalidError(op, "unset fraction")
 	}
 	if f.Sign() < 0 {
 		return Seconds{}, simpleError(ErrNegativeTime, op, "negative time")
 	}
-	return toSeconds(op, mul(ratOf(f), ratInt(factor)))
+	s, err := f.MulInt(factor)
+	return secondsResult(op, s, err)
 }
 
 // SecondsFromTimeDuration returns the time of d exactly, d/10⁹ seconds. It

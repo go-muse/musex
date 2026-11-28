@@ -293,7 +293,7 @@ func (t Tempo) Mul(k fraction.Fraction) (Tempo, error) {
 	if unsetFraction(k) || k.Sign() <= 0 {
 		return Tempo{}, invalidError(op, "factor unset or not positive")
 	}
-	return t.scale(op, ratOf(k))
+	return t.scale(op, k)
 }
 
 // MustMul is like Mul but panics with the returned error.
@@ -302,9 +302,12 @@ func (t Tempo) MustMul(k fraction.Fraction) Tempo {
 }
 
 // scale returns the set tempo t with beats per minute multiplied by k > 0.
-func (t Tempo) scale(op string, k *big.Rat) (Tempo, error) {
-	m, err := markOf(op, t.m.unit, mul(ratOf(t.m.bpm), k))
-	return Tempo{m: m}, err
+func (t Tempo) scale(op string, k fraction.Fraction) (Tempo, error) {
+	bpm, err := t.m.bpm.Mul(k)
+	if err != nil {
+		return Tempo{}, rangeError(op)
+	}
+	return Tempo{m: mark{unit: t.m.unit, bpm: bpm}}, nil
 }
 
 // Double returns the tempo twice as fast, the doppio movimento: Mul(2). In
@@ -316,7 +319,7 @@ func (t Tempo) Double() (Tempo, error) {
 	if !t.IsSet() {
 		return Tempo{}, t.unset(op)
 	}
-	return t.scale(op, ratInt(2))
+	return t.scale(op, two)
 }
 
 // MustDouble is like Double but panics with the returned error.
@@ -331,7 +334,7 @@ func (t Tempo) Halve() (Tempo, error) {
 	if !t.IsSet() {
 		return Tempo{}, t.unset(op)
 	}
-	return t.scale(op, big.NewRat(1, 2))
+	return t.scale(op, half)
 }
 
 // MustHalve is like Halve but panics with the returned error.
@@ -470,7 +473,8 @@ func (t Tempo) DurationIn(s Seconds) (duration.Duration, error) {
 	if s.v.Sign() == 0 {
 		return duration.Duration{}, simpleError(ErrNoSolution, op, "zero time")
 	}
-	return toDuration(op, mul(minutes(s), t.m.speed()))
+	d, err := fraction.Product(s.v, inv60, t.m.unitFraction(), t.m.bpm)
+	return durationResult(op, d, err)
 }
 
 // MustDurationIn is like DurationIn but panics with the returned error.
