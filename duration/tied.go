@@ -3,7 +3,6 @@ package duration
 import (
 	"cmp"
 	"encoding/binary"
-	"math/big"
 
 	"github.com/go-muse/musex/common/fraction"
 	"github.com/go-muse/musex/tuplet"
@@ -57,14 +56,14 @@ func unpackParts(s string, n int) []Written {
 // makeTied returns the tied duration of set parts with the exact sum of
 // their durations.
 func makeTied(op string, parts []Written) (Tied, error) {
-	sum := new(big.Rat)
+	vs := make([]fraction.Fraction, len(parts))
 	size := 0
-	for _, w := range parts {
-		sum.Add(sum, ratOf(w.value))
+	for i, w := range parts {
+		vs[i] = w.value
 		size += partHeaderBytes + len(w.chain)
 	}
-	v, ok := fromRat(sum)
-	if !ok {
+	v, err := fraction.Sum(vs...)
+	if err != nil {
 		return Tied{}, rangeError(op)
 	}
 	b := make([]byte, 0, size)

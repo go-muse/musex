@@ -29,6 +29,17 @@ func newDuration(op string, r *big.Rat) (Duration, error) {
 	return Duration{v: f}, nil
 }
 
+// durationOf returns the positive value f of a fraction operation as a
+// duration, or an error wrapping ErrOutOfRange if the operation failed. The
+// operands of every such operation are set and in range, so the only possible
+// failure is a result outside the range of package common/fraction.
+func durationOf(op string, f fraction.Fraction, err error) (Duration, error) {
+	if err != nil {
+		return Duration{}, rangeError(op)
+	}
+	return Duration{v: f}, nil
+}
+
 // New returns the duration num/den in whole notes. The signs of num and den
 // are taken by value: New(-1, -4) is 1/4. It returns an error wrapping
 // ErrInvalidArgument and fraction.ErrZeroDenominator if den is zero, and
@@ -93,11 +104,12 @@ func Sum(ds ...Duration) (Duration, error) {
 	if err := checkList(op, ds); err != nil {
 		return Duration{}, err
 	}
-	sum := new(big.Rat)
-	for _, d := range ds {
-		sum.Add(sum, ratOf(d.v))
+	vs := make([]fraction.Fraction, len(ds))
+	for i, d := range ds {
+		vs[i] = d.v
 	}
-	return newDuration(op, sum)
+	sum, err := fraction.Sum(vs...)
+	return durationOf(op, sum, err)
 }
 
 // MustSum is like Sum but panics with the returned error.
