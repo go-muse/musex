@@ -1,8 +1,10 @@
 package ticks_test
 
 import (
+	"fmt"
 	"math"
 	"math/big"
+	"math/bits"
 	"math/rand/v2"
 	"testing"
 
@@ -441,10 +443,12 @@ type minresCase struct {
 
 // minresClass classifies the outcome of the oracle for counting: success,
 // success with some v/w outside the fraction range, Е-8 with every v/a in
-// the fraction range, and Е-8 with some v/a outside it.
+// the fraction range, and Е-8 with some v/a outside it. Here a = bb/gcd(bb,
+// 32) is the numerator of the reduced w = bb/32 (architecture 4.3).
 func minresClass(bb int, c minresCase) string {
 	_, ok := minresOracle(bb, c.ds, c.ps)
 	k := minresK()
+	a := int64(bb >> min(bits.TrailingZeros(uint(bb)), 5))
 
 	outside := func(q *big.Rat) bool {
 		return new(big.Int).Abs(q.Num()).Cmp(k) > 0 || q.Denom().Cmp(k) > 0
@@ -455,7 +459,7 @@ func minresClass(bb int, c minresCase) string {
 	for _, vs := range [][]*big.Rat{c.ds, c.ps} {
 		for _, v := range vs {
 			wideW = wideW || outside(new(big.Rat).Mul(v, big.NewRat(32, int64(bb))))
-			wideA = wideA || outside(new(big.Rat).Quo(v, big.NewRat(int64(bb), 1)))
+			wideA = wideA || outside(new(big.Rat).Quo(v, big.NewRat(a, 1)))
 		}
 	}
 
@@ -517,12 +521,14 @@ func TestMinResolutionLCMOracle(t *testing.T) {
 		}
 	}
 
+	// The sets are generated above, so -run selects one bb or one set with
+	// the same values.
 	for bb := 1; bb <= 255; bb++ {
-		t.Run("", func(t *testing.T) {
+		t.Run(fmt.Sprintf("bb=%d", bb), func(t *testing.T) {
 			t.Parallel()
 
 			for i, c := range cases[bb] {
-				func() {
+				t.Run(fmt.Sprintf("set=%d", i), func(t *testing.T) {
 					defer func() {
 						if t.Failed() {
 							t.Logf("bb %d, set %d (seed %d): durations %v, positions %v", bb, i, seed, c.ds, c.ps)
@@ -530,7 +536,7 @@ func TestMinResolutionLCMOracle(t *testing.T) {
 					}()
 
 					assertMinResolution(t, bb, c.explicit, c.ds, c.ps)
-				}()
+				})
 			}
 		})
 	}

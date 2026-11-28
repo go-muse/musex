@@ -158,7 +158,7 @@ const (
 // of three meters 1/p: c = 1/periodP0 + 1/periodP1 + 1/periodP2 and
 // a = 1/periodP3 + 1/periodP4 + 1/d3. The reduced numerator of a is
 // periodP3·periodP4 + d3·(periodP3 + periodP4), so the product of the
-// numerators grows by (periodP3 + periodP4)·num(c) < 2¹⁹¹ per unit of d3.
+// numerators grows by (periodP3 + periodP4)·num(c) < 2¹⁹² per unit of d3.
 // periodBelowK is the largest d3 with lcm(num a, num c) ≤ K and
 // periodBelowK + 1 the smallest with lcm > K; both keep the numerators
 // coprime. lcm = K exactly is not reached by meters, whose numerators are
