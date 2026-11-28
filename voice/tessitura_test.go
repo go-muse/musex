@@ -1,6 +1,7 @@
 package voice_test
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/go-muse/musex/common/fraction"
@@ -695,4 +696,107 @@ func TestTessituraSumOutOfRange(t *testing.T) {
 	// Weighted by count the number is representable.
 	_, err := l.TessituraBy(ref, voice.ByCount, voice.DefaultZones())
 	require.NoError(t, err)
+}
+
+// Architecture 6.10 (as clarified for the move of the tessitura sums to
+// fraction.Sum): the failure of the sums is decided only by the final
+// values — the product wᵢ·D(xᵢ) of one sound, the final sums of the
+// numerator and the weights, the denominator W·Σ wᵢ and the final r —
+// without *voice.ItemError. Each input below overflows one final value and
+// keeps the others in range.
+func TestTessituraFinalValueFailures(t *testing.T) {
+	t.Parallel()
+	maxDur := voice.MustValueDuration(bigDuration(fraction.MaxComponentBig(), big.NewInt(1)))
+	halfMaxDur := voice.MustValueDuration(bigDuration(fraction.MaxComponentBig(), big.NewInt(2)))
+	invP, restP, invQ := overflowDurations()
+	ref := voice.PresetReference(soprano())
+
+	tests := []struct {
+		name string
+		l    *voice.Line
+	}{
+		// E4 is 4 steps above C4: w·D = 4·MaxComponent is out of range.
+		{"product of one sound", line(snd(e4(), maxDur))},
+		// Σ wᵢ = (p+q)/(pq) has a denominator near 2^400; the sounds are C4,
+		// so the numerator sum is 0. The rest keeps the positions 0, 1/p, 1,
+		// 1+1/q of the line representable.
+		{"final weight sum", line(
+			snd(c4(), voice.MustValueDuration(invP)),
+			rst(voice.MustValueDuration(restP)),
+			snd(c4(), voice.MustValueDuration(invQ)),
+		)},
+		// Σ wᵢ = MaxComponent is in range, but 19·Σ wᵢ is not; the numerator
+		// sum is 0.
+		{"final denominator", line(snd(c4(), halfMaxDur), snd(c4(), halfMaxDur))},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assertFailure(t, fails(fraction.ErrOutOfRange),
+				func() (voice.Tessitura, error) { return tt.l.Tessitura(ref) },
+				func() voice.Tessitura { return tt.l.MustTessitura(ref) })
+			assertFailure(t, fails(fraction.ErrOutOfRange),
+				func() (voice.Tessitura, error) { return tt.l.TessituraIn(traditional(), ref) },
+				func() voice.Tessitura { return tt.l.MustTessituraIn(traditional(), ref) })
+		})
+	}
+}
+
+// Architecture 6.10 (as clarified for the move of the tessitura sums to
+// fraction.Sum): partial sums out of range do not fail the tessitura when
+// every final value is in range, and the result does not depend on the
+// order of the sounds. The three sounds stand at the same height (E4 is 4
+// steps above C4) with the lengths 1/p, 1/q, (p−1)/p in the direct order or
+// (p−1)/p, 1/q, 1/p in the reversed one: the partial sum of the first two
+// has a denominator near 2^400, while Σ wᵢ = (q+1)/q, Σ wᵢ·D(xᵢ) = 4·(q+1)/q,
+// W·Σ wᵢ and r = 4/19 are all in range. The rests between the sounds carry
+// no weight and keep every position of the line representable. Before the
+// sums move to fraction.Sum this test fails: the sequential accumulation
+// refuses at the second sound with fraction.ErrOutOfRange.
+func TestTessituraPartialSumsBeyondRange(t *testing.T) {
+	t.Parallel()
+	invP, restP, invQ := overflowDurations()
+	_, q := bigDenominators()
+	restQ := voice.MustValueDuration(bigDuration(new(big.Int).Sub(q, big.NewInt(1)), q))
+	ref := voice.PresetReference(soprano())
+
+	tests := []struct {
+		name string
+		l    *voice.Line
+	}{
+		// Positions 0, 1/p, 1, 1+1/q, 2, 2+(p−1)/p.
+		{"direct", line(
+			snd(e4(), voice.MustValueDuration(invP)), rst(voice.MustValueDuration(restP)),
+			snd(e4(), voice.MustValueDuration(invQ)), rst(restQ),
+			snd(e4(), voice.MustValueDuration(restP)),
+		)},
+		// Positions 0, (p−1)/p, 1, 1+1/q, 2, 2+1/p.
+		{"reversed", line(
+			snd(e4(), voice.MustValueDuration(restP)), rst(voice.MustValueDuration(invP)),
+			snd(e4(), voice.MustValueDuration(invQ)), rst(restQ),
+			snd(e4(), voice.MustValueDuration(invP)),
+		)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			l := tt.l
+
+			got, err := l.Tessitura(ref)
+			require.NoError(t, err)
+			assert.Equal(t, "4/19", got.Number.String())
+			assert.Equal(t, voice.TessituraLow, got.Kind)
+			assertTessitura(t, got, l.MustTessitura(ref))
+
+			in, err := l.TessituraIn(traditional(), ref)
+			require.NoError(t, err)
+			assertTessitura(t, got, in)
+			assertTessitura(t, got, l.MustTessituraIn(traditional(), ref))
+
+			// Weighted by count the number is the same and needs no big sums.
+			byCount, err := l.TessituraBy(ref, voice.ByCount, voice.DefaultZones())
+			require.NoError(t, err)
+			assertTessitura(t, got, byCount)
+		})
+	}
 }
