@@ -1,6 +1,7 @@
 package measure_test
 
 import (
+	"fmt"
 	"math"
 	"math/big"
 	"math/rand/v2"
@@ -594,7 +595,7 @@ func TestBarsCheckLCMOracle(t *testing.T) {
 			hi = spec.bars
 		}
 
-		for range 6 {
+		for j := range 6 {
 			first := lo + rng.IntN(min(hi, model.horizon+2)-lo+1)
 			last := min(hi, first+rng.IntN(model.horizon+2))
 
@@ -608,7 +609,9 @@ func TestBarsCheckLCMOracle(t *testing.T) {
 			reason := model.refuses(first, last)
 			counts[reason]++
 
-			t.Run("", func(t *testing.T) {
+			// The ranges are drawn outside the subtest, so -run selects one
+			// range with the same values.
+			t.Run(fmt.Sprintf("grid=%d,range=%d", i, j), func(t *testing.T) {
 				defer guard(t)
 				defer func() {
 					if t.Failed() {
